@@ -1,0 +1,571 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  admin
+  teacher
+  student
+}
+
+enum FileCategory {
+  assignment
+  class_material
+  class_record
+}
+
+enum AssignmentTarget {
+  section
+  individual
+}
+
+enum AssignmentStatus {
+  draft
+  published
+  closed
+}
+
+enum SubmissionStatus {
+  submitted
+  late
+  missing
+}
+
+enum EventType {
+  institution
+  course
+  section
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+// ============================================================================
+// AUTHENTICATION & IDENTITY LAYER
+// ============================================================================
+
+model User {
+  id String @id @default(uuid())
+
+  username String? @unique @db.VarChar(50)
+  email String @unique @db.VarChar(120)
+
+  passwordHash String @map("password_hash")
+
+  role UserRole
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdBy String?
+  createdByUser User? @relation("CreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  usersCreated User[] @relation("CreatedBy")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  studentProfile StudentProfile?
+  teacherProfile TeacherProfile?
+  uploadedFiles File[]
+  createdCourses Course[]
+  createdAssignments Assignment[]
+  uploadedMaterials ClassMaterial[]
+  createdEvents Event[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// PROFILE LAYER
+// ============================================================================
+
+model StudentProfile {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentId String @unique @db.VarChar(50)
+
+  fullName String @db.VarChar(120)
+
+  profileImage String?
+
+  admissionStatus String? @db.VarChar(30)
+
+  dateOfBirth DateTime?
+
+  bio String?
+
+  bloodGroup String? @db.VarChar(5)
+
+  educationBackground String?
+
+  phone String? @db.VarChar(30)
+
+  address String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  enrollments Enrollment[]
+  assignmentSubmissions AssignmentSubmission[]
+  attendance Attendance[]
+  performanceRecords StudentPerformance[]
+
+  @@map("student_profiles")
+}
+
+model TeacherProfile {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  teacherId String @unique @db.VarChar(50)
+
+  fullName String @db.VarChar(120)
+
+  profileImage String?
+
+  description String?
+
+  specialization String?
+
+  experienceYears Int?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  assignedCourses TeacherCourse[]
+  assignedSections Section[] @relation("AssignedSectionTeacher")
+  ownedAssignments Assignment[]
+  gradedSubmissions AssignmentSubmission[]
+
+  @@map("teacher_profiles")
+}
+
+// ============================================================================
+// ACADEMIC STRUCTURE
+// ============================================================================
+
+model Course {
+  id String @id @default(uuid())
+
+  title String @db.VarChar(200)
+
+  description String?
+
+  totalSectionCount Int @default(0) @map("total_section_count")
+
+  createdBy String
+  createdByUser User @relation(fields: [createdBy], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  sections Section[]
+  enrollments Enrollment[]
+  teacherAssignments TeacherCourse[]
+  assignments Assignment[]
+  classMaterials ClassMaterial[]
+  classRecords ClassRecord[]
+
+  @@map("courses")
+}
+
+model Session {
+  id String @id @default(uuid())
+
+  name String? @db.VarChar(100)
+
+  description String?
+
+  startDate DateTime?
+
+  endDate DateTime?
+
+  // Relations
+  semesters Semester[]
+
+  @@map("sessions")
+}
+
+model Semester {
+  id String @id @default(uuid())
+
+  name String? @db.VarChar(50)
+
+  monthsIncluded String?
+
+  year Int?
+
+  sessionId String
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Relations
+  sections Section[]
+  enrollments Enrollment[]
+  assignments Assignment[]
+  attendance Attendance[]
+  classMaterials ClassMaterial[]
+  classRecords ClassRecord[]
+  events Event[]
+  performanceRecords StudentPerformance[]
+
+  @@map("semesters")
+}
+
+model Section {
+  id String @id @default(uuid())
+
+  name String @db.VarChar(100)
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  semesterId String?
+  semester Semester? @relation(fields: [semesterId], references: [id])
+
+  assignedTeacherId String? @map("assigned_teacher_id")
+  assignedTeacher TeacherProfile? @relation("AssignedSectionTeacher", fields: [assignedTeacherId], references: [id], onDelete: SetNull)
+
+  description String?
+
+  totalStudentCount Int @default(0) @map("total_student_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  enrollments Enrollment[]
+  assignments Assignment[]
+  attendance Attendance[]
+  classMaterials ClassMaterial[]
+  classRecords ClassRecord[]
+
+  @@map("sections")
+}
+
+// ============================================================================
+// ENROLLMENT & ASSIGNMENT
+// ============================================================================
+
+model Enrollment {
+  id String @id @default(uuid())
+
+  studentId String
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+
+  sectionId String?
+  section Section? @relation(fields: [sectionId], references: [id])
+
+  semesterId String?
+  semester Semester? @relation(fields: [semesterId], references: [id])
+
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  @@map("enrollments")
+}
+
+model TeacherCourse {
+  id String @id @default(uuid())
+
+  teacherId String
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@map("teacher_courses")
+}
+
+// ============================================================================
+// FILE MANAGEMENT (Azure Blob Storage)
+// ============================================================================
+
+model File {
+  id String @id @default(uuid())
+
+  name String? @db.VarChar(200)
+
+  slug String? @db.VarChar(200)
+
+  fileUrl String @map("file_url")
+
+  fileType FileCategory?
+
+  uploadedBy String
+  uploadedByUser User @relation(fields: [uploadedBy], references: [id])
+
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  assignmentFiles AssignmentFile[]
+  classMaterial ClassMaterial?
+  classRecord ClassRecord?
+  assignmentSubmissions AssignmentSubmission[]
+
+  @@map("files")
+}
+
+// ============================================================================
+// ASSIGNMENTS & SUBMISSIONS
+// ============================================================================
+
+model Assignment {
+  id String @id @default(uuid())
+
+  title String @db.VarChar(200)
+
+  description String?
+
+  teacherInstruction String? @map("teacher_instruction")
+
+  teacherId String
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  createdBy String
+  createdByUser User @relation(fields: [createdBy], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  dueDate DateTime?
+
+  totalMarks Int @default(100) @map("total_marks")
+
+  passingMarks Int? @map("passing_marks")
+
+  allowLateSubmission Boolean @default(false) @map("allow_late_submission")
+
+  status AssignmentStatus @default(draft)
+
+  targetType AssignmentTarget
+
+  sectionId String?
+  section Section? @relation(fields: [sectionId], references: [id])
+
+  semesterId String?
+  semester Semester? @relation(fields: [semesterId], references: [id])
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+
+  // Relations
+  assignmentFiles AssignmentFile[]
+  rubrics AssignmentRubric[]
+  submissions AssignmentSubmission[]
+
+  @@index([teacherId, status])
+  @@index([courseId, sectionId, dueDate])
+
+  @@map("assignments")
+}
+
+model AssignmentFile {
+  id String @id @default(uuid())
+
+  assignmentId String
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  fileId String
+  file File @relation(fields: [fileId], references: [id])
+
+  @@map("assignment_files")
+}
+
+model AssignmentSubmission {
+  id String @id @default(uuid())
+
+  assignmentId String
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+
+  studentId String
+  student StudentProfile @relation(fields: [studentId], references: [id])
+
+  submissionFileId String?
+  submissionFile File? @relation(fields: [submissionFileId], references: [id])
+
+  submissionText String? @map("submission_text")
+
+  submissionFileUrl String? @map("submission_file_url")
+
+  status SubmissionStatus @default(submitted)
+
+  attemptNumber Int @default(1) @map("attempt_number")
+
+  submittedAt DateTime @default(now()) @map("submitted_at")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+
+  marks Int?
+
+  gradeLetter String? @db.VarChar(10) @map("grade_letter")
+
+  feedback String?
+
+  markedBy String?
+  markedByTeacher TeacherProfile? @relation(fields: [markedBy], references: [id])
+
+  markedAt DateTime?
+
+  @@index([assignmentId, studentId])
+  @@index([assignmentId, status])
+
+  @@map("assignment_submissions")
+}
+
+model AssignmentRubric {
+  id String @id @default(uuid())
+
+  assignmentId String
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  criteria String @db.VarChar(200)
+
+  maxMarks Int @map("max_marks")
+
+  @@map("assignment_rubrics")
+}
+
+// ============================================================================
+// ATTENDANCE
+// ============================================================================
+
+model Attendance {
+  id String @id @default(uuid())
+
+  studentId String
+  student StudentProfile @relation(fields: [studentId], references: [id])
+
+  sectionId String
+  section Section @relation(fields: [sectionId], references: [id])
+
+  semesterId String
+  semester Semester @relation(fields: [semesterId], references: [id])
+
+  date DateTime
+
+  status AttendanceStatus
+
+  @@map("attendance")
+}
+
+// ============================================================================
+// LEARNING MATERIALS
+// ============================================================================
+
+model ClassMaterial {
+  id String @id @default(uuid())
+
+  title String @db.VarChar(200)
+
+  description String?
+
+  fileId String @unique
+  file File @relation(fields: [fileId], references: [id])
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+
+  sectionId String?
+  section Section? @relation(fields: [sectionId], references: [id])
+
+  semesterId String?
+  semester Semester? @relation(fields: [semesterId], references: [id])
+
+  uploadedBy String
+  uploadedByUser User @relation(fields: [uploadedBy], references: [id])
+
+  @@map("class_materials")
+}
+
+model ClassRecord {
+  id String @id @default(uuid())
+
+  title String @db.VarChar(200)
+
+  description String?
+
+  fileId String @unique
+  file File @relation(fields: [fileId], references: [id])
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id])
+
+  sectionId String?
+  section Section? @relation(fields: [sectionId], references: [id])
+
+  semesterId String?
+  semester Semester? @relation(fields: [semesterId], references: [id])
+
+  @@map("class_records")
+}
+
+// ============================================================================
+// EVENTS & CALENDAR
+// ============================================================================
+
+model Event {
+  id String @id @default(uuid())
+
+  type EventType
+
+  title String @db.VarChar(200)
+
+  description String?
+
+  semesterId String?
+  semester Semester? @relation(fields: [semesterId], references: [id])
+
+  createdBy String
+  createdByUser User @relation(fields: [createdBy], references: [id])
+
+  startTime DateTime?
+
+  endTime DateTime?
+
+  @@map("events")
+}
+
+// ============================================================================
+// PERFORMANCE TRACKING
+// ============================================================================
+
+model StudentPerformance {
+  id String @id @default(uuid())
+
+  studentId String
+  student StudentProfile @relation(fields: [studentId], references: [id])
+
+  semesterId String
+  semester Semester @relation(fields: [semesterId], references: [id])
+
+  assignmentPercentage Decimal @db.Decimal(5, 2)
+
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("student_performance")
+}

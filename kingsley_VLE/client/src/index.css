@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #F3F4F6; color: #111827; }
+}
+
+@layer components {
+  /* Spinner */
+  .spinner {
+    @apply w-8 h-8 rounded-full border-4 border-brand-100 border-t-brand-700 animate-spin;
+  }
+  .loading-screen {
+    @apply fixed inset-0 flex items-center justify-center bg-white/80;
+  }
+
+  /* Form elements */
+  .form-label  { @apply block text-sm font-medium text-gray-700 mb-1; }
+  .form-input  { @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 focus:border-transparent transition; }
+  .form-group  { @apply flex flex-col mb-4; }
+  .form-row    { @apply grid grid-cols-2 gap-4; }
+
+  /* Buttons */
+  .btn-primary  { @apply bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed; }
+  .btn-secondary { @apply bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-300 transition; }
+  .btn-full     { @apply w-full; }
+  .btn-icon     { @apply p-1.5 rounded-md hover:bg-gray-100 text-base transition cursor-pointer border-0 bg-transparent; }
+
+  /* Badges */
+  .badge         { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
+  .badge-active  { @apply bg-green-100 text-green-700; }
+  .badge-inactive{ @apply bg-red-100   text-red-600; }
+  .badge-id      { @apply bg-gray-100  text-gray-600 font-mono; }
+
+  /* Page layout */
+  .page-container { @apply p-8 max-w-7xl mx-auto; }
+  .page-header    { @apply flex items-start justify-between mb-8; }
+  .page-title     { @apply text-2xl font-bold text-gray-900 mb-0.5; }
+  .page-subtitle  { @apply text-sm text-gray-500 mt-1; }
+
+  /* Stats */
+  .stats-grid  { @apply grid grid-cols-3 gap-5 mb-8; }
+  .stat-card   { @apply bg-white rounded-xl p-5 flex items-center gap-4 shadow-sm border border-gray-100; }
+  .stat-icon   { @apply w-12 h-12 rounded-lg flex items-center justify-center text-xl flex-shrink-0; }
+  .stat-icon--blue   { @apply bg-blue-50; }
+  .stat-icon--green  { @apply bg-green-50; }
+  .stat-icon--orange { @apply bg-orange-50; }
+  .stat-label  { @apply text-xs text-gray-500 mb-0.5; }
+  .stat-value  { @apply text-2xl font-bold text-gray-900; }
+
+  /* Panel */
+  .panel         { @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden; }
+  .panel-header  { @apply flex items-center justify-between px-5 py-4 border-b border-gray-100 gap-4 flex-wrap; }
+  .panel-loading { @apply flex justify-center py-16; }
+
+  /* Tabs */
+  .tab-group    { @apply flex gap-1 bg-gray-100 p-1 rounded-lg; }
+  .tab-btn      { @apply px-4 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 transition border-0 bg-transparent cursor-pointer; }
+  .tab-btn--active { @apply bg-white text-brand-700 shadow-sm font-semibold; }
+
+  /* Search */
+  .search-input { @apply px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 w-56; }
+  .panel-actions { @apply flex items-center gap-3; }
+
+  /* Table */
+  .table-wrapper { @apply overflow-x-auto; }
+  .data-table    { @apply w-full text-sm; }
+  .data-table th { @apply text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-100; }
+  .data-table td { @apply px-5 py-3.5 border-b border-gray-50; }
+  .data-table tbody tr:hover { @apply bg-gray-50; }
+  .td-name     { @apply font-medium text-gray-900; }
+  .td-actions  { @apply flex items-center gap-1; }
+  .table-empty { @apply text-center py-12 text-sm text-gray-400; }
+
+  /* Modal */
+  .modal-overlay { @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4; }
+  .modal         { @apply bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto; }
+  .modal-header  { @apply flex items-center justify-between px-6 py-5 border-b border-gray-100; }
+  .modal-header h3 { @apply text-lg font-semibold text-gray-900; }
+  .modal-close   { @apply text-gray-400 hover:text-gray-600 text-lg w-8 h-8 flex items-center justify-center rounded-md hover:bg-gray-100 transition border-0 bg-transparent cursor-pointer; }
+  .modal-body    { @apply px-6 py-5; }
+  .modal-actions { @apply flex justify-end gap-3 pt-4 mt-2 border-t border-gray-100; }
+
+  /* Login error */
+  .login-error { @apply bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-lg text-sm mb-4; }
+
+  /* Profile card */
+  .profile-card  { @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6; }
+  .profile-section-title { @apply text-base font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100; }
+}
+

@@ -1,0 +1,13 @@
+.dashboard-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background-color: #F3F4F6;
+}
+
+.dashboard-content {
+  margin-left: 230px;
+  flex: 1;
+  min-height: 100vh;
+  overflow-y: auto;
+  background-color: #F3F4F6;
+}
