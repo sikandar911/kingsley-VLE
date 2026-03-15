@@ -184,10 +184,14 @@ export const updateUser = async (req, res) => {
     if (isActive !== undefined) updateData.isActive = isActive
     if (password) updateData.passwordHash = await bcrypt.hash(password, 10)
 
-    if (fullName && user.role === 'student') {
-      updateData.studentProfile = { update: { fullName, ...profileRest } }
-    } else if (fullName && user.role === 'teacher') {
-      updateData.teacherProfile = { update: { fullName, ...profileRest } }
+    if (user.role === 'student') {
+      const profileUpdate = { fullName: fullName || user.studentProfile?.fullName }
+      Object.assign(profileUpdate, profileRest)
+      updateData.studentProfile = { upsert: { create: profileUpdate, update: profileUpdate } }
+    } else if (user.role === 'teacher') {
+      const profileUpdate = { fullName: fullName || user.teacherProfile?.fullName }
+      Object.assign(profileUpdate, profileRest)
+      updateData.teacherProfile = { upsert: { create: profileUpdate, update: profileUpdate } }
     }
 
     const updated = await prisma.user.update({

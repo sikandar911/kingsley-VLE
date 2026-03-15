@@ -38,3 +38,4 @@ logs
 *.key
 auth.json
 config.json (unless template/example)
+

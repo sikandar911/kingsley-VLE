@@ -9,35 +9,15 @@ const menuByRole = {
       path: "/admin/dashboard",
       icon: "⊞",
     },
-    // {
-    //   label: "User Management",
-    //   icon: "👥",
-    //   submenu: [
-    //     { label: "Students", path: "/admin/users?role=student", icon: "🎓" },
-    //     {
-    //       label: "Teachers",
-    //       path: "/admin/users?role=teacher",
-    //       icon: "👨\u200d🏫",
-    //     },
-    //   ],
-    // },
     {
-      label: "Student Access",
-      icon: "📚",
-      submenu: [
-        { label: "My Courses", path: "/student/courses", icon: "📚" },
-        { label: "Assignments", path: "/student/assignments", icon: "📋" },
-        { label: "Results", path: "/student/results", icon: "🏆" },
-      ],
+      label: "User Management",
+      path: "/admin/users",
+      icon: "👥",
     },
     {
-      label: "Teacher Access",
-      icon: "📚",
-      submenu: [
-        { label: "My Courses", path: "/teacher/courses", icon: "📚" },
-        { label: "Assignments", path: "/teacher/assignments", icon: "📋" },
-        { label: "Students", path: "/teacher/students", icon: "🎓" },
-      ],
+      label: "Assignments",
+      path: "/admin/assignments",
+      icon: "📋",
     },
   ],
   student: [

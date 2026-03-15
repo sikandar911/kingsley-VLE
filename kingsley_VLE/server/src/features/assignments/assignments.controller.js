@@ -989,3 +989,66 @@ export const gradeSubmission = async (req, res) => {
     return res.status(500).json({ error: 'Server error' })
   }
 }
+
+/**
+ * @swagger
+ * /api/assignments/meta:
+ *   get:
+ *     summary: Get courses (with sections) and teachers for the assignment creation form
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Courses with sections, and teachers array (admin only)
+ */
+export const getAssignmentsMeta = async (req, res) => {
+  try {
+    let courseWhere = {}
+
+    if (req.user.role === 'teacher') {
+      const teacherProfile = await prisma.teacherProfile.findUnique({ where: { userId: req.user.id } })
+      if (!teacherProfile) return res.status(400).json({ error: 'Teacher profile not found' })
+
+      const teacherCourses = await prisma.teacherCourse.findMany({
+        where: { teacherId: teacherProfile.id },
+        select: { courseId: true },
+      })
+      const courseIds = teacherCourses.map((tc) => tc.courseId)
+      courseWhere = courseIds.length ? { id: { in: courseIds } } : { id: { in: [] } }
+    }
+
+    const courses = await prisma.course.findMany({
+      where: courseWhere,
+      select: {
+        id: true,
+        title: true,
+        sections: {
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+        },
+      },
+      orderBy: { title: 'asc' },
+    })
+
+    const result = { courses }
+
+    if (req.user.role === 'admin') {
+      const teachers = await prisma.teacherProfile.findMany({
+        select: {
+          id: true,
+          teacherId: true,
+          fullName: true,
+          user: { select: { email: true } },
+        },
+        orderBy: { fullName: 'asc' },
+      })
+      result.teachers = teachers
+    }
+
+    return res.json(result)
+  } catch (err) {
+    console.error('Assignment meta error:', err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+}

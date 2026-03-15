@@ -15,6 +15,7 @@ import TeacherCoursesPage from "./Dashboard/Teacher/pages/TeacherCoursesPage";
 import TeacherAssignmentsPage from "./Dashboard/Teacher/pages/TeacherAssignmentsPage";
 import TeacherStudentsPage from "./Dashboard/Teacher/pages/TeacherStudentsPage";
 import TeacherProfilePage from "./Profile/teacher/pages/TeacherProfilePage";
+import AdminAssignmentsPage from "./features/assignments/pages/AdminAssignmentsPage";
 
 export default function App() {
   return (
@@ -30,12 +31,13 @@ export default function App() {
             <Route element={<DashboardLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<AdminUserManagement />} />
+              <Route path="/admin/assignments" element={<AdminAssignmentsPage />} />
             </Route>
           </Route>
 
           {/* Student */}
           <Route
-            element={<ProtectedRoute allowedRoles={["student", "admin"]} />}
+            element={<ProtectedRoute allowedRoles={["student"]} />}
           >
             <Route element={<DashboardLayout />}>
               <Route path="/student/dashboard" element={<StudentDashboard />} />

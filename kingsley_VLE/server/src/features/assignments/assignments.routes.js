@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   createAssignment,
   getAssignmentById,
+  getAssignmentsMeta,
   gradeSubmission,
   listAssignments,
   listAssignmentSubmissions,
@@ -16,6 +17,7 @@ const router = Router()
 router.use(authenticate)
 
 router.get('/', listAssignments)
+router.get('/meta', authorize('admin', 'teacher'), getAssignmentsMeta)
 router.get('/:id', getAssignmentById)
 
 router.post('/', authorize('admin', 'teacher'), createAssignment)
