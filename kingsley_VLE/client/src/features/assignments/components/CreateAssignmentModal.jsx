@@ -175,7 +175,7 @@ export default function CreateAssignmentModal({
             title="Close"
           >
             <svg
-              className="w-4 h-4 border rounded md:w-6 md:h-6"
+              className="w-4 h-5 md:w-6 md:h-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

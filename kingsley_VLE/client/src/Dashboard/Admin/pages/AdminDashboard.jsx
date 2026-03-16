@@ -45,9 +45,9 @@ export default function AdminDashboard() {
   const adminName = user?.email?.split('@')[0]
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 md:mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
           Hello <span className="text-brand-700">{adminName},</span>
         </h1>
@@ -55,13 +55,13 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6 md:mb-8">
         {[
           { label: 'Total Students', value: stats.totalStudents, icon: '🎓', bg: 'bg-blue-50' },
           { label: 'Total Teachers', value: stats.totalTeachers, icon: '👨\u200d🏫', bg: 'bg-green-50' },
           { label: 'Total Courses',  value: stats.totalCourses,  icon: '📚', bg: 'bg-orange-50' },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-xl p-5 flex items-center gap-4 shadow-sm border border-gray-100">
+          <div key={s.label} className="bg-white rounded-xl p-4 md:p-3 lg:p-5 flex items-center gap-4 shadow-sm border border-gray-100">
             <div className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center text-2xl flex-shrink-0`}>{s.icon}</div>
             <div>
               <p className="text-xs text-gray-500 mb-0.5">{s.label}</p>
@@ -73,7 +73,7 @@ export default function AdminDashboard() {
 
       {/* Users Panel */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 gap-4 flex-wrap">
+        <div className=" flex items-center justify-between px-5 py-4 border-b border-gray-100 gap-4 flex-wrap">
           {/* Tabs */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
             {['student', 'teacher'].map((r) => (
@@ -88,15 +88,15 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="md:flex items-center md:gap-14 lg:gap-3">
             <input
               type="text"
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 w-56"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 w-full md:w-56"
               placeholder="Search by name, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="btn-primary" onClick={handleCreate}>+ Create Account</button>
+            <button className="btn-primary mt-3 md:mt-0" onClick={handleCreate}>+ Create Account</button>
           </div>
         </div>
 

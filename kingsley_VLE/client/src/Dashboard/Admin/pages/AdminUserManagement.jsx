@@ -68,9 +68,9 @@ export default function AdminUserManagement() {
   const userType = tab === "student" ? "Students" : "Teachers";
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 md:mb-8">
         <h1 className="text-2xl font-bold text-gray-900">{userType}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Manage {userType.toLowerCase()} accounts
@@ -96,15 +96,15 @@ export default function AdminUserManagement() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="md:flex items-center md:gap-14 lg:gap-3">
             <input
               type="text"
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 w-56"
+              className="px-3 w-full md:w-56 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 w-56"
               placeholder="Search by name, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="btn-primary" onClick={handleCreate}>
+            <button className="btn-primary mt-3 md:mt-0" onClick={handleCreate}>
               + Create Account
             </button>
           </div>
