@@ -30,7 +30,7 @@ const menuByRole = {
       label: "Courses & Learning",
       icon: "📚",
       submenu: [
-        { label: "My Courses", path: "/student/courses", icon: "📚" },
+        { label: "My Courses", path: "/student/courses", icon: "🎓" },
         { label: "Assignments", path: "/student/assignments", icon: "📋" },
         { label: "Results", path: "/student/results", icon: "🏆" },
       ],
@@ -48,12 +48,12 @@ const menuByRole = {
       icon: "⊞",
     },
     {
-      label: "Teaching",
+      label: "Teacher",
       icon: "📚",
       submenu: [
-        { label: "My Courses", path: "/teacher/courses", icon: "📚" },
+        { label: "My Courses", path: "/teacher/courses", icon: "🎓" },
         { label: "Assignments", path: "/teacher/assignments", icon: "📋" },
-        { label: "Students", path: "/teacher/students", icon: "🎓" },
+        { label: "Students", path: "/teacher/students", icon: "👥" },
       ],
     },
     {
@@ -70,7 +70,7 @@ const portalTitle = {
   teacher: "Teacher Portal",
 };
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = true, onClose = () => {} }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const menuItems = menuByRole[user?.role] || [];
@@ -97,10 +97,34 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-[230px] min-h-screen bg-brand-700 flex flex-col fixed left-0 top-0 bottom-0 z-50 text-white">
+    <aside
+      className={`w-[230px] min-h-screen bg-brand-700 flex flex-col fixed left-0 top-0 bottom-0 z-50 text-white transition-transform duration-300 md:translate-x-0 ${
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      }`}
+    >
       {/* Header */}
-      <div className="px-5 py-6 border-b border-white/15">
+      <div className="px-5 py-6 border-b border-white/15 flex items-center justify-between">
         <h2 className="text-base font-bold tracking-tight">{title}</h2>
+        {/* Close Button - Only visible on small screens */}
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 rounded-lg hover:bg-white/10 transition"
+          aria-label="Close menu"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Nav */}
@@ -116,7 +140,7 @@ export default function Sidebar() {
               >
                 <div className="flex items-center gap-3">
                   <span className="w-5 text-center text-base">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="text-[13px]">{item.label}</span>
                 </div>
                 <span
                   className={`text-xs transition-transform ${expandedItems[item.label] ? "rotate-180" : ""}`}
@@ -128,6 +152,7 @@ export default function Sidebar() {
               // Regular Link Item
               <NavLink
                 to={item.path}
+                onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
@@ -148,6 +173,7 @@ export default function Sidebar() {
                   <NavLink
                     key={subitem.path}
                     to={subitem.path}
+                    onClick={onClose}
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                         isActive

@@ -59,19 +59,19 @@ export default function TeacherProfilePage() {
   const profile = user?.teacherProfile
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+    <div className="p-4 md:p-8 max-w-3xl mx-auto">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-xl md:text-2xl lg:text-2xl font-bold text-gray-900">My Profile</h1>
         <p className="text-sm text-gray-500 mt-1">Update your professional information</p>
       </div>
 
       {/* Avatar card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 flex items-center gap-5">
-        <div className="w-16 h-16 rounded-full bg-brand-700 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-4 md:mb-6 flex items-center gap-4 md:gap-5">
+        <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-brand-700 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
           {profile?.fullName?.[0]?.toUpperCase() || '?'}
         </div>
         <div>
-          <p className="font-semibold text-gray-900 text-lg">{profile?.fullName}</p>
+          <p className="text-base sm:text-sm md:text-sm lg:text-xl font-semibold text-gray-900 ">{profile?.fullName}</p>
           <p className="text-sm text-gray-500">{user?.email}</p>
           <span className="inline-block mt-1 text-xs font-medium bg-brand-50 text-brand-700 px-2.5 py-0.5 rounded-full">
             {profile?.teacherId}
@@ -84,9 +84,9 @@ export default function TeacherProfilePage() {
         {success && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-lg text-sm">{success}</div>}
 
         <h3 className="text-base font-semibold text-gray-800 pb-2 border-b border-gray-100">Professional Info</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label className="block text-sm mt-[-9px] md:mt-0 font-medium text-gray-700 mb-1">Full Name</label>
             <input name="fullName" className={input} value={form.fullName} onChange={set} />
           </div>
           <div>
@@ -110,11 +110,11 @@ export default function TeacherProfilePage() {
 
         <h3 className="text-base font-semibold text-gray-800 pb-2 border-b border-gray-100 pt-2">Change Password</h3>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+          <label className="block text-sm mt-[-9px] md:mt-0 font-medium text-gray-700 mb-1">New Password</label>
           <input name="password" type="password" className={input} value={form.password} onChange={set} placeholder="Leave blank to keep current" />
         </div>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex md:justify-end md:pt-0">
           <button type="submit" className="btn-primary px-6" disabled={loading}>
             {loading ? 'Saving...' : 'Save Changes'}
           </button>

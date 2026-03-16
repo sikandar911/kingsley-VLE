@@ -7,8 +7,8 @@ export default function StudentDashboard() {
   const name = profile?.fullName || user?.email
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="mb-8">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <div className="mb-6 md:mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
           Hello <span className="text-brand-700">{name},</span>
         </h1>
@@ -16,7 +16,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid md:grid-cols-2 sm:grid-cols-4 gap-3.5 mb-6 md:mb-8">
         {[
           { label: 'Student ID', value: profile?.studentId || '—', icon: '🪪' },
           { label: 'Status', value: profile?.admissionStatus || 'Active', icon: '✅' },
@@ -35,8 +35,8 @@ export default function StudentDashboard() {
 
       {/* Profile completion prompt */}
       {!profile?.phone && (
-        <div className="bg-brand-50 border border-brand-200 rounded-xl p-5 flex items-center justify-between">
-          <div>
+    <div className="bg-brand-50 border border-brand-200 rounded-xl p-5 md:flex items-center justify-between md:gap-2">
+          <div className='mb-4 md:mb-0'>
             <p className="font-semibold text-brand-700">Complete your profile</p>
             <p className="text-sm text-brand-600 mt-0.5">Add your phone, address and other details to your profile.</p>
           </div>

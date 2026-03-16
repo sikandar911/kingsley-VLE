@@ -7,15 +7,15 @@ export default function TeacherDashboard() {
   const name = profile?.fullName || user?.email
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="mb-8">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <div className="mb-6 md:mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
           Hello <span className="text-brand-700">{name},</span>
         </h1>
         <p className="text-sm text-gray-500 mt-1">Welcome to your teacher portal</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid md:grid-cols-2 sm:grid-cols-4 gap-3.5 mb-6 md:mb-8">
         {[
           { label: 'Teacher ID', value: profile?.teacherId || '—', icon: '🪪' },
           { label: 'Specialization', value: profile?.specialization || '—', icon: '🎯' },
@@ -33,8 +33,8 @@ export default function TeacherDashboard() {
       </div>
 
       {!profile?.description && (
-        <div className="bg-brand-50 border border-brand-200 rounded-xl p-5 flex items-center justify-between">
-          <div>
+        <div className="bg-brand-50 border border-brand-200 rounded-xl p-5 md:flex items-center justify-between md:gap-2">
+          <div className='mb-4 md:mb-0'>
             <p className="font-semibold text-brand-700">Complete your profile</p>
             <p className="text-sm text-brand-600 mt-0.5">Add your bio, specialization and experience to your profile.</p>
           </div>

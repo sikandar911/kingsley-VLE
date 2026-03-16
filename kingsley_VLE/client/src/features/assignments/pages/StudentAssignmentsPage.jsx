@@ -88,13 +88,13 @@ export default function StudentAssignmentsPage() {
   return (
     <div className="min-h-screen bg-[#F4F7F6]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-8 py-6">
+      <div className="bg-white border-b border-gray-200 px-5 md:px-8 py-6">
         <h1 className="text-3xl font-bold text-gray-900">My Assignments</h1>
         <p className="text-sm text-gray-500 mt-1">Assignments › My List</p>
       </div>
 
       {/* Stats */}
-      <div className="px-8 py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="px-5 md:px-8 py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
           <div
             key={s.label}
@@ -114,7 +114,7 @@ export default function StudentAssignmentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="px-8 pb-5 flex flex-col sm:flex-row gap-4">
+      <div className="px-5 md:px-8 pb-5 flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <input
             type="text"
@@ -129,7 +129,7 @@ export default function StudentAssignmentsPage() {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white"
         >
-          <option value="">All Statuses</option>
+          <option value="">All Status</option>
           <option value="submitted">Submitted</option>
           <option value="pending">Pending</option>
           <option value="graded">Graded</option>
@@ -139,7 +139,7 @@ export default function StudentAssignmentsPage() {
       </div>
 
       {/* Table */}
-      <div className="px-8 pb-8">
+      <div className="px-5 md:px-8 pb-8 ">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-48">
@@ -148,7 +148,7 @@ export default function StudentAssignmentsPage() {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-400">
               <span className="text-5xl mb-3">📋</span>
-              <p className="text-sm">
+              <p className="text-sm px-4 md:px-0 text-center md:text-center">
                 {assignments.length === 0
                   ? 'No assignments have been assigned to you yet'
                   : 'No matching assignments'}
