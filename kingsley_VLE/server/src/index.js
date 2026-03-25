@@ -7,6 +7,10 @@ import authRoutes from './features/auth/auth.routes.js'
 import adminRoutes from './features/admin/admin.routes.js'
 import assignmentRoutes from './features/assignments/assignments.routes.js'
 import usersRoutes from './features/users/users.routes.js'
+import courseRoutes from './features/courses/courses.routes.js'
+import sectionRoutes from './features/sections/sections.routes.js'
+import academicRoutes from './features/academic/academic.routes.js'
+import enrollmentRoutes from './features/enrollments/enrollments.routes.js'
 import prisma from './config/prisma.js'
 
 const app = express()
@@ -24,6 +28,10 @@ app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/assignments', assignmentRoutes)
 app.use('/api/users', usersRoutes)
+app.use('/api/courses', courseRoutes)
+app.use('/api/sections', sectionRoutes)
+app.use('/api', academicRoutes)          // exposes /api/sessions and /api/semesters
+app.use('/api/enrollments', enrollmentRoutes)
 
 // Health check
 app.get('/health', (req, res) => {

@@ -15,6 +15,20 @@ const menuByRole = {
       icon: "👥",
     },
     {
+      label: "Academic",
+      icon: "🏛️",
+      submenu: [
+        { label: "Sessions & Semesters", path: "/admin/academic", icon: "📅" },
+        { label: "Courses", path: "/admin/courses", icon: "📚" },
+        { label: "Sections", path: "/admin/sections", icon: "🏫" },
+      ],
+    },
+    {
+      label: "Enrollments",
+      path: "/admin/enrollments",
+      icon: "📝",
+    },
+    {
       label: "Assignments",
       path: "/admin/assignments",
       icon: "📋",

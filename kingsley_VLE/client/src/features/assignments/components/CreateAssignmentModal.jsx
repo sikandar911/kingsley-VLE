@@ -6,6 +6,7 @@ const INITIAL = {
   teacherId: "",
   courseId: "",
   sectionId: "",
+  semesterId: "",
   title: "",
   description: "",
   teacherInstruction: "",
@@ -40,6 +41,7 @@ export default function CreateAssignmentModal({
           teacherId: editAssignment.teacher?.id || "",
           courseId: editAssignment.courseId || "",
           sectionId: editAssignment.sectionId || "",
+          semesterId: editAssignment.semesterId || "",
           title: editAssignment.title || "",
           description: editAssignment.description || "",
           teacherInstruction: editAssignment.teacherInstruction || "",
@@ -69,6 +71,7 @@ export default function CreateAssignmentModal({
         if (form.courseId) {
           const c = courseList.find((c) => c.id === form.courseId);
           setSections(c?.sections || []);
+          // if editing with a courseId, also reflect the auto semesterId
         }
       })
       .catch(() =>
@@ -82,7 +85,12 @@ export default function CreateAssignmentModal({
     if (name === "courseId") {
       const course = courses.find((c) => c.id === value);
       setSections(course?.sections || []);
-      setForm((prev) => ({ ...prev, courseId: value, sectionId: "" }));
+      setForm((prev) => ({
+        ...prev,
+        courseId: value,
+        sectionId: "",
+        semesterId: course?.semesterId || "",
+      }));
       return;
     }
     setForm((prev) => ({
@@ -117,6 +125,7 @@ export default function CreateAssignmentModal({
         instructions: form.teacherInstruction || null,
         courseId: form.courseId,
         sectionId: form.sectionId || null,
+        semesterId: form.semesterId || null,
         dueDate: form.dueDate || null,
         totalMarks: Number(form.totalMarks),
         passingMarks:
@@ -219,10 +228,10 @@ export default function CreateAssignmentModal({
               </div>
             )}
 
-            {/* Top row: Teacher (admin), Course, Section */}
+            {/* Top row: Teacher (admin), Course, Section, Semester */}
             <div className="bg-gray-50 rounded-lg p-6">
               <div
-                className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+                className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}
               >
                 {isAdmin && (
                   <div>
@@ -265,6 +274,24 @@ export default function CreateAssignmentModal({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Semester
+                  </label>
+                  <div className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600 min-h-[42px]">
+                    {form.semesterId
+                      ? (() => {
+                          const c = courses.find((c) => c.id === form.courseId);
+                          return c?.semester
+                            ? `${c.semester.name}${c.semester.year ? ` (${c.semester.year})` : ""}`
+                            : "Auto-set from course";
+                        })()
+                      : form.courseId
+                        ? "Course has no semester"
+                        : "Select a course first"}
+                  </div>
                 </div>
 
                 <div>

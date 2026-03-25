@@ -145,8 +145,12 @@ const validateAssignmentPayload = async (body, { requireTeacherId }) => {
     return 'title and courseId are required'
   }
 
-  if (body.targetType === 'section' && !body.sectionId) {
-    return 'sectionId is required when targetType is section'
+  if (!body.semesterId) {
+    return 'semesterId is required'
+  }
+
+  if (!body.sectionId) {
+    return 'sectionId is required'
   }
 
   const totalMarks = body.totalMarks !== undefined ? Number(body.totalMarks) : 100
@@ -1023,6 +1027,8 @@ export const getAssignmentsMeta = async (req, res) => {
       select: {
         id: true,
         title: true,
+        semesterId: true,
+        semester: { select: { id: true, name: true, year: true } },
         sections: {
           select: { id: true, name: true },
           orderBy: { name: 'asc' },

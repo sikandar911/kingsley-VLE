@@ -16,6 +16,10 @@ import TeacherAssignmentsPage from "./Dashboard/Teacher/pages/TeacherAssignments
 import TeacherStudentsPage from "./Dashboard/Teacher/pages/TeacherStudentsPage";
 import TeacherProfilePage from "./Profile/teacher/pages/TeacherProfilePage";
 import AdminAssignmentsPage from "./features/assignments/pages/AdminAssignmentsPage";
+import AdminCoursesPage from "./features/courses/pages/AdminCoursesPage";
+import AdminSectionsPage from "./features/sections/pages/AdminSectionsPage";
+import AdminAcademicPage from "./features/academic/pages/AdminAcademicPage";
+import AdminEnrollmentsPage from "./features/enrollments/pages/AdminEnrollmentsPage";
 
 export default function App() {
   return (
@@ -32,6 +36,10 @@ export default function App() {
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<AdminUserManagement />} />
               <Route path="/admin/assignments" element={<AdminAssignmentsPage />} />
+              <Route path="/admin/courses" element={<AdminCoursesPage />} />
+              <Route path="/admin/sections" element={<AdminSectionsPage />} />
+              <Route path="/admin/academic" element={<AdminAcademicPage />} />
+              <Route path="/admin/enrollments" element={<AdminEnrollmentsPage />} />
             </Route>
           </Route>
 
