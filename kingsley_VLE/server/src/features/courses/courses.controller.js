@@ -1,4 +1,5 @@
 import prisma from '../../config/prisma.js'
+import { deleteFromAzure } from '../../config/azure.storage.js'
 
 /**
  * @swagger
@@ -249,6 +250,22 @@ export const deleteCourse = async (req, res) => {
     const existing = await prisma.course.findUnique({ where: { id: req.params.id } })
     if (!existing) return res.status(404).json({ error: 'Course not found' })
 
+    // Clean up class materials: delete Azure blobs + File records before course delete
+    const materials = await prisma.classMaterial.findMany({
+      where: { courseId: req.params.id },
+      include: { file: true },
+    })
+    for (const material of materials) {
+      if (material.file?.slug) await deleteFromAzure(material.file.slug)
+    }
+    const fileIds = materials.map((m) => m.fileId).filter(Boolean)
+    if (fileIds.length > 0) {
+      // Unlink before delete to avoid FK constraint on classMaterial
+      await prisma.classMaterial.deleteMany({ where: { courseId: req.params.id } })
+      await prisma.file.deleteMany({ where: { id: { in: fileIds } } })
+    }
+
+    // Delete the course — ClassRecords cascade via onDelete:Cascade in schema
     await prisma.course.delete({ where: { id: req.params.id } })
     return res.json({ message: 'Course deleted successfully' })
   } catch (err) {

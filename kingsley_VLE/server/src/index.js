@@ -11,6 +11,10 @@ import courseRoutes from './features/courses/courses.routes.js'
 import sectionRoutes from './features/sections/sections.routes.js'
 import academicRoutes from './features/academic/academic.routes.js'
 import enrollmentRoutes from './features/enrollments/enrollments.routes.js'
+import fileRoutes from './features/files/files.routes.js'
+import attendanceRoutes from './features/attendance/attendance.routes.js'
+import classMaterialRoutes from './features/class-materials/classMaterials.routes.js'
+import classRecordRoutes from './features/class-records/classRecords.routes.js'
 import prisma from './config/prisma.js'
 
 const app = express()
@@ -32,6 +36,10 @@ app.use('/api/courses', courseRoutes)
 app.use('/api/sections', sectionRoutes)
 app.use('/api', academicRoutes)          // exposes /api/sessions and /api/semesters
 app.use('/api/enrollments', enrollmentRoutes)
+app.use('/api/files', fileRoutes)
+app.use('/api/attendance', attendanceRoutes)
+app.use('/api/class-materials', classMaterialRoutes)
+app.use('/api/class-records', classRecordRoutes)
 
 // Health check
 app.get('/health', (req, res) => {

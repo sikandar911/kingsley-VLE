@@ -326,7 +326,6 @@ model File {
   // Relations
   assignmentFiles AssignmentFile[]
   classMaterial ClassMaterial?
-  classRecord ClassRecord?
   assignmentSubmissions AssignmentSubmission[]
 
   @@map("files")
@@ -492,7 +491,7 @@ model ClassMaterial {
   file File @relation(fields: [fileId], references: [id])
 
   courseId String
-  course Course @relation(fields: [courseId], references: [id])
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   sectionId String?
   section Section? @relation(fields: [sectionId], references: [id])
@@ -502,6 +501,9 @@ model ClassMaterial {
 
   uploadedBy String
   uploadedByUser User @relation(fields: [uploadedBy], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("class_materials")
 }
@@ -513,17 +515,19 @@ model ClassRecord {
 
   description String?
 
-  fileId String @unique
-  file File @relation(fields: [fileId], references: [id])
+  url String @db.Text
 
   courseId String
-  course Course @relation(fields: [courseId], references: [id])
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   sectionId String?
   section Section? @relation(fields: [sectionId], references: [id])
 
   semesterId String?
   semester Semester? @relation(fields: [semesterId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("class_records")
 }
