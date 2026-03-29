@@ -27,6 +27,12 @@ import prisma from '../../config/prisma.js'
  *     responses:
  *       200:
  *         description: List of sections
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Section'
  */
 export const listSections = async (req, res) => {
   const { courseId, semesterId } = req.query
@@ -68,8 +74,16 @@ export const listSections = async (req, res) => {
  *     responses:
  *       200:
  *         description: Section data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Section'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSection = async (req, res) => {
   try {
@@ -125,10 +139,22 @@ export const getSection = async (req, res) => {
  *     responses:
  *       201:
  *         description: Section created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Section'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Course or semester not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createSection = async (req, res) => {
   const { name, courseId, semesterId, assignedTeacherId, description } = req.body
@@ -208,8 +234,16 @@ export const createSection = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated section
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Section'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSection = async (req, res) => {
   const { name, semesterId, assignedTeacherId, description } = req.body
@@ -264,8 +298,16 @@ export const updateSection = async (req, res) => {
  *     responses:
  *       200:
  *         description: Section deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSection = async (req, res) => {
   try {

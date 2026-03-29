@@ -36,6 +36,12 @@ import prisma from '../../config/prisma.js'
  *     responses:
  *       200:
  *         description: List of enrollments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Enrollment'
  */
 export const listEnrollments = async (req, res) => {
   const { courseId, sectionId, semesterId, studentId } = req.query
@@ -98,8 +104,16 @@ export const listEnrollments = async (req, res) => {
  *     responses:
  *       201:
  *         description: Enrollment created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Enrollment'
  *       409:
  *         description: Already enrolled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createEnrollment = async (req, res) => {
   const { studentId, courseId, sectionId, semesterId } = req.body
@@ -185,8 +199,16 @@ export const createEnrollment = async (req, res) => {
  *     responses:
  *       200:
  *         description: Enrollment data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Enrollment'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getEnrollment = async (req, res) => {
   try {
@@ -225,8 +247,16 @@ export const getEnrollment = async (req, res) => {
  *     responses:
  *       200:
  *         description: Enrollment removed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteEnrollment = async (req, res) => {
   try {
@@ -272,6 +302,12 @@ export const deleteEnrollment = async (req, res) => {
  *     responses:
  *       200:
  *         description: List of teacher-course assignments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/TeacherCourse'
  */
 export const listTeacherCourses = async (req, res) => {
   const { courseId, teacherId } = req.query
@@ -327,8 +363,16 @@ export const listTeacherCourses = async (req, res) => {
  *     responses:
  *       201:
  *         description: Assignment created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TeacherCourse'
  *       409:
  *         description: Teacher already assigned to this course
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createTeacherCourse = async (req, res) => {
   const { teacherId, courseId } = req.body
@@ -379,8 +423,16 @@ export const createTeacherCourse = async (req, res) => {
  *     responses:
  *       200:
  *         description: Assignment removed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteTeacherCourse = async (req, res) => {
   try {

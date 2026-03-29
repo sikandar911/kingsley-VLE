@@ -12,6 +12,10 @@ import prisma from '../../config/prisma.js'
  *     responses:
  *       200:
  *         description: User profile data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
  */
 export const getProfile = async (req, res) => {
   try {
@@ -70,6 +74,10 @@ export const getProfile = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
  */
 export const updateProfile = async (req, res) => {
   const { password, username, fullName, dateOfBirth, ...profileRest } = req.body

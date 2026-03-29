@@ -43,6 +43,10 @@ const materialInclude = {
  *     responses:
  *       200:
  *         description: List of materials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassMaterialListResponse'
  */
 export const listClassMaterials = async (req, res) => {
   const { courseId, sectionId, semesterId, page = 1, limit = 20 } = req.query
@@ -86,8 +90,16 @@ export const listClassMaterials = async (req, res) => {
  *     responses:
  *       200:
  *         description: Class material record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassMaterial'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getClassMaterial = async (req, res) => {
   try {
@@ -134,8 +146,16 @@ export const getClassMaterial = async (req, res) => {
  *     responses:
  *       201:
  *         description: Created class material
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassMaterial'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createClassMaterial = async (req, res) => {
   const { title, description, fileId, courseId, sectionId, semesterId } = req.body
@@ -205,8 +225,16 @@ export const createClassMaterial = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated material
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassMaterial'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateClassMaterial = async (req, res) => {
   const { title, description, sectionId, semesterId } = req.body
@@ -248,8 +276,16 @@ export const updateClassMaterial = async (req, res) => {
  *     responses:
  *       200:
  *         description: Deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteClassMaterial = async (req, res) => {
   try {

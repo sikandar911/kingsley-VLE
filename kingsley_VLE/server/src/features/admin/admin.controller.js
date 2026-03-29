@@ -39,8 +39,16 @@ import prisma from '../../config/prisma.js'
  *     responses:
  *       201:
  *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
  *       409:
  *         description: Email or username already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createUser = async (req, res) => {
   const { username, email, password, role, fullName, studentId, teacherId, ...profileRest } = req.body
@@ -118,6 +126,12 @@ export const createUser = async (req, res) => {
  *     responses:
  *       200:
  *         description: Array of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
  */
 export const listUsers = async (req, res) => {
   const { role } = req.query
@@ -166,6 +180,10 @@ export const listUsers = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
  */
 export const updateUser = async (req, res) => {
   const { id } = req.params
@@ -225,8 +243,16 @@ export const updateUser = async (req, res) => {
  *     responses:
  *       200:
  *         description: User deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       403:
  *         description: Cannot delete admin accounts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteUser = async (req, res) => {
   const { id } = req.params
@@ -253,6 +279,10 @@ export const deleteUser = async (req, res) => {
  *     responses:
  *       200:
  *         description: Dashboard statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AdminStats'
  */
 export const getStats = async (req, res) => {
   try {

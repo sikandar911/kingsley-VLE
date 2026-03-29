@@ -30,6 +30,10 @@ import { deleteFromAzure } from '../../config/azure.storage.js'
  *     responses:
  *       200:
  *         description: List of courses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CourseListResponse'
  */
 export const listCourses = async (req, res) => {
   const { search, page = 1, limit = 20 } = req.query
@@ -88,8 +92,16 @@ export const listCourses = async (req, res) => {
  *     responses:
  *       200:
  *         description: Course data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Course'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCourse = async (req, res) => {
   try {
@@ -143,8 +155,16 @@ export const getCourse = async (req, res) => {
  *     responses:
  *       201:
  *         description: Course created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Course'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createCourse = async (req, res) => {
   const { title, description, semesterId } = req.body
@@ -197,8 +217,16 @@ export const createCourse = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated course
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Course'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateCourse = async (req, res) => {
   const { title, description, semesterId } = req.body
@@ -242,8 +270,16 @@ export const updateCourse = async (req, res) => {
  *     responses:
  *       200:
  *         description: Course deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteCourse = async (req, res) => {
   try {
