@@ -95,8 +95,8 @@ export default function SessionFormModal({ onClose, onSaved, editSession }) {
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group mb-0">
+          <div className="md:form-row">
+            <div className="form-group md:mb-0">
               <label className="form-label">Start Date</label>
               <input
                 type="date"

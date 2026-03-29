@@ -42,7 +42,7 @@
 
   /* Stats */
   .stats-grid  { @apply grid grid-cols-3 gap-5 mb-8; }
-  .stat-card   { @apply bg-white rounded-xl p-5 flex items-center gap-4 shadow-sm border border-gray-100; }
+  .stat-card   { @apply bg-white rounded-xl p-4 flex items-center gap-4 shadow-sm border border-gray-100; }
   .stat-icon   { @apply w-12 h-12 rounded-lg flex items-center justify-center text-xl flex-shrink-0; }
   .stat-icon--blue   { @apply bg-blue-50; }
   .stat-icon--green  { @apply bg-green-50; }

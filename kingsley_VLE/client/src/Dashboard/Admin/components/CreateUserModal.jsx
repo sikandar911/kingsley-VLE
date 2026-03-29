@@ -50,7 +50,7 @@ export default function CreateUserModal({ onClose, onCreated, editUser }) {
     }
   }
 
-  const input = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 focus:border-transparent'
+  const input = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 focus:border-transparent'
 
   return (
     <div
@@ -70,7 +70,7 @@ export default function CreateUserModal({ onClose, onCreated, editUser }) {
         <form onSubmit={handleSubmit} className="px-6 py-5">
           {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-lg text-sm mb-4">{error}</div>}
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
               <input name="fullName" className={input} value={form.fullName} onChange={set} required placeholder="Full name" />
@@ -84,7 +84,7 @@ export default function CreateUserModal({ onClose, onCreated, editUser }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
               <input name="email" type="email" className={input} value={form.email} onChange={set} required placeholder="email@example.com" />
@@ -108,7 +108,7 @@ export default function CreateUserModal({ onClose, onCreated, editUser }) {
           </div>
 
           {form.role === 'student' && (
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
                 <input name="studentId" className={input} value={form.studentId} onChange={set} placeholder="Auto-generated if blank" />
@@ -121,7 +121,7 @@ export default function CreateUserModal({ onClose, onCreated, editUser }) {
           )}
 
           {form.role === 'teacher' && (
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Teacher ID</label>
                 <input name="teacherId" className={input} value={form.teacherId} onChange={set} placeholder="Auto-generated if blank" />

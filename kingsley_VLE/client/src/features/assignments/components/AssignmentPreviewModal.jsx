@@ -1,29 +1,29 @@
-import { useState } from 'react'
-import ViewSubmissionsModal from './ViewSubmissionsModal'
-import StudentSubmitModal from './StudentSubmitModal'
+import { useState } from "react";
+import ViewSubmissionsModal from "./ViewSubmissionsModal";
+import StudentSubmitModal from "./StudentSubmitModal";
 
 const fmt = (d) =>
   d
-    ? new Date(d).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+    ? new Date(d).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       })
-    : '—'
+    : "—";
 
 const statusCls = {
-  draft: 'bg-amber-100 text-amber-700',
-  published: 'bg-green-100 text-green-700',
-  closed: 'bg-red-100 text-red-700',
-}
+  draft: "bg-amber-100 text-amber-700",
+  published: "bg-green-100 text-green-700",
+  closed: "bg-red-100 text-red-700",
+};
 
 const subStatusCls = {
-  submitted: 'bg-blue-100 text-blue-700',
-  late: 'bg-orange-100 text-orange-700',
-  missing: 'bg-red-100 text-red-700',
-}
+  submitted: "bg-blue-100 text-blue-700",
+  late: "bg-orange-100 text-orange-700",
+  missing: "bg-red-100 text-red-700",
+};
 
 export default function AssignmentPreviewModal({
   assignment,
@@ -32,53 +32,72 @@ export default function AssignmentPreviewModal({
   onEdit,
   onRefresh,
 }) {
-  const [showSubmissions, setShowSubmissions] = useState(false)
-  const [showSubmit, setShowSubmit] = useState(false)
+  const [showSubmissions, setShowSubmissions] = useState(false);
+  const [showSubmit, setShowSubmit] = useState(false);
 
-  const mySubmissions = assignment.submissions || []
-  const isOverdue = Boolean(assignment.dueDate && new Date() > new Date(assignment.dueDate))
+  const mySubmissions = assignment.submissions || [];
+  const isOverdue = Boolean(
+    assignment.dueDate && new Date() > new Date(assignment.dueDate),
+  );
   const canSubmit =
-    role === 'student' &&
-    assignment.status === 'published' &&
-    (!isOverdue || assignment.allowLateSubmission)
+    role === "student" &&
+    assignment.status === "published" &&
+    (!isOverdue || assignment.allowLateSubmission);
 
   return (
     <>
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 z-50">
         <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-8 py-6 flex items-start justify-between z-10">
-            <div className="flex-1 min-w-0 pr-4">
-              <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 md:px-8 py-4 md:py-6 z-10 relative">
+            <div className="flex-1 min-w-0 pr-10">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 leading-tight">
                 {assignment.title}
               </h1>
-              <p className="text-sm text-gray-500 mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              <p className="text-xs md:text-sm text-gray-500 mt-2 flex flex-wrap gap-x-3 gap-y-1">
                 {assignment.course && (
                   <span>
-                    Course: <strong className="text-gray-700">{assignment.course.title}</strong>
+                    Course:{" "}
+                    <strong className="text-gray-700">
+                      {assignment.course.title}
+                    </strong>
                   </span>
                 )}
                 {assignment.section && (
                   <span>
-                    Section: <strong className="text-gray-700">{assignment.section.name}</strong>
+                    Section:{" "}
+                    <strong className="text-gray-700">
+                      {assignment.section.name}
+                    </strong>
                   </span>
                 )}
                 {assignment.teacher && (
                   <span>
-                    Instructor:{' '}
-                    <strong className="text-gray-700">{assignment.teacher.fullName}</strong>
+                    Instructor:{" "}
+                    <strong className="text-gray-700">
+                      {assignment.teacher.fullName}
+                    </strong>
                   </span>
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
+
+            <div className="absolute top-4 md:top-6 right-4 md:right-8 flex flex-col-reverse md:flex-row items-center gap-3">
               <span
-                className={`px-3 py-1.5 rounded-full text-sm font-semibold capitalize ${statusCls[assignment.status] || 'bg-gray-100 text-gray-600'}`}
+                className={`mt-2.5 md:mt-0 px-2 md:px-3 py-1.5 rounded-full text-[10.5px] md:text-sm font-semibold capitalize whitespace-nowrap ${statusCls[assignment.status] || "bg-gray-100 text-gray-600"}`}
               >
                 {assignment.status}
               </span>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+              >
+                <svg
+                  className="w-5 h-5 md:w-6 md:h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -92,13 +111,15 @@ export default function AssignmentPreviewModal({
 
           {/* Body */}
           <div className="overflow-y-auto flex-1">
-            <div className="p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="p-5 md:p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-1 gap-5 md:gap-5 lg:gap-0">
                 {/* Left column */}
-                <div className="lg:col-span-2 space-y-8">
+                <div className="lg:col-span-2 space-y-8 lg:mb-5">
                   {assignment.description && (
                     <div>
-                      <h2 className="text-base font-bold text-gray-900 mb-3">Description</h2>
+                      <h2 className="text-base font-bold text-gray-900 mb-3">
+                        Description
+                      </h2>
                       <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
                         {assignment.description}
                       </p>
@@ -106,8 +127,10 @@ export default function AssignmentPreviewModal({
                   )}
 
                   {assignment.teacherInstruction && (
-                    <div className="bg-slate-50 rounded-lg p-6 border border-gray-200">
-                      <h2 className="text-base font-bold text-gray-900 mb-3">Instructions</h2>
+                    <div className=" bg-slate-50  rounded-lg p-6 border border-gray-200">
+                      <h2 className="text-base font-bold text-gray-900 mb-3">
+                        Instructions
+                      </h2>
                       <div className="text-gray-700 text-sm whitespace-pre-line leading-relaxed">
                         {assignment.teacherInstruction}
                       </div>
@@ -116,7 +139,9 @@ export default function AssignmentPreviewModal({
 
                   {assignment.rubrics?.length > 0 && (
                     <div>
-                      <h2 className="text-base font-bold text-gray-900 mb-3">Grading Rubric</h2>
+                      <h2 className="text-base font-bold text-gray-900 mb-3">
+                        Grading Rubric
+                      </h2>
                       <div className="border border-gray-200 rounded-lg overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50">
@@ -132,7 +157,9 @@ export default function AssignmentPreviewModal({
                           <tbody className="divide-y divide-gray-100">
                             {assignment.rubrics.map((r) => (
                               <tr key={r.id}>
-                                <td className="px-4 py-3 text-gray-700">{r.criteria}</td>
+                                <td className="px-4 py-3 text-gray-700">
+                                  {r.criteria}
+                                </td>
                                 <td className="px-4 py-3 text-right font-semibold text-gray-900">
                                   {r.maxMarks}
                                 </td>
@@ -145,9 +172,11 @@ export default function AssignmentPreviewModal({
                   )}
 
                   {/* Student submission history */}
-                  {role === 'student' && mySubmissions.length > 0 && (
+                  {role === "student" && mySubmissions.length > 0 && (
                     <div>
-                      <h2 className="text-base font-bold text-gray-900 mb-3">My Submissions</h2>
+                      <h2 className="text-base font-bold text-gray-900 mb-3">
+                        My Submissions
+                      </h2>
                       <div className="space-y-3">
                         {mySubmissions.map((sub) => (
                           <div
@@ -160,18 +189,23 @@ export default function AssignmentPreviewModal({
                                   Attempt #{sub.attemptNumber}
                                 </span>
                                 <span
-                                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${subStatusCls[sub.status] || 'bg-gray-100 text-gray-500'}`}
+                                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${subStatusCls[sub.status] || "bg-gray-100 text-gray-500"}`}
                                 >
                                   {sub.status}
                                 </span>
-                                {sub.marks !== null && sub.marks !== undefined && (
-                                  <span className="bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                                    {sub.marks}/{assignment.totalMarks}
-                                    {sub.gradeLetter ? ` · ${sub.gradeLetter}` : ''}
-                                  </span>
-                                )}
+                                {sub.marks !== null &&
+                                  sub.marks !== undefined && (
+                                    <span className="bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                                      {sub.marks}/{assignment.totalMarks}
+                                      {sub.gradeLetter
+                                        ? ` · ${sub.gradeLetter}`
+                                        : ""}
+                                    </span>
+                                  )}
                               </div>
-                              <span className="text-xs text-gray-400">{fmt(sub.submittedAt)}</span>
+                              <span className="text-xs text-gray-400">
+                                {fmt(sub.submittedAt)}
+                              </span>
                             </div>
 
                             {sub.submissionText && (
@@ -195,12 +229,15 @@ export default function AssignmentPreviewModal({
                                 <p className="text-xs font-semibold text-gray-500 mb-1">
                                   Teacher feedback:
                                 </p>
-                                <p className="text-sm text-gray-700">{sub.feedback}</p>
+                                <p className="text-sm text-gray-700">
+                                  {sub.feedback}
+                                </p>
                               </div>
                             )}
                             {sub.markedByTeacher && (
                               <p className="text-xs text-gray-400 mt-2">
-                                Graded by {sub.markedByTeacher.fullName} · {fmt(sub.markedAt)}
+                                Graded by {sub.markedByTeacher.fullName} ·{" "}
+                                {fmt(sub.markedAt)}
                               </p>
                             )}
                           </div>
@@ -209,9 +246,11 @@ export default function AssignmentPreviewModal({
                     </div>
                   )}
 
-                  {role === 'student' && mySubmissions.length === 0 && (
+                  {role === "student" && mySubmissions.length === 0 && (
                     <div className="bg-gray-50 rounded-xl p-6 text-center border border-gray-200">
-                      <p className="text-sm text-gray-500">You have not submitted this assignment yet.</p>
+                      <p className="text-sm text-gray-500">
+                        You have not submitted this assignment yet.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -226,14 +265,18 @@ export default function AssignmentPreviewModal({
                     <div className="space-y-3">
                       <div>
                         <p className="text-xs text-gray-500 mb-0.5">Created</p>
-                        <p className="text-sm font-semibold text-gray-900">{fmt(assignment.createdAt)}</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {fmt(assignment.createdAt)}
+                        </p>
                       </div>
                       <div className="border-t border-gray-100 pt-3">
                         <p className="text-xs text-gray-500 mb-0.5">Due Date</p>
                         <p
-                          className={`text-sm font-semibold ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}
+                          className={`text-sm font-semibold ${isOverdue ? "text-red-600" : "text-gray-900"}`}
                         >
-                          {assignment.dueDate ? fmt(assignment.dueDate) : 'No deadline set'}
+                          {assignment.dueDate
+                            ? fmt(assignment.dueDate)
+                            : "No deadline set"}
                         </p>
                       </div>
                     </div>
@@ -247,12 +290,14 @@ export default function AssignmentPreviewModal({
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-gray-50 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 mb-1">Total</p>
-                        <p className="text-2xl font-bold text-gray-900">{assignment.totalMarks}</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {assignment.totalMarks}
+                        </p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 mb-1">Passing</p>
                         <p className="text-2xl font-bold text-gray-900">
-                          {assignment.passingMarks ?? '—'}
+                          {assignment.passingMarks ?? "—"}
                         </p>
                       </div>
                     </div>
@@ -263,22 +308,26 @@ export default function AssignmentPreviewModal({
                     <div>
                       <p className="text-xs text-gray-500">Target</p>
                       <p className="text-sm font-semibold text-gray-900 mt-0.5 capitalize">
-                        {assignment.targetType === 'section'
-                          ? `Section: ${assignment.section?.name || '—'}`
-                          : 'All enrolled students'}
+                        {assignment.targetType === "section"
+                          ? `Section: ${assignment.section?.name || "—"}`
+                          : "All enrolled students"}
                       </p>
                     </div>
                     <div className="border-t border-gray-100 pt-4">
                       <p className="text-xs text-gray-500">Late Submission</p>
                       <p className="text-sm font-semibold text-gray-900 mt-0.5">
-                        {assignment.allowLateSubmission ? '✓ Allowed' : '✗ Not allowed'}
+                        {assignment.allowLateSubmission
+                          ? "✓ Allowed"
+                          : "✗ Not allowed"}
                       </p>
                     </div>
-                    {(role === 'teacher' || role === 'admin') && (
+                    {(role === "teacher" || role === "admin") && (
                       <div className="border-t border-gray-100 pt-4">
-                        <p className="text-xs text-gray-500">Total Submissions</p>
+                        <p className="text-xs text-gray-500">
+                          Total Submissions
+                        </p>
                         <p className="text-xl font-bold text-gray-900 mt-0.5">
-                          {assignment._count?.submissions ?? '—'}
+                          {assignment._count?.submissions ?? "—"}
                         </p>
                       </div>
                     )}
@@ -289,49 +338,59 @@ export default function AssignmentPreviewModal({
           </div>
 
           {/* Footer */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-8 py-4 flex items-center justify-between">
-            <p className="text-xs text-gray-400">Last updated: {fmt(assignment.updatedAt)}</p>
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
-              >
-                Close
-              </button>
-
-              {(role === 'teacher' || role === 'admin') && (
-                <>
-                  {onEdit && (
-                    <button
-                      onClick={() => { onClose(); onEdit() }}
-                      className="px-4 py-2 border border-[#6b1142] text-[#6b1142] rounded-lg text-sm font-medium hover:bg-[#6b1142]/5 transition"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowSubmissions(true)}
-                    className="px-4 py-2 bg-[#6b1142] text-white rounded-lg text-sm font-medium hover:bg-[#5a0d38] transition"
-                  >
-                    View Submissions
-                  </button>
-                </>
-              )}
-
-              {role === 'student' && canSubmit && (
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 md:px-8 py-4 space-y-3 md:space-y-0 md:flex md:items-center md:justify-between">
+            <p className="text-xs text-gray-400">
+              Last updated: {fmt(assignment.updatedAt)}
+            </p>
+            <div className="space-y-2 md:space-y-0 md:flex md:gap-3">
+              <div className="flex gap-2 md:gap-3">
                 <button
-                  onClick={() => setShowSubmit(true)}
-                  className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition ${
-                    isOverdue
-                      ? 'bg-orange-500 hover:bg-orange-600'
-                      : 'bg-[#6b1142] hover:bg-[#5a0d38]'
-                  }`}
+                  onClick={onClose}
+                  className="flex-1 md:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
                 >
-                  {isOverdue
-                    ? 'Submit Late'
-                    : mySubmissions.length > 0
-                    ? 'Resubmit'
-                    : 'Submit Assignment'}
+                  Close
+                </button>
+
+                {(role === "teacher" || role === "admin") && (
+                  <>
+                    {onEdit && (
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onEdit();
+                        }}
+                        className="flex-1 md:flex-none px-4 py-2 border border-[#6b1142] text-[#6b1142] rounded-lg text-sm font-medium hover:bg-[#6b1142]/5 transition"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {role === "student" && canSubmit && (
+                  <button
+                    onClick={() => setShowSubmit(true)}
+                    className={`flex-1 md:flex-none px-4 py-2 text-white rounded-lg text-sm font-medium transition ${
+                      isOverdue
+                        ? "bg-orange-500 hover:bg-orange-600"
+                        : "bg-[#6b1142] hover:bg-[#5a0d38]"
+                    }`}
+                  >
+                    {isOverdue
+                      ? "Submit Late"
+                      : mySubmissions.length > 0
+                        ? "Resubmit"
+                        : "Submit Assignment"}
+                  </button>
+                )}
+              </div>
+
+              {(role === "teacher" || role === "admin") && (
+                <button
+                  onClick={() => setShowSubmissions(true)}
+                  className="w-full md:w-auto px-4 py-2 bg-[#6b1142] text-white rounded-lg text-sm font-medium hover:bg-[#5a0d38] transition"
+                >
+                  View Submissions
                 </button>
               )}
             </div>
@@ -340,7 +399,10 @@ export default function AssignmentPreviewModal({
       </div>
 
       {showSubmissions && (
-        <ViewSubmissionsModal assignment={assignment} onClose={() => setShowSubmissions(false)} />
+        <ViewSubmissionsModal
+          assignment={assignment}
+          onClose={() => setShowSubmissions(false)}
+        />
       )}
 
       {showSubmit && (
@@ -348,12 +410,12 @@ export default function AssignmentPreviewModal({
           assignment={assignment}
           onClose={() => setShowSubmit(false)}
           onSubmitted={() => {
-            setShowSubmit(false)
-            onRefresh?.()
-            onClose()
+            setShowSubmit(false);
+            onRefresh?.();
+            onClose();
           }}
         />
       )}
     </>
-  )
+  );
 }
