@@ -114,8 +114,8 @@ export default function SemesterFormModal({ onClose, onSaved, editSemester }) {
             </select>
           </div>
 
-          <div className="form-row">
-            <div className="form-group mb-0">
+          <div className="md:form-row">
+            <div className="form-group md:mb-0">
               <label className="form-label">Year</label>
               <input
                 type="number"
@@ -128,7 +128,7 @@ export default function SemesterFormModal({ onClose, onSaved, editSemester }) {
                 className="form-input"
               />
             </div>
-            <div className="form-group mb-0">
+            <div className="form-group md:mb-0">
               <label className="form-label">Months Included</label>
               <input
                 name="monthsIncluded"
@@ -144,7 +144,7 @@ export default function SemesterFormModal({ onClose, onSaved, editSemester }) {
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" disabled={loading || metaLoading} className="btn-primary">
+            <button type="submit" disabled={loading || metaLoading} className="text-[13px] btn-primary">
               {loading ? 'Saving…' : isEdit ? 'Update Semester' : 'Create Semester'}
             </button>
           </div>

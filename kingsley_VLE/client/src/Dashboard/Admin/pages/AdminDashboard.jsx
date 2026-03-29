@@ -45,7 +45,7 @@ export default function AdminDashboard() {
   const adminName = user?.email?.split('@')[0]
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-4 md:px-4 lg:px-8  lg:py-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6 md:mb-8">
         <h1 className="text-2xl font-bold text-gray-900">

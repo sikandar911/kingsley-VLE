@@ -199,9 +199,9 @@ export default function TeacherAssignmentsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <p className="text-xs text-gray-400">Created: {fmt(a.createdAt)}</p>
+                          <p className="text-xs text-gray-400 whitespace-nowrap">Created: {fmt(a.createdAt)}</p>
                           {a.dueDate && (
-                            <p className={`text-xs mt-0.5 font-medium ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
+                            <p className={`text-xs mt-0.5 whitespace-nowrap font-medium ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
                               Due: {fmt(a.dueDate)}
                             </p>
                           )}
@@ -214,7 +214,7 @@ export default function TeacherAssignmentsPage() {
                             {a.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                           {a.teacher?.fullName || '—'}
                         </td>
                         <td className="px-6 py-4">

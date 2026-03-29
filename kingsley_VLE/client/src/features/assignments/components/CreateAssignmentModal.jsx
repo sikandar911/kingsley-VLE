@@ -229,7 +229,7 @@ export default function CreateAssignmentModal({
             )}
 
             {/* Top row: Teacher (admin), Course, Section, Semester */}
-            <div className="bg-gray-50 rounded-lg p-6">
+            <div className="bg-gray-50 rounded-lg p-4 md:p-6">
               <div
                 className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}
               >
@@ -320,7 +320,7 @@ export default function CreateAssignmentModal({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {/* Left */}
               <div className="space-y-4 md:space-y-6">
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
                     Assignment Title *
                   </label>
@@ -334,7 +334,7 @@ export default function CreateAssignmentModal({
                   />
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
                     Description
                   </label>
@@ -348,7 +348,7 @@ export default function CreateAssignmentModal({
                   />
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
                     Instructions / Teacher Notes
                   </label>
@@ -365,7 +365,7 @@ export default function CreateAssignmentModal({
 
               {/* Right */}
               <div className="space-y-4 md:space-y-6">
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
                     Submission Deadline
                   </label>
@@ -381,7 +381,7 @@ export default function CreateAssignmentModal({
                   </p>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
                   <h3 className="text-sm font-semibold text-gray-900 mb-4">
                     Marks Configuration
                   </h3>
@@ -416,7 +416,7 @@ export default function CreateAssignmentModal({
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-between">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">
                       Allow Late Submission
@@ -438,15 +438,15 @@ export default function CreateAssignmentModal({
                 </div>
 
                 {isEdit && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
                     <h3 className="text-sm font-semibold text-gray-900 mb-3">
                       Status
                     </h3>
-                    <div className="flex gap-5">
+                    <div className="flex gap-4 md:gap-5">
                       {["draft", "published", "closed"].map((s) => (
                         <label
                           key={s}
-                          className="flex items-center gap-2 cursor-pointer"
+                          className="flex items-center gap-1 md:gap-2 cursor-pointer"
                         >
                           <input
                             type="radio"
