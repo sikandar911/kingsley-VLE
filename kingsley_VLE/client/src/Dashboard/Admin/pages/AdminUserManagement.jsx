@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { adminApi } from "../api/admin.api";
 import CreateUserModal from "../components/CreateUserModal";
+import BulkCreateModal from "../components/BulkCreateModal";
 import UserTable from "../components/UserTable";
 
 export default function AdminUserManagement() {
@@ -18,6 +19,7 @@ export default function AdminUserManagement() {
   });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [search, setSearch] = useState("");
 
@@ -104,9 +106,19 @@ export default function AdminUserManagement() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="btn-primary mt-3 md:mt-0" onClick={handleCreate}>
-              + Create Account
-            </button>
+            <div className="flex gap-2 mt-3 md:mt-0">
+              {tab === "student" && (
+                <button
+                  className="px-4 py-2 text-sm font-medium text-brand-700 border border-brand-300 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer"
+                  onClick={() => setShowBulkModal(true)}
+                >
+                  📋 Bulk
+                </button>
+              )}
+              <button className="btn-primary" onClick={handleCreate}>
+                + Create Account
+              </button>
+            </div>
           </div>
         </div>
 
@@ -131,6 +143,13 @@ export default function AdminUserManagement() {
           }}
           onCreated={fetchUsers}
           editUser={editUser}
+        />
+      )}
+
+      {showBulkModal && (
+        <BulkCreateModal
+          onClose={() => setShowBulkModal(false)}
+          onCreated={fetchUsers}
         />
       )}
     </div>

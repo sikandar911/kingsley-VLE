@@ -3,6 +3,141 @@ import prisma from '../../config/prisma.js'
 
 /**
  * @swagger
+ * /api/admin/users/bulk:
+ *   post:
+ *     summary: Bulk create student accounts from a validated list (admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [students]
+ *             properties:
+ *               students:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [fullName, email, password]
+ *                   properties:
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                       format: email
+ *                     username:
+ *                       type: string
+ *                     password:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *     responses:
+ *       201:
+ *         description: Bulk creation result - created and failed counts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 created:
+ *                   type: integer
+ *                 failed:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       row:
+ *                         type: integer
+ *                       email:
+ *                         type: string
+ *                       reason:
+ *                         type: string
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+export const bulkCreateStudents = async (req, res) => {
+  const { students } = req.body
+
+  if (!Array.isArray(students) || students.length === 0) {
+    return res.status(400).json({ error: 'students array is required and must not be empty' })
+  }
+
+  if (students.length > 500) {
+    return res.status(400).json({ error: 'Maximum 500 students per bulk upload' })
+  }
+
+  const created = []
+  const failed = []
+
+  for (let i = 0; i < students.length; i++) {
+    const { fullName, email, username, password, phone } = students[i]
+    const row = i + 1
+
+    if (!fullName?.trim() || !email?.trim() || !password) {
+      failed.push({ row, email: email || '', reason: 'fullName, email, and password are required' })
+      continue
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      failed.push({ row, email: email.trim(), reason: 'Invalid email format' })
+      continue
+    }
+
+    try {
+      const existsQuery = [{ email: email.trim() }]
+      if (username?.trim()) existsQuery.push({ username: username.trim() })
+      const exists = await prisma.user.findFirst({ where: { OR: existsQuery } })
+      if (exists) {
+        failed.push({ row, email: email.trim(), reason: 'Email or username already exists' })
+        continue
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10)
+      const timestamp = Date.now() + i
+
+      const user = await prisma.user.create({
+        data: {
+          username: username?.trim() || null,
+          email: email.trim(),
+          passwordHash,
+          role: 'student',
+          createdBy: req.user.id,
+          studentProfile: {
+            create: {
+              fullName: fullName.trim(),
+              studentId: `STU-${timestamp}`,
+              phone: phone?.trim() || null,
+            },
+          },
+        },
+        include: { studentProfile: true },
+      })
+
+      const { passwordHash: _ph, ...result } = user
+      created.push(result)
+    } catch (err) {
+      console.error(`Bulk create row ${row} error:`, err)
+      failed.push({ row, email: email?.trim() || '', reason: 'Server error while creating user' })
+    }
+  }
+
+  return res.status(201).json({
+    created: created.length,
+    failed,
+    users: created,
+  })
+}
+
+/**
+ * @swagger
  * /api/admin/users:
  *   post:
  *     summary: Create a student or teacher account
