@@ -36,7 +36,7 @@ export const classMaterialsApi = {
     formData.append("file", file);
     formData.append("fileType", fileType);
 
-    return api.post("/files", formData, {
+    return api.post("/file", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
