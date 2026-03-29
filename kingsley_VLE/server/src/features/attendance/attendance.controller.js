@@ -55,6 +55,10 @@ const attendanceInclude = {
  *     responses:
  *       200:
  *         description: List of attendance records
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AttendanceListResponse'
  */
 export const listAttendance = async (req, res) => {
   const { studentId, sectionId, semesterId, date, from, to, status, page = 1, limit = 50 } = req.query
@@ -119,8 +123,16 @@ export const listAttendance = async (req, res) => {
  *     responses:
  *       200:
  *         description: Attendance record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AttendanceRecord'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getAttendance = async (req, res) => {
   try {
@@ -176,8 +188,16 @@ export const getAttendance = async (req, res) => {
  *     responses:
  *       201:
  *         description: Attendance marked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AttendanceRecord'
  *       400:
  *         description: Validation error or duplicate
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const markAttendance = async (req, res) => {
   const { studentId, sectionId, semesterId, date, status } = req.body
@@ -252,6 +272,10 @@ export const markAttendance = async (req, res) => {
  *     responses:
  *       201:
  *         description: Attendance records created/updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/BulkAttendanceResponse'
  */
 export const markBulkAttendance = async (req, res) => {
   const { sectionId, semesterId, date, records } = req.body
@@ -319,8 +343,16 @@ export const markBulkAttendance = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AttendanceRecord'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateAttendance = async (req, res) => {
   const { status } = req.body
@@ -361,8 +393,16 @@ export const updateAttendance = async (req, res) => {
  *     responses:
  *       200:
  *         description: Deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteAttendance = async (req, res) => {
   try {

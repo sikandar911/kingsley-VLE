@@ -33,8 +33,16 @@ import { uploadToAzure, deleteFromAzure } from '../../config/azure.storage.js'
  *     responses:
  *       201:
  *         description: File uploaded, returns File record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/File'
  *       400:
  *         description: No file provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const uploadFile = async (req, res) => {
   try {
@@ -85,6 +93,10 @@ export const uploadFile = async (req, res) => {
  *     responses:
  *       200:
  *         description: List of files
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FileListResponse'
  */
 export const listFiles = async (req, res) => {
   const { fileType, page = 1, limit = 20 } = req.query
@@ -128,8 +140,16 @@ export const listFiles = async (req, res) => {
  *     responses:
  *       200:
  *         description: File record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/File'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getFile = async (req, res) => {
   try {
@@ -161,10 +181,22 @@ export const getFile = async (req, res) => {
  *     responses:
  *       200:
  *         description: File deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
  *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteFile = async (req, res) => {
   try {

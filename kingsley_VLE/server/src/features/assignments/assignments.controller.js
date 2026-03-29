@@ -298,6 +298,10 @@ const getTeacherManagedAssignmentWhere = async (userId, extraWhere = {}) => {
  *     responses:
  *       201:
  *         description: Assignment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Assignment'
  */
 export const createAssignment = async (req, res) => {
   try {
@@ -377,6 +381,12 @@ export const createAssignment = async (req, res) => {
  *     responses:
  *       200:
  *         description: Assignment list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Assignment'
  */
 export const listAssignments = async (req, res) => {
   try {
@@ -463,8 +473,16 @@ export const listAssignments = async (req, res) => {
  *     responses:
  *       200:
  *         description: Assignment details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Assignment'
  *       404:
  *         description: Assignment not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getAssignmentById = async (req, res) => {
   try {
@@ -559,6 +577,10 @@ export const getAssignmentById = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated assignment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Assignment'
  */
 export const updateAssignment = async (req, res) => {
   try {
@@ -703,6 +725,10 @@ export const updateAssignment = async (req, res) => {
  *     responses:
  *       200:
  *         description: Assignment status updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Assignment'
  */
 export const updateAssignmentStatus = async (req, res) => {
   const { status } = req.body
@@ -766,6 +792,10 @@ export const updateAssignmentStatus = async (req, res) => {
  *     responses:
  *       201:
  *         description: Submission created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Submission'
  */
 export const submitAssignment = async (req, res) => {
   const { submissionText, submissionFileId, submissionFileUrl } = req.body
@@ -861,6 +891,12 @@ export const submitAssignment = async (req, res) => {
  *     responses:
  *       200:
  *         description: Submission list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Submission'
  */
 export const listAssignmentSubmissions = async (req, res) => {
   try {
@@ -925,6 +961,10 @@ export const listAssignmentSubmissions = async (req, res) => {
  *     responses:
  *       200:
  *         description: Submission graded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Submission'
  */
 export const gradeSubmission = async (req, res) => {
   const { marks, gradeLetter, feedback, markedByTeacherId } = req.body
@@ -1005,6 +1045,10 @@ export const gradeSubmission = async (req, res) => {
  *     responses:
  *       200:
  *         description: Courses with sections, and teachers array (admin only)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AssignmentMetaResponse'
  */
 export const getAssignmentsMeta = async (req, res) => {
   try {

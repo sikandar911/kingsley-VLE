@@ -24,8 +24,16 @@ import prisma from '../../config/prisma.js'
  *     responses:
  *       200:
  *         description: Login successful - returns token and user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
  *       401:
  *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const login = async (req, res) => {
   const { identifier, password } = req.body
@@ -80,8 +88,16 @@ export const login = async (req, res) => {
  *     responses:
  *       200:
  *         description: Current user data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getMe = async (req, res) => {
   try {

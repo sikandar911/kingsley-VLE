@@ -40,6 +40,10 @@ const recordInclude = {
  *     responses:
  *       200:
  *         description: List of class records
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassRecordListResponse'
  */
 export const listClassRecords = async (req, res) => {
   const { courseId, sectionId, semesterId, page = 1, limit = 20 } = req.query
@@ -83,8 +87,16 @@ export const listClassRecords = async (req, res) => {
  *     responses:
  *       200:
  *         description: Class record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassRecord'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getClassRecord = async (req, res) => {
   try {
@@ -132,8 +144,16 @@ export const getClassRecord = async (req, res) => {
  *     responses:
  *       201:
  *         description: Created class record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassRecord'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createClassRecord = async (req, res) => {
   const { title, description, url, courseId, sectionId, semesterId } = req.body
@@ -197,8 +217,16 @@ export const createClassRecord = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated record
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ClassRecord'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateClassRecord = async (req, res) => {
   const { title, description, url, sectionId, semesterId } = req.body
@@ -241,8 +269,16 @@ export const updateClassRecord = async (req, res) => {
  *     responses:
  *       200:
  *         description: Deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteClassRecord = async (req, res) => {
   try {

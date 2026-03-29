@@ -22,6 +22,12 @@ import prisma from '../../config/prisma.js'
  *     responses:
  *       200:
  *         description: List of sessions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Session'
  */
 export const listSessions = async (req, res) => {
   try {
@@ -56,8 +62,16 @@ export const listSessions = async (req, res) => {
  *     responses:
  *       200:
  *         description: Session data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Session'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSession = async (req, res) => {
   try {
@@ -104,6 +118,10 @@ export const getSession = async (req, res) => {
  *     responses:
  *       201:
  *         description: Session created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Session'
  */
 export const createSession = async (req, res) => {
   const { name, description, startDate, endDate } = req.body
@@ -158,6 +176,10 @@ export const createSession = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Session'
  */
 export const updateSession = async (req, res) => {
   const { name, description, startDate, endDate } = req.body
@@ -197,6 +219,10 @@ export const updateSession = async (req, res) => {
  *     responses:
  *       200:
  *         description: Session deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  */
 export const deleteSession = async (req, res) => {
   try {
@@ -230,6 +256,12 @@ export const deleteSession = async (req, res) => {
  *     responses:
  *       200:
  *         description: List of semesters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Semester'
  */
 export const listSemesters = async (req, res) => {
   const { sessionId } = req.query
@@ -265,8 +297,16 @@ export const listSemesters = async (req, res) => {
  *     responses:
  *       200:
  *         description: Semester data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Semester'
  *       404:
  *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSemester = async (req, res) => {
   try {
@@ -319,6 +359,10 @@ export const getSemester = async (req, res) => {
  *     responses:
  *       201:
  *         description: Semester created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Semester'
  */
 export const createSemester = async (req, res) => {
   const { name, sessionId, monthsIncluded, year } = req.body
@@ -376,6 +420,10 @@ export const createSemester = async (req, res) => {
  *     responses:
  *       200:
  *         description: Updated semester
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Semester'
  */
 export const updateSemester = async (req, res) => {
   const { name, sessionId, monthsIncluded, year } = req.body
@@ -421,6 +469,10 @@ export const updateSemester = async (req, res) => {
  *     responses:
  *       200:
  *         description: Semester deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
  */
 export const deleteSemester = async (req, res) => {
   try {
