@@ -33,6 +33,11 @@ const menuByRole = {
       path: "/admin/assignments",
       icon: "📋",
     },
+    {
+      label: "Class Materials",
+      path: "/admin/class-materials",
+      icon: "📄",
+    },
   ],
   student: [
     {
