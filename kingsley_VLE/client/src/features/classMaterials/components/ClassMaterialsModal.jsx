@@ -17,9 +17,12 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [filteredSections, setFilteredSections] = useState([]);
+  const [filteredSemesters, setFilteredSemesters] = useState([]);
+  const [relationshipMap, setRelationshipMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
-  // Fetch dropdown data on mount
+  // Fetch dropdown data on mount + build relationship map
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -40,6 +43,25 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
         setCourses(coursesData);
         setSections(sectionsData);
         setSemesters(semestersData);
+        setFilteredSections(sectionsData);
+        setFilteredSemesters(semestersData);
+
+        // Build relationship map from sections
+        const map = {};
+        sectionsData.forEach((section) => {
+          const courseId = section.courseId;
+          const semesterId = section.semesterId;
+          const sectionId = section.id;
+
+          if (!map[courseId]) map[courseId] = { sections: [], semesters: [] };
+          if (!map[courseId].sections.includes(sectionId)) {
+            map[courseId].sections.push(sectionId);
+          }
+          if (semesterId && !map[courseId].semesters.includes(semesterId)) {
+            map[courseId].semesters.push(semesterId);
+          }
+        });
+        setRelationshipMap(map);
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
         // Set empty arrays on error
@@ -55,6 +77,23 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
       fetchDropdownData();
     }
   }, [isOpen]);
+
+  // Filter sections and semesters based on selected course
+  useEffect(() => {
+    if (formData.courseId && relationshipMap[formData.courseId]) {
+      const relatedSectionIds = relationshipMap[formData.courseId].sections;
+      const relatedSemesterIds = relationshipMap[formData.courseId].semesters;
+      setFilteredSections(
+        sections.filter((s) => relatedSectionIds.includes(s.id)),
+      );
+      setFilteredSemesters(
+        semesters.filter((s) => relatedSemesterIds.includes(s.id)),
+      );
+    } else {
+      setFilteredSections(sections);
+      setFilteredSemesters(semesters);
+    }
+  }, [formData.courseId, relationshipMap, sections, semesters]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -305,8 +344,9 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 style={{ "--tw-ring-color": "#6b1d3e" }}
               >
                 <option value="">Select Section</option>
-                {Array.isArray(sections) && sections.length > 0 ? (
-                  sections.map((section) => (
+                {Array.isArray(filteredSections) &&
+                filteredSections.length > 0 ? (
+                  filteredSections.map((section) => (
                     <option key={section.id} value={section.id}>
                       {section.name}
                     </option>
@@ -331,8 +371,9 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 style={{ "--tw-ring-color": "#6b1d3e" }}
               >
                 <option value="">Select Semester</option>
-                {Array.isArray(semesters) && semesters.length > 0 ? (
-                  semesters.map((semester) => (
+                {Array.isArray(filteredSemesters) &&
+                filteredSemesters.length > 0 ? (
+                  filteredSemesters.map((semester) => (
                     <option key={semester.id} value={semester.id}>
                       {semester.name}
                     </option>

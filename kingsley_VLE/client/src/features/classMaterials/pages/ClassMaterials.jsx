@@ -6,33 +6,126 @@ import { coursesApi } from "../../courses/api/courses.api";
 
 const ClassMaterials = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState("All Courses");
-  const [selectedSection, setSelectedSection] = useState("All Sections");
-  const [selectedSemester, setSelectedSemester] = useState("All Semesters");
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [selectedSemester, setSelectedSemester] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [courses, setCourses] = useState(["All Courses"]);
-  const [sections, setSections] = useState(["All Sections"]);
-  const [semesters, setSemesters] = useState(["All Semesters"]);
 
-  // Fetch materials from API based on filters
+  // All dropdown options from API (never change unless new data added)
+  const [courses, setCourses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+
+  // Filtered dropdown options based on current selection
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [filteredSections, setFilteredSections] = useState([]);
+  const [filteredSemesters, setFilteredSemesters] = useState([]);
+
+  // Relationship maps built from sections data
+  const [relationshipMap, setRelationshipMap] = useState({});
+
+  // Fetch all courses on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await coursesApi.list({ limit: 200 });
+        const coursesList = response.data?.courses || [];
+        setCourses(coursesList);
+        setFilteredCourses(coursesList);
+      } catch (err) {
+        console.error("Error fetching courses:", err);
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  // Fetch all sections and semesters on mount + build relationship map
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [sectionsRes, semestersRes] = await Promise.all([
+          classMaterialsApi.getSections(),
+          classMaterialsApi.getSemesters(),
+        ]);
+
+        const sectionsData = Array.isArray(sectionsRes.data)
+          ? sectionsRes.data
+          : sectionsRes || [];
+        const semestersData = Array.isArray(semestersRes.data)
+          ? semestersRes.data
+          : semestersRes || [];
+
+        setSections(sectionsData);
+        setSemesters(semestersData);
+        setFilteredSections(sectionsData);
+        setFilteredSemesters(semestersData);
+
+        // Build relationship map from sections
+        const map = {};
+        sectionsData.forEach((section) => {
+          const courseId = section.courseId;
+          const semesterId = section.semesterId;
+          const sectionId = section.id;
+
+          if (!map[courseId]) map[courseId] = { sections: [], semesters: [] };
+          if (!map[courseId].sections.includes(sectionId)) {
+            map[courseId].sections.push(sectionId);
+          }
+          if (semesterId && !map[courseId].semesters.includes(semesterId)) {
+            map[courseId].semesters.push(semesterId);
+          }
+        });
+        setRelationshipMap(map);
+      } catch (err) {
+        console.error("Error fetching dropdown data:", err);
+      }
+    };
+    fetchDropdownData();
+  }, []);
+
+  // Filter dropdowns based on current selections using relationship map
+  useEffect(() => {
+    let newFilteredCourses = courses;
+    let newFilteredSections = sections;
+    let newFilteredSemesters = semesters;
+
+    if (selectedCourse && relationshipMap[selectedCourse]) {
+      // If course selected, show only its sections and semesters
+      const relatedSectionIds = relationshipMap[selectedCourse].sections;
+      const relatedSemesterIds = relationshipMap[selectedCourse].semesters;
+      newFilteredSections = sections.filter((s) =>
+        relatedSectionIds.includes(s.id),
+      );
+      newFilteredSemesters = semesters.filter((s) =>
+        relatedSemesterIds.includes(s.id),
+      );
+    }
+
+    setFilteredCourses(newFilteredCourses);
+    setFilteredSections(newFilteredSections);
+    setFilteredSemesters(newFilteredSemesters);
+  }, [selectedCourse, relationshipMap, courses, sections, semesters]);
+
+  // When filters change, update materials
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
         setLoading(true);
         setError(null);
         const params = {};
-        if (selectedCourse !== "All Courses") params.course = selectedCourse;
-        if (selectedSection !== "All Sections")
-          params.section = selectedSection;
-        if (selectedSemester !== "All Semesters")
-          params.semester = selectedSemester;
+        if (selectedCourse) params.courseId = selectedCourse;
+        if (selectedSection) params.sectionId = selectedSection;
+        if (selectedSemester) params.semesterId = selectedSemester;
         if (searchTerm) params.search = searchTerm;
 
         const response = await classMaterialsApi.list(params);
-        setMaterials(response.data || response || []);
+        const data =
+          response.data?.materials || response.data || response || [];
+        const materialsData = Array.isArray(data) ? data : [];
+        setMaterials(materialsData);
       } catch (err) {
         console.error("Error fetching materials:", err);
         setError("Failed to load materials. Please try again.");
@@ -45,58 +138,17 @@ const ClassMaterials = () => {
     fetchMaterials();
   }, [selectedCourse, selectedSection, selectedSemester, searchTerm]);
 
-  // Fetch available courses on mount
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await coursesApi.list({ limit: 200 });
-        const coursesList = response.data.courses || [];
-        const courseNames = coursesList.map((c) => c.title).filter(Boolean);
-        setCourses(["All Courses", ...courseNames]);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-      }
-    };
+  const handleCourseChange = (courseId) => {
+    setSelectedCourse(courseId);
+  };
 
-    fetchCourses();
-  }, []);
+  const handleSectionChange = (sectionId) => {
+    setSelectedSection(sectionId);
+  };
 
-  // Fetch sections and semesters from API
-  useEffect(() => {
-    const fetchDropdownData = async () => {
-      try {
-        const [sectionsRes, semestersRes] = await Promise.all([
-          classMaterialsApi.getSections(),
-          classMaterialsApi.getSemesters(),
-        ]);
-
-        const sectionsData = sectionsRes.data || sectionsRes || [];
-        const semestersData = semestersRes.data || semestersRes || [];
-
-        setSections([
-          "All Sections",
-          ...(Array.isArray(sectionsData)
-            ? sectionsData.map((s) =>
-                typeof s === "string" ? s : s.name || s.id,
-              )
-            : []),
-        ]);
-
-        setSemesters([
-          "All Semesters",
-          ...(Array.isArray(semestersData)
-            ? semestersData.map((s) =>
-                typeof s === "string" ? s : s.name || s.id,
-              )
-            : []),
-        ]);
-      } catch (err) {
-        console.error("Error fetching dropdown data:", err);
-      }
-    };
-
-    fetchDropdownData();
-  }, []);
+  const handleSemesterChange = (semesterId) => {
+    setSelectedSemester(semesterId);
+  };
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this material?")) {
@@ -121,10 +173,24 @@ const ClassMaterials = () => {
     }
   };
 
+  const getCourseName = (id) => {
+    const course = courses.find((c) => c.id === id);
+    return course ? course.title : id;
+  };
+
+  const getSectionName = (id) => {
+    const section = sections.find((s) => s && s.id === id);
+    return section ? section.name : id;
+  };
+
+  const getSemesterName = (id) => {
+    const semester = semesters.find((s) => s && s.id === id);
+    return semester ? semester.name : id;
+  };
+
   return (
     <>
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-        {/* Header Section */}
         <div className="mb-6 sm:mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
@@ -145,13 +211,11 @@ const ClassMaterials = () => {
           </button>
         </div>
 
-        {/* Filter and Search Section */}
         <div
           className="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8"
           style={{ background: "linear-gradient(to right, #6b1d3e, #5a1630)" }}
         >
           <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Search Bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300 w-5 h-5" />
               <input
@@ -164,46 +228,49 @@ const ClassMaterials = () => {
               />
             </div>
 
-            {/* Dropdowns and Button */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              {/* Courses Dropdown */}
               <select
                 value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
+                onChange={(e) => handleCourseChange(e.target.value)}
                 className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
                 style={{ "--tw-ring-color": "#6b1d3e" }}
               >
-                {courses.map((course) => (
-                  <option key={course} value={course}>
-                    {course}
+                <option value="">All Courses ({filteredCourses.length})</option>
+                {filteredCourses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
                   </option>
                 ))}
               </select>
 
-              {/* Sections Dropdown */}
               <select
                 value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
+                onChange={(e) => handleSectionChange(e.target.value)}
                 className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
                 style={{ "--tw-ring-color": "#6b1d3e" }}
               >
-                {sections.map((section) => (
-                  <option key={section} value={section}>
-                    {section}
+                <option value="">
+                  All Sections ({filteredSections.length})
+                </option>
+                {filteredSections.map((section) => (
+                  <option key={section?.id} value={section?.id}>
+                    {section?.name}
                   </option>
                 ))}
               </select>
 
-              {/* Semesters Dropdown */}
               <select
                 value={selectedSemester}
-                onChange={(e) => setSelectedSemester(e.target.value)}
+                onChange={(e) => handleSemesterChange(e.target.value)}
                 className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
                 style={{ "--tw-ring-color": "#6b1d3e" }}
               >
-                {semesters.map((semester) => (
-                  <option key={semester} value={semester}>
-                    {semester}
+                <option value="">
+                  All Semesters ({filteredSemesters.length})
+                </option>
+                {filteredSemesters.map((semester) => (
+                  <option key={semester?.id} value={semester?.id}>
+                    {semester?.name}
                   </option>
                 ))}
               </select>
@@ -211,9 +278,7 @@ const ClassMaterials = () => {
           </div>
         </div>
 
-        {/* Table Section */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -234,7 +299,7 @@ const ClassMaterials = () => {
                     SEMESTER
                   </th>
                   <th className="px-4 py-4 text-left text-xs sm:text-sm font-semibold">
-                    URL
+                    FILE
                   </th>
                   <th className="px-4 py-4 text-left text-xs sm:text-sm font-semibold">
                     ACTIONS
@@ -265,33 +330,34 @@ const ClassMaterials = () => {
                   materials.map((material, index) => (
                     <tr
                       key={material.id}
-                      className={`border-b ${index % 2 === 0 ? "bg-white" : "bg-gray-50"} transition`}
-                      style={{ ":hover": { backgroundColor: "#f5f1f5" } }}
-                      onMouseEnter={(e) =>
-                        (e.target.style.backgroundColor = "#f5f1f5")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.target.style.backgroundColor =
-                          index % 2 === 0 ? "#ffffff" : "#f9fafb")
-                      }
+                      className={`border-b ${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition`}
                     >
                       <td className="px-4 py-4 text-xs sm:text-sm text-gray-900 font-medium">
                         {material.title}
                       </td>
                       <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
-                        {material.course}
+                        {getCourseName(material.courseId)}
                       </td>
                       <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
-                        {material.section}
+                        {getSectionName(material.sectionId)}
                       </td>
                       <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
-                        {material.semester}
+                        {getSemesterName(material.semesterId)}
                       </td>
                       <td className="px-4 py-4 text-xs sm:text-sm">
-                        <button className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition">
-                          <Eye className="w-4 h-4" />
-                          <span className="hidden sm:inline">View File</span>
-                        </button>
+                        {material.file?.name && (
+                          <a
+                            href={material.file.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="hidden sm:inline">
+                              {material.file.name}
+                            </span>
+                          </a>
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex gap-2">
@@ -300,14 +366,8 @@ const ClassMaterials = () => {
                           </button>
                           <button
                             onClick={() => handleDelete(material.id)}
-                            className="inline-flex items-center justify-center p-2 rounded-lg transition"
+                            className="inline-flex items-center justify-center p-2 rounded-lg transition hover:bg-red-50"
                             style={{ color: "#6b1d3e" }}
-                            onMouseEnter={(e) =>
-                              (e.target.style.backgroundColor = "#f5f1f5")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.target.style.backgroundColor = "transparent")
-                            }
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -321,7 +381,7 @@ const ClassMaterials = () => {
                       colSpan="6"
                       className="px-4 py-8 text-center text-gray-500 text-sm"
                     >
-                      No materials found matching your criteria
+                      No materials found
                     </td>
                   </tr>
                 )}
@@ -329,92 +389,63 @@ const ClassMaterials = () => {
             </table>
           </div>
 
-          {/* Mobile Card View */}
           <div className="md:hidden">
             {loading ? (
               <div className="p-8 text-center text-gray-500">
                 <p className="text-sm">Loading materials...</p>
               </div>
-            ) : error ? (
-              <div className="p-8 text-center" style={{ color: "#6b1d3e" }}>
-                <p className="text-sm">{error}</p>
-              </div>
             ) : materials.length > 0 ? (
               <div className="divide-y">
                 {materials.map((material) => (
-                  <div
-                    key={material.id}
-                    className="p-4 space-y-3 border-b transition"
-                    onMouseEnter={(e) =>
-                      (e.target.style.backgroundColor = "#f5f1f5")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.target.style.backgroundColor = "transparent")
-                    }
-                  >
-                    {/* Title */}
+                  <div key={material.id} className="p-4 space-y-3">
                     <div>
                       <p className="text-xs font-semibold text-gray-600 uppercase">
                         Title
                       </p>
-                      <p className="text-sm sm:text-base font-medium text-gray-900 mt-1">
+                      <p className="text-sm font-medium text-gray-900 mt-1">
                         {material.title}
                       </p>
                     </div>
-
-                    {/* Course and Section */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase">
+                        <p className="text-xs font-semibold text-gray-600">
                           Course
                         </p>
-                        <p className="text-xs sm:text-sm text-gray-700 mt-1">
-                          {material.course}
+                        <p className="text-xs text-gray-700 mt-1">
+                          {getCourseName(material.courseId)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase">
+                        <p className="text-xs font-semibold text-gray-600">
                           Section
                         </p>
-                        <p className="text-xs sm:text-sm text-gray-700 mt-1">
-                          {material.section}
+                        <p className="text-xs text-gray-700 mt-1">
+                          {getSectionName(material.sectionId)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600">
+                          Semester
+                        </p>
+                        <p className="text-xs text-gray-700 mt-1">
+                          {getSemesterName(material.semesterId)}
                         </p>
                       </div>
                     </div>
-
-                    {/* Semester */}
-                    <div>
-                      <p className="text-xs font-semibold text-gray-600 uppercase">
-                        Semester
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-700 mt-1">
-                        {material.semester}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
                     <div className="flex gap-2 pt-2">
-                      <button className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 text-blue-600 py-2.5 rounded-lg hover:bg-blue-100 transition text-xs sm:text-sm font-medium">
+                      <button className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 text-blue-600 py-2 rounded-lg text-xs font-medium">
                         <Eye className="w-4 h-4" />
                         View
                       </button>
-                      <button className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 text-gray-600 py-2.5 rounded-lg hover:bg-gray-200 transition text-xs sm:text-sm font-medium">
+                      <button className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 text-gray-600 py-2 rounded-lg text-xs font-medium">
                         <Edit2 className="w-4 h-4" />
-                        Edit
                       </button>
                       <button
                         onClick={() => handleDelete(material.id)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg transition text-xs sm:text-sm font-medium"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium"
                         style={{ backgroundColor: "#f5f1f5", color: "#6b1d3e" }}
-                        onMouseEnter={(e) =>
-                          (e.target.style.backgroundColor = "#ede5f0")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.target.style.backgroundColor = "#f5f1f5")
-                        }
                       >
                         <Trash2 className="w-4 h-4" />
-                        Delete
                       </button>
                     </div>
                   </div>
@@ -429,12 +460,13 @@ const ClassMaterials = () => {
         </div>
       </div>
 
-      {/* Modal */}
-      <ClassMaterialsModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleAddMaterial}
-      />
+      {isModalOpen && (
+        <ClassMaterialsModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleAddMaterial}
+        />
+      )}
     </>
   );
 };
