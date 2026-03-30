@@ -160,6 +160,7 @@ export const createClassRecord = async (req, res) => {
 
   if (!title?.trim()) return res.status(400).json({ error: 'title is required' })
   if (!url?.trim()) return res.status(400).json({ error: 'url is required' })
+  if (!url.trim().startsWith('https://')) return res.status(400).json({ error: 'URL must use HTTPS (http:// URLs are not allowed)' })
   if (!courseId) return res.status(400).json({ error: 'courseId is required' })
 
   try {
@@ -234,6 +235,11 @@ export const updateClassRecord = async (req, res) => {
   try {
     const existing = await prisma.classRecord.findUnique({ where: { id: req.params.id } })
     if (!existing) return res.status(404).json({ error: 'Class record not found' })
+
+    // Validate URL if being updated
+    if (url?.trim() && !url.trim().startsWith('https://')) {
+      return res.status(400).json({ error: 'URL must use HTTPS (http:// URLs are not allowed)' })
+    }
 
     const record = await prisma.classRecord.update({
       where: { id: req.params.id },

@@ -158,29 +158,39 @@ export const getClassMaterial = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createClassMaterial = async (req, res) => {
-  const { title, description, fileId, courseId, sectionId, semesterId } = req.body
+  const { title, description, fileId, fileUrl, courseId, sectionId, semesterId } = req.body
 
   if (!title?.trim()) return res.status(400).json({ error: 'title is required' })
-  if (!fileId) return res.status(400).json({ error: 'fileId is required' })
+  if (!fileId && !fileUrl?.trim()) return res.status(400).json({ error: 'Either fileId or fileUrl is required' })
+  if (fileId && fileUrl?.trim()) return res.status(400).json({ error: 'Provide either fileId or fileUrl, not both' })
   if (!courseId) return res.status(400).json({ error: 'courseId is required' })
 
+  // Validate URL must be HTTPS
+  if (fileUrl?.trim()) {
+    if (!fileUrl.trim().startsWith('https://')) {
+      return res.status(400).json({ error: 'URL must use HTTPS (http:// URLs are not allowed)' })
+    }
+  }
+
   try {
-    const [file, course] = await Promise.all([
-      prisma.file.findUnique({ where: { id: fileId } }),
-      prisma.course.findUnique({ where: { id: courseId } }),
-    ])
-    if (!file) return res.status(400).json({ error: 'File not found — upload the file first' })
+    const course = await prisma.course.findUnique({ where: { id: courseId } })
     if (!course) return res.status(400).json({ error: 'Course not found' })
 
-    // Ensure file isn't already linked to another material
-    const existingMaterial = await prisma.classMaterial.findUnique({ where: { fileId } })
-    if (existingMaterial) return res.status(400).json({ error: 'This file is already linked to a class material' })
+    let resolvedFileId = null
+    if (fileId) {
+      const file = await prisma.file.findUnique({ where: { id: fileId } })
+      if (!file) return res.status(400).json({ error: 'File not found — upload the file first' })
+      const existingMaterial = await prisma.classMaterial.findUnique({ where: { fileId } })
+      if (existingMaterial) return res.status(400).json({ error: 'This file is already linked to a class material' })
+      resolvedFileId = fileId
+    }
 
     const material = await prisma.classMaterial.create({
       data: {
         title: title.trim(),
         description: description || null,
-        fileId,
+        fileId: resolvedFileId,
+        fileUrl: fileUrl?.trim() || null,
         courseId,
         sectionId: sectionId || null,
         semesterId: semesterId || null,
@@ -295,10 +305,12 @@ export const deleteClassMaterial = async (req, res) => {
     })
     if (!material) return res.status(404).json({ error: 'Class material not found' })
 
-    // Delete blob from Azure, then File record, then ClassMaterial
-    await deleteFromAzure(material.file?.slug)
+    // Delete class material first (releases the unique fileId FK)
     await prisma.classMaterial.delete({ where: { id: material.id } })
-    if (material.fileId) {
+
+    // Only clean up uploaded file if one is linked
+    if (material.fileId && material.file) {
+      await deleteFromAzure(material.file.slug).catch(() => {})
       await prisma.file.delete({ where: { id: material.fileId } }).catch(() => {})
     }
 

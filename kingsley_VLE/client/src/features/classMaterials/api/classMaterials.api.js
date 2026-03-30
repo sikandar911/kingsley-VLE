@@ -30,8 +30,8 @@ export const classMaterialsApi = {
 
   // ── File Upload Functions ──
   // Upload a file for class materials
-  // fileType defaults to "class-material"
-  uploadFile: (file, fileType = "class-material") => {
+  // fileType defaults to "class_material"
+  uploadFile: (file, fileType = "class_material") => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("fileType", fileType);

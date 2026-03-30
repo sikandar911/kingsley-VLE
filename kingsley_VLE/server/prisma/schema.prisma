@@ -487,8 +487,10 @@ model ClassMaterial {
 
   description String?
 
-  fileId String @unique
-  file File @relation(fields: [fileId], references: [id])
+  fileId String? @unique
+  file File? @relation(fields: [fileId], references: [id])
+
+  fileUrl String? @db.Text
 
   courseId String
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)

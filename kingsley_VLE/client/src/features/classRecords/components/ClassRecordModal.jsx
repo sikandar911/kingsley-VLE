@@ -1,24 +1,24 @@
-﻿import React, { useState, useEffect } from "react";
-import { X, Upload, Link } from "lucide-react";
-import { classMaterialsApi } from "../api/classMaterials.api";
+import React, { useState, useEffect } from "react";
+import { X, Upload, Link, Video } from "lucide-react";
+import { classRecordsApi } from "../api/classRecords.api";
 
 const BRAND = "#6b1d3e";
 const BRAND_DARK = "#5a1630";
 
-const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
-  const [inputMode, setInputMode] = useState("file"); // "file" | "url"
+const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
+  const isEdit = Boolean(record);
+  const [inputMode, setInputMode] = useState("url"); // "url" | "file"
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    fileId: "",
-    fileUrl: "",
+    url: "",
     courseId: "",
     sectionId: "",
     semesterId: "",
   });
   const [loading, setLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
   const [urlError, setUrlError] = useState("");
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
@@ -26,54 +26,68 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
   useEffect(() => {
-    const fetchDropdownData = async () => {
+    if (!isOpen) return;
+    // Populate form when editing
+    if (record) {
+      setFormData({
+        title: record.title || "",
+        description: record.description || "",
+        url: record.url || "",
+        courseId: record.courseId || "",
+        sectionId: record.sectionId || "",
+        semesterId: record.semesterId || "",
+      });
+      setInputMode("url");
+    }
+    const fetchDropdowns = async () => {
       try {
         setLoadingDropdowns(true);
-        const [coursesRes, sectionsRes, semestersRes] = await Promise.all([
-          classMaterialsApi.getCourses(),
-          classMaterialsApi.getSections(),
-          classMaterialsApi.getSemesters(),
+        const [cRes, sRes, smRes] = await Promise.all([
+          classRecordsApi.getCourses(),
+          classRecordsApi.getSections(),
+          classRecordsApi.getSemesters(),
         ]);
-        setCourses(coursesRes.data.courses || []);
-        setSections(sectionsRes.data || sectionsRes || []);
-        setSemesters(semestersRes.data || semestersRes || []);
+        setCourses(cRes.data.courses || []);
+        setSections(sRes.data || sRes || []);
+        setSemesters(smRes.data || smRes || []);
       } catch (err) {
-        console.error("Error fetching dropdown data:", err);
-        setCourses([]);
-        setSections([]);
-        setSemesters([]);
+        console.error("Error fetching dropdowns:", err);
       } finally {
         setLoadingDropdowns(false);
       }
     };
-    if (isOpen) fetchDropdownData();
-  }, [isOpen]);
+    fetchDropdowns();
+  }, [isOpen, record]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "url") setUrlError("");
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleModeSwitch = (mode) => {
+    setInputMode(mode);
+    setUrlError("");
+    setFormData((prev) => ({ ...prev, url: "" }));
+    setUploadedFileName("");
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       setUploadingFile(true);
-      const response = await classMaterialsApi.uploadFile(file, "class_material");
-      const uploadedFileData = response.data;
-      setUploadedFile(uploadedFileData);
-      setFormData((prev) => ({ ...prev, fileId: uploadedFileData.id, fileUrl: "" }));
+      const res = await classRecordsApi.uploadFile(file);
+      const fileData = res.data;
+      // Store the azure blob URL in the url field
+      setFormData((prev) => ({ ...prev, url: fileData.fileUrl }));
+      setUploadedFileName(fileData.name || file.name);
+      setUrlError("");
     } catch (err) {
       console.error("Error uploading file:", err);
       alert("Failed to upload file. Please try again.");
-      setUploadedFile(null);
     } finally {
       setUploadingFile(false);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "fileUrl") {
-      setUrlError("");
-      setFormData((prev) => ({ ...prev, fileUrl: value, fileId: "" }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -88,66 +102,39 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
     return "";
   };
 
-  const handleModeSwitch = (mode) => {
-    setInputMode(mode);
-    setUrlError("");
-    setFormData((prev) => ({ ...prev, fileId: "", fileUrl: "" }));
-    setUploadedFile(null);
-  };
-
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
+    if (!formData.title.trim()) { alert("Title is required"); return; }
+    if (!formData.courseId) { alert("Please select a Course"); return; }
 
-    if (!formData.title.trim()) {
-      alert("Material title is required");
-      return;
-    }
-    if (!formData.courseId || !formData.sectionId || !formData.semesterId) {
-      alert("Please select a Course, Section, and Semester");
-      return;
-    }
-
-    if (inputMode === "file" && !formData.fileId) {
-      alert("Please upload a file");
-      return;
-    }
-
-    if (inputMode === "url") {
-      const err = validateUrl(formData.fileUrl);
-      if (err) {
-        setUrlError(err);
-        return;
-      }
-    }
+    const urlErr = validateUrl(formData.url);
+    if (urlErr) { setUrlError(urlErr); return; }
 
     try {
       setLoading(true);
       const payload = {
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description || undefined,
+        url: formData.url.trim(),
         courseId: formData.courseId,
-        sectionId: formData.sectionId,
-        semesterId: formData.semesterId,
+        sectionId: formData.sectionId || undefined,
+        semesterId: formData.semesterId || undefined,
       };
-      if (inputMode === "file") {
-        payload.fileId = formData.fileId;
-      } else {
-        payload.fileUrl = formData.fileUrl.trim();
-      }
       await onSubmit(payload);
       handleClose();
     } catch (err) {
-      console.error("Error submitting form:", err);
+      console.error("Error submitting:", err);
+      alert(err?.response?.data?.error || "Failed to save. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setFormData({ title: "", description: "", fileId: "", fileUrl: "", courseId: "", sectionId: "", semesterId: "" });
-    setUploadedFile(null);
+    setFormData({ title: "", description: "", url: "", courseId: "", sectionId: "", semesterId: "" });
     setUrlError("");
-    setInputMode("file");
+    setUploadedFileName("");
+    setInputMode("url");
     onClose();
   };
 
@@ -158,7 +145,12 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
       <div className="bg-white rounded-lg w-full max-w-lg sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-lg">
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Add New Class Material</h2>
+          <div className="flex items-center gap-2">
+            <Video className="w-5 h-5" style={{ color: BRAND }} />
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+              {isEdit ? "Edit Class Record" : "Add Class Record"}
+            </h2>
+          </div>
           <button onClick={handleClose} className="p-1 hover:bg-gray-100 rounded-full transition">
             <X className="w-5 h-5 text-gray-600" />
           </button>
@@ -168,14 +160,14 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
           {/* Title */}
           <div>
             <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-              Material Title <span className="text-red-500">*</span>
+              Recording Title <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
-              placeholder="e.g. Lecture 01 - Introduction to DBMS"
+              placeholder="e.g. Lecture 01 - Introduction to Algorithms"
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400"
               style={{ "--tw-ring-color": BRAND }}
             />
@@ -190,36 +182,24 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Provide a brief overview of the material..."
+              placeholder="Brief description of this recording..."
               rows="3"
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 resize-none"
               style={{ "--tw-ring-color": BRAND }}
             />
           </div>
 
-          {/* File / URL toggle */}
+          {/* URL / File toggle */}
           <div>
             <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-              Material Source <span className="text-red-500">*</span>
+              Recording Source <span className="text-red-500">*</span>
             </label>
 
-            {/* Mode tabs */}
             <div className="flex rounded-lg border border-gray-300 overflow-hidden mb-3">
               <button
                 type="button"
-                onClick={() => handleModeSwitch("file")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition ${
-                  inputMode === "file" ? "text-white" : "text-gray-600 bg-white hover:bg-gray-50"
-                }`}
-                style={inputMode === "file" ? { backgroundColor: BRAND } : {}}
-              >
-                <Upload className="w-4 h-4" />
-                Upload File
-              </button>
-              <button
-                type="button"
                 onClick={() => handleModeSwitch("url")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition border-l border-gray-300 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition ${
                   inputMode === "url" ? "text-white" : "text-gray-600 bg-white hover:bg-gray-50"
                 }`}
                 style={inputMode === "url" ? { backgroundColor: BRAND } : {}}
@@ -227,26 +207,60 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 <Link className="w-4 h-4" />
                 Enter URL
               </button>
+              <button
+                type="button"
+                onClick={() => handleModeSwitch("file")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition border-l border-gray-300 ${
+                  inputMode === "file" ? "text-white" : "text-gray-600 bg-white hover:bg-gray-50"
+                }`}
+                style={inputMode === "file" ? { backgroundColor: BRAND } : {}}
+              >
+                <Upload className="w-4 h-4" />
+                Upload File
+              </button>
             </div>
 
-            {/* File upload zone */}
+            {/* URL Input */}
+            {inputMode === "url" && (
+              <div>
+                <div className="relative">
+                  <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    name="url"
+                    value={formData.url}
+                    onChange={handleChange}
+                    placeholder="https://drive.google.com/... or https://youtube.com/..."
+                    className={`w-full pl-9 pr-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
+                      urlError ? "border-red-400" : "border-gray-300"
+                    }`}
+                    style={!urlError ? { "--tw-ring-color": BRAND } : {}}
+                  />
+                </div>
+                {urlError && <p className="text-xs text-red-500 mt-1">{urlError}</p>}
+                <p className="text-xs text-gray-500 mt-1">Only https:// URLs are accepted</p>
+              </div>
+            )}
+
+            {/* File Upload */}
             {inputMode === "file" && (
               <div>
-                {!uploadedFile ? (
+                {!uploadedFileName ? (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center hover:border-gray-400 transition cursor-pointer bg-gray-50 hover:bg-gray-100">
                     <input
                       type="file"
+                      accept="video/*,.mp4,.mov,.avi,.mkv,.webm"
                       onChange={handleFileUpload}
                       disabled={uploadingFile}
                       className="hidden"
-                      id="file-upload"
+                      id="record-file-upload"
                     />
-                    <label htmlFor="file-upload" className="cursor-pointer block">
-                      <Upload className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-gray-400" />
+                    <label htmlFor="record-file-upload" className="cursor-pointer block">
+                      <Video className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-gray-400" />
                       <p className="text-xs sm:text-sm font-medium text-gray-700">
-                        {uploadingFile ? "Uploading..." : "Click to upload or drag and drop"}
+                        {uploadingFile ? "Uploading..." : "Click to upload video file"}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">PDF, DOCX, PPTX, etc.</p>
+                      <p className="text-xs text-gray-500 mt-1">MP4, MOV, AVI, MKV, etc.</p>
                     </label>
                   </div>
                 ) : (
@@ -256,43 +270,19 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                         <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{uploadedFile.name}</p>
-                          <p className="text-xs text-gray-500">ID: {uploadedFile.id?.substring(0, 8)}...</p>
-                        </div>
+                        <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{uploadedFileName}</p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => { setUploadedFile(null); setFormData((prev) => ({ ...prev, fileId: "" })); }}
-                        className="ml-2 text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium flex-shrink-0"
+                        onClick={() => { setUploadedFileName(""); setFormData((prev) => ({ ...prev, url: "" })); }}
+                        className="ml-2 text-red-600 hover:text-red-800 text-xs font-medium flex-shrink-0"
                       >
                         Remove
                       </button>
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* URL input */}
-            {inputMode === "url" && (
-              <div>
-                <div className="relative">
-                  <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    name="fileUrl"
-                    value={formData.fileUrl}
-                    onChange={handleChange}
-                    placeholder="https://example.com/file.pdf"
-                    className={`w-full pl-9 pr-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
-                      urlError ? "border-red-400 focus:ring-red-300" : "border-gray-300"
-                    }`}
-                    style={!urlError ? { "--tw-ring-color": BRAND } : {}}
-                  />
-                </div>
                 {urlError && <p className="text-xs text-red-500 mt-1">{urlError}</p>}
-                <p className="text-xs text-gray-500 mt-1">Only https:// URLs are accepted</p>
               </div>
             )}
           </div>
@@ -305,8 +295,8 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 name="courseId"
                 value={formData.courseId}
                 onChange={handleChange}
-                disabled={loadingDropdowns}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50"
+                disabled={loadingDropdowns || isEdit}
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ "--tw-ring-color": BRAND }}
               >
                 <option value="">Select Course</option>
@@ -314,7 +304,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
               </select>
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">Section <span className="text-red-500">*</span></label>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">Section</label>
               <select
                 name="sectionId"
                 value={formData.sectionId}
@@ -328,7 +318,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
               </select>
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">Semester <span className="text-red-500">*</span></label>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">Semester</label>
               <select
                 name="semesterId"
                 value={formData.semesterId}
@@ -363,8 +353,8 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
             onMouseEnter={(e) => !loading && !uploadingFile && (e.currentTarget.style.backgroundColor = BRAND_DARK)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND)}
           >
-            {inputMode === "file" ? <Upload className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-            <span>{loading ? "Saving..." : "Add Material"}</span>
+            <Video className="w-4 h-4" />
+            <span>{loading ? "Saving..." : isEdit ? "Save Changes" : "Add Recording"}</span>
           </button>
         </div>
       </div>
@@ -372,4 +362,4 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
   );
 };
 
-export default ClassMaterialsModal;
+export default ClassRecordModal;
