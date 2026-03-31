@@ -22,16 +22,16 @@ export const classMaterialsApi = {
   // Get all courses for dropdown
   getCourses: () => api.get("/courses"),
 
-  // Get all sections for dropdown
-  getSections: () => api.get("/sections"),
+  // Get sections with optional filters (by courseId)
+  getSections: (params = {}) => api.get("/sections", { params }),
 
-  // Get all semesters for dropdown
-  getSemesters: () => api.get("/semesters"),
+  // Get semesters with optional filters (by courseId)
+  getSemesters: (params = {}) => api.get("/semesters", { params }),
 
   // ── File Upload Functions ──
   // Upload a file for class materials
-  // fileType defaults to "class-material"
-  uploadFile: (file, fileType = "class-material") => {
+  // fileType defaults to "class_material"
+  uploadFile: (file, fileType = "class_material") => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("fileType", fileType);

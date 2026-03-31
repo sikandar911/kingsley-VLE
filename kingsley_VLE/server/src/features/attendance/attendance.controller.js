@@ -1,4 +1,4 @@
-import prisma from '../../config/prisma.js'
+import prisma from "../../config/prisma.js";
 
 /**
  * @swagger
@@ -11,7 +11,7 @@ const attendanceInclude = {
   student: { select: { id: true, studentId: true, fullName: true } },
   section: { select: { id: true, name: true } },
   semester: { select: { id: true, name: true, year: true } },
-}
+};
 
 /**
  * @swagger
@@ -61,32 +61,45 @@ const attendanceInclude = {
  *               $ref: '#/components/schemas/AttendanceListResponse'
  */
 export const listAttendance = async (req, res) => {
-  const { studentId, sectionId, semesterId, date, from, to, status, page = 1, limit = 50 } = req.query
-  const skip = (Number(page) - 1) * Number(limit)
+  const {
+    studentId,
+    sectionId,
+    semesterId,
+    date,
+    from,
+    to,
+    status,
+    page = 1,
+    limit = 50,
+  } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
 
-  const where = {}
-  if (sectionId) where.sectionId = sectionId
-  if (semesterId) where.semesterId = semesterId
-  if (status) where.status = status
+  const where = {};
+  if (sectionId) where.sectionId = sectionId;
+  if (semesterId) where.semesterId = semesterId;
+  if (status) where.status = status;
 
   // Students can only see their own attendance
-  if (req.user.role === 'student') {
-    const profile = await prisma.studentProfile.findUnique({ where: { userId: req.user.id } })
-    if (!profile) return res.status(404).json({ error: 'Student profile not found' })
-    where.studentId = profile.id
+  if (req.user.role === "student") {
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: req.user.id },
+    });
+    if (!profile)
+      return res.status(404).json({ error: "Student profile not found" });
+    where.studentId = profile.id;
   } else if (studentId) {
-    where.studentId = studentId
+    where.studentId = studentId;
   }
 
   if (date) {
-    const d = new Date(date)
-    const next = new Date(d)
-    next.setDate(next.getDate() + 1)
-    where.date = { gte: d, lt: next }
+    const d = new Date(date);
+    const next = new Date(d);
+    next.setDate(next.getDate() + 1);
+    where.date = { gte: d, lt: next };
   } else if (from || to) {
-    where.date = {}
-    if (from) where.date.gte = new Date(from)
-    if (to) where.date.lte = new Date(to)
+    where.date = {};
+    if (from) where.date.gte = new Date(from);
+    if (to) where.date.lte = new Date(to);
   }
 
   try {
@@ -95,17 +108,22 @@ export const listAttendance = async (req, res) => {
         where,
         skip,
         take: Number(limit),
-        orderBy: { date: 'desc' },
+        orderBy: { date: "desc" },
         include: attendanceInclude,
       }),
       prisma.attendance.count({ where }),
-    ])
-    return res.json({ records, total, page: Number(page), limit: Number(limit) })
+    ]);
+    return res.json({
+      records,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
-    console.error('listAttendance error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("listAttendance error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -139,23 +157,26 @@ export const getAttendance = async (req, res) => {
     const record = await prisma.attendance.findUnique({
       where: { id: req.params.id },
       include: attendanceInclude,
-    })
-    if (!record) return res.status(404).json({ error: 'Attendance record not found' })
+    });
+    if (!record)
+      return res.status(404).json({ error: "Attendance record not found" });
 
     // Students can only view their own
-    if (req.user.role === 'student') {
-      const profile = await prisma.studentProfile.findUnique({ where: { userId: req.user.id } })
+    if (req.user.role === "student") {
+      const profile = await prisma.studentProfile.findUnique({
+        where: { userId: req.user.id },
+      });
       if (!profile || record.studentId !== profile.id) {
-        return res.status(403).json({ error: 'Forbidden' })
+        return res.status(403).json({ error: "Forbidden" });
       }
     }
 
-    return res.json(record)
+    return res.json(record);
   } catch (err) {
-    console.error('getAttendance error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("getAttendance error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -200,40 +221,61 @@ export const getAttendance = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const markAttendance = async (req, res) => {
-  const { studentId, sectionId, semesterId, date, status } = req.body
+  const { studentId, sectionId, semesterId, date, status } = req.body;
 
   if (!studentId || !sectionId || !semesterId || !date || !status) {
-    return res.status(400).json({ error: 'studentId, sectionId, semesterId, date and status are required' })
+    return res.status(400).json({
+      error: "studentId, sectionId, semesterId, date and status are required",
+    });
   }
 
-  const validStatuses = ['present', 'absent', 'late', 'excused']
+  const validStatuses = ["present", "absent", "late", "excused"];
   if (!validStatuses.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` })
+    return res
+      .status(400)
+      .json({ error: `status must be one of: ${validStatuses.join(", ")}` });
   }
 
   try {
-    const attendanceDate = new Date(date)
-    if (isNaN(attendanceDate.getTime())) return res.status(400).json({ error: 'Invalid date' })
+    const attendanceDate = new Date(date);
+    if (isNaN(attendanceDate.getTime()))
+      return res.status(400).json({ error: "Invalid date" });
     // Normalize to midnight UTC
-    attendanceDate.setUTCHours(0, 0, 0, 0)
+    attendanceDate.setUTCHours(0, 0, 0, 0);
 
+    // Check if record exists
     const existing = await prisma.attendance.findFirst({
       where: { studentId, sectionId, date: attendanceDate },
-    })
+    });
+
+    let record;
     if (existing) {
-      return res.status(400).json({ error: 'Attendance already marked for this student on this date in this section' })
+      // Update existing record
+      record = await prisma.attendance.update({
+        where: { id: existing.id },
+        data: { status },
+        include: attendanceInclude,
+      });
+    } else {
+      // Create new record
+      record = await prisma.attendance.create({
+        data: {
+          studentId,
+          sectionId,
+          semesterId,
+          date: attendanceDate,
+          status,
+        },
+        include: attendanceInclude,
+      });
     }
 
-    const record = await prisma.attendance.create({
-      data: { studentId, sectionId, semesterId, date: attendanceDate, status },
-      include: attendanceInclude,
-    })
-    return res.status(201).json(record)
+    return res.status(201).json(record);
   } catch (err) {
-    console.error('markAttendance error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("markAttendance error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -278,43 +320,98 @@ export const markAttendance = async (req, res) => {
  *               $ref: '#/components/schemas/BulkAttendanceResponse'
  */
 export const markBulkAttendance = async (req, res) => {
-  const { sectionId, semesterId, date, records } = req.body
+  const { sectionId, semesterId, date, records } = req.body;
 
-  if (!sectionId || !semesterId || !date || !Array.isArray(records) || records.length === 0) {
-    return res.status(400).json({ error: 'sectionId, semesterId, date and records[] are required' })
+  if (
+    !sectionId ||
+    !semesterId ||
+    !date ||
+    !Array.isArray(records) ||
+    records.length === 0
+  ) {
+    return res.status(400).json({
+      error: "sectionId, semesterId, date and records[] are required",
+    });
   }
 
-  const validStatuses = ['present', 'absent', 'late', 'excused']
+  const validStatuses = ["present", "absent", "late", "excused"];
   for (const r of records) {
-    if (!r.studentId || !validStatuses.includes(r.status)) {
-      return res.status(400).json({ error: 'Each record must have studentId and valid status' })
+    if (!r.studentId) {
+      return res.status(400).json({ error: "Each record must have studentId" });
+    }
+    // Allow null/undefined status OR valid status values (no auto-default)
+    if (r.status && !validStatuses.includes(r.status)) {
+      return res.status(400).json({
+        error: `status must be one of: ${validStatuses.join(", ")} or null`,
+      });
     }
   }
 
   try {
-    const attendanceDate = new Date(date)
-    if (isNaN(attendanceDate.getTime())) return res.status(400).json({ error: 'Invalid date' })
-    attendanceDate.setUTCHours(0, 0, 0, 0)
+    const attendanceDate = new Date(date);
+    if (isNaN(attendanceDate.getTime()))
+      return res.status(400).json({ error: "Invalid date" });
+    attendanceDate.setUTCHours(0, 0, 0, 0);
 
-    // Upsert pattern: delete existing for this section+date, then insert fresh
-    await prisma.attendance.deleteMany({ where: { sectionId, date: attendanceDate } })
+    // Filter: only process records with valid status (skip null/undefined)
+    const recordsWithStatus = records.filter((r) => r.status);
 
-    const created = await prisma.attendance.createMany({
-      data: records.map((r) => ({
-        studentId: r.studentId,
-        sectionId,
-        semesterId,
+    if (recordsWithStatus.length === 0) {
+      // No records to save - return success with 0 count
+      return res.status(201).json({
+        message: "0 attendance records saved (all records had empty status)",
         date: attendanceDate,
-        status: r.status,
-      })),
-    })
+        sectionId,
+      });
+    }
 
-    return res.status(201).json({ message: `${created.count} attendance records saved`, date: attendanceDate, sectionId })
+    // Upsert pattern: For each record, create or update individually (DON'T delete others)
+    let updatedCount = 0;
+    let createdCount = 0;
+
+    for (const r of recordsWithStatus) {
+      const existing = await prisma.attendance.findFirst({
+        where: {
+          studentId: r.studentId,
+          sectionId,
+          date: attendanceDate,
+        },
+      });
+
+      if (existing) {
+        // Update existing record
+        await prisma.attendance.update({
+          where: { id: existing.id },
+          data: { status: r.status },
+        });
+        updatedCount++;
+      } else {
+        // Create new record
+        await prisma.attendance.create({
+          data: {
+            studentId: r.studentId,
+            sectionId,
+            semesterId,
+            date: attendanceDate,
+            status: r.status,
+          },
+        });
+        createdCount++;
+      }
+    }
+
+    return res.status(201).json({
+      message: `${createdCount} attendance records created, ${updatedCount} updated`,
+      date: attendanceDate,
+      sectionId,
+      created: createdCount,
+      updated: updatedCount,
+    });
   } catch (err) {
-    console.error('markBulkAttendance error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("markBulkAttendance error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -355,27 +452,32 @@ export const markBulkAttendance = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateAttendance = async (req, res) => {
-  const { status } = req.body
-  const validStatuses = ['present', 'absent', 'late', 'excused']
+  const { status } = req.body;
+  const validStatuses = ["present", "absent", "late", "excused"];
   if (!status || !validStatuses.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` })
+    return res
+      .status(400)
+      .json({ error: `status must be one of: ${validStatuses.join(", ")}` });
   }
 
   try {
-    const existing = await prisma.attendance.findUnique({ where: { id: req.params.id } })
-    if (!existing) return res.status(404).json({ error: 'Attendance record not found' })
+    const existing = await prisma.attendance.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing)
+      return res.status(404).json({ error: "Attendance record not found" });
 
     const record = await prisma.attendance.update({
       where: { id: req.params.id },
       data: { status },
       include: attendanceInclude,
-    })
-    return res.json(record)
+    });
+    return res.json(record);
   } catch (err) {
-    console.error('updateAttendance error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("updateAttendance error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -406,13 +508,16 @@ export const updateAttendance = async (req, res) => {
  */
 export const deleteAttendance = async (req, res) => {
   try {
-    const existing = await prisma.attendance.findUnique({ where: { id: req.params.id } })
-    if (!existing) return res.status(404).json({ error: 'Attendance record not found' })
+    const existing = await prisma.attendance.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing)
+      return res.status(404).json({ error: "Attendance record not found" });
 
-    await prisma.attendance.delete({ where: { id: req.params.id } })
-    return res.json({ message: 'Attendance record deleted' })
+    await prisma.attendance.delete({ where: { id: req.params.id } });
+    return res.json({ message: "Attendance record deleted" });
   } catch (err) {
-    console.error('deleteAttendance error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("deleteAttendance error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};

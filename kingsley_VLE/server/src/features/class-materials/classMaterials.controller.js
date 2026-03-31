@@ -1,5 +1,5 @@
-import prisma from '../../config/prisma.js'
-import { deleteFromAzure } from '../../config/azure.storage.js'
+import prisma from "../../config/prisma.js";
+import { deleteFromAzure } from "../../config/azure.storage.js";
 
 /**
  * @swagger
@@ -14,7 +14,7 @@ const materialInclude = {
   section: { select: { id: true, name: true } },
   semester: { select: { id: true, name: true, year: true } },
   uploadedByUser: { select: { id: true, email: true, role: true } },
-}
+};
 
 /**
  * @swagger
@@ -49,12 +49,25 @@ const materialInclude = {
  *               $ref: '#/components/schemas/ClassMaterialListResponse'
  */
 export const listClassMaterials = async (req, res) => {
-  const { courseId, sectionId, semesterId, page = 1, limit = 20 } = req.query
-  const skip = (Number(page) - 1) * Number(limit)
-  const where = {}
-  if (courseId) where.courseId = courseId
-  if (sectionId) where.sectionId = sectionId
-  if (semesterId) where.semesterId = semesterId
+  const {
+    courseId,
+    sectionId,
+    semesterId,
+    search,
+    page = 1,
+    limit = 20,
+  } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const where = {};
+  if (courseId) where.courseId = courseId;
+  if (sectionId) where.sectionId = sectionId;
+  if (semesterId) where.semesterId = semesterId;
+  if (search) {
+    where.title = {
+      contains: search,
+      mode: "insensitive",
+    };
+  }
 
   try {
     const [materials, total] = await Promise.all([
@@ -62,17 +75,22 @@ export const listClassMaterials = async (req, res) => {
         where,
         skip,
         take: Number(limit),
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: materialInclude,
       }),
       prisma.classMaterial.count({ where }),
-    ])
-    return res.json({ materials, total, page: Number(page), limit: Number(limit) })
+    ]);
+    return res.json({
+      materials,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
-    console.error('listClassMaterials error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("listClassMaterials error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -106,14 +124,15 @@ export const getClassMaterial = async (req, res) => {
     const material = await prisma.classMaterial.findUnique({
       where: { id: req.params.id },
       include: materialInclude,
-    })
-    if (!material) return res.status(404).json({ error: 'Class material not found' })
-    return res.json(material)
+    });
+    if (!material)
+      return res.status(404).json({ error: "Class material not found" });
+    return res.json(material);
   } catch (err) {
-    console.error('getClassMaterial error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("getClassMaterial error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -158,42 +177,77 @@ export const getClassMaterial = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createClassMaterial = async (req, res) => {
-  const { title, description, fileId, courseId, sectionId, semesterId } = req.body
+  const {
+    title,
+    description,
+    fileId,
+    fileUrl,
+    courseId,
+    sectionId,
+    semesterId,
+  } = req.body;
 
-  if (!title?.trim()) return res.status(400).json({ error: 'title is required' })
-  if (!fileId) return res.status(400).json({ error: 'fileId is required' })
-  if (!courseId) return res.status(400).json({ error: 'courseId is required' })
+  if (!title?.trim())
+    return res.status(400).json({ error: "title is required" });
+  if (!fileId && !fileUrl?.trim())
+    return res
+      .status(400)
+      .json({ error: "Either fileId or fileUrl is required" });
+  if (fileId && fileUrl?.trim())
+    return res
+      .status(400)
+      .json({ error: "Provide either fileId or fileUrl, not both" });
+  if (!courseId) return res.status(400).json({ error: "courseId is required" });
+
+  // Validate URL must be HTTPS
+  if (fileUrl?.trim()) {
+    if (!fileUrl.trim().startsWith("https://")) {
+      return res
+        .status(400)
+        .json({ error: "URL must use HTTPS (http:// URLs are not allowed)" });
+    }
+  }
 
   try {
-    const [file, course] = await Promise.all([
-      prisma.file.findUnique({ where: { id: fileId } }),
-      prisma.course.findUnique({ where: { id: courseId } }),
-    ])
-    if (!file) return res.status(400).json({ error: 'File not found — upload the file first' })
-    if (!course) return res.status(400).json({ error: 'Course not found' })
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) return res.status(400).json({ error: "Course not found" });
 
-    // Ensure file isn't already linked to another material
-    const existingMaterial = await prisma.classMaterial.findUnique({ where: { fileId } })
-    if (existingMaterial) return res.status(400).json({ error: 'This file is already linked to a class material' })
+    let resolvedFileId = null;
+    if (fileId) {
+      const file = await prisma.file.findUnique({ where: { id: fileId } });
+      if (!file)
+        return res
+          .status(400)
+          .json({ error: "File not found — upload the file first" });
+      const existingMaterial = await prisma.classMaterial.findUnique({
+        where: { fileId },
+      });
+      if (existingMaterial)
+        return res
+          .status(400)
+          .json({ error: "This file is already linked to a class material" });
+      resolvedFileId = fileId;
+    }
 
     const material = await prisma.classMaterial.create({
       data: {
         title: title.trim(),
         description: description || null,
-        fileId,
+        fileId: resolvedFileId,
+        fileUrl: fileUrl?.trim() || null,
         courseId,
         sectionId: sectionId || null,
         semesterId: semesterId || null,
         uploadedBy: req.user.id,
       },
       include: materialInclude,
-    })
-    return res.status(201).json(material)
+    });
+    return res.status(201).json(material);
   } catch (err) {
-    console.error('createClassMaterial error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("createClassMaterial error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -237,28 +291,33 @@ export const createClassMaterial = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateClassMaterial = async (req, res) => {
-  const { title, description, sectionId, semesterId } = req.body
+  const { title, description, sectionId, semesterId } = req.body;
 
   try {
-    const existing = await prisma.classMaterial.findUnique({ where: { id: req.params.id } })
-    if (!existing) return res.status(404).json({ error: 'Class material not found' })
+    const existing = await prisma.classMaterial.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing)
+      return res.status(404).json({ error: "Class material not found" });
 
     const material = await prisma.classMaterial.update({
       where: { id: req.params.id },
       data: {
         ...(title?.trim() ? { title: title.trim() } : {}),
-        ...(description !== undefined ? { description: description || null } : {}),
+        ...(description !== undefined
+          ? { description: description || null }
+          : {}),
         ...(sectionId !== undefined ? { sectionId: sectionId || null } : {}),
         ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
       },
       include: materialInclude,
-    })
-    return res.json(material)
+    });
+    return res.json(material);
   } catch (err) {
-    console.error('updateClassMaterial error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("updateClassMaterial error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -292,19 +351,26 @@ export const deleteClassMaterial = async (req, res) => {
     const material = await prisma.classMaterial.findUnique({
       where: { id: req.params.id },
       include: { file: true },
-    })
-    if (!material) return res.status(404).json({ error: 'Class material not found' })
+    });
+    if (!material)
+      return res.status(404).json({ error: "Class material not found" });
 
-    // Delete blob from Azure, then File record, then ClassMaterial
-    await deleteFromAzure(material.file?.slug)
-    await prisma.classMaterial.delete({ where: { id: material.id } })
-    if (material.fileId) {
-      await prisma.file.delete({ where: { id: material.fileId } }).catch(() => {})
+    // Delete class material first (releases the unique fileId FK)
+    await prisma.classMaterial.delete({ where: { id: material.id } });
+
+    // Only clean up uploaded file if one is linked
+    if (material.fileId && material.file) {
+      await deleteFromAzure(material.file.slug).catch(() => {});
+      await prisma.file
+        .delete({ where: { id: material.fileId } })
+        .catch(() => {});
     }
 
-    return res.json({ message: 'Class material and file deleted successfully' })
+    return res.json({
+      message: "Class material and file deleted successfully",
+    });
   } catch (err) {
-    console.error('deleteClassMaterial error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("deleteClassMaterial error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};

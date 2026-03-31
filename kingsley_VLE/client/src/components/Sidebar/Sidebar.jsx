@@ -38,6 +38,16 @@ const menuByRole = {
       path: "/admin/class-materials",
       icon: "📄",
     },
+    {
+      label: "Class Recordings",
+      path: "/admin/class-records",
+      icon: "🎥",
+    },
+    {
+      label: "Class Attendance",
+      path: "/admin/attendance",
+      icon: "✓",
+    },
   ],
   student: [
     {
@@ -52,6 +62,11 @@ const menuByRole = {
         { label: "My Courses", path: "/student/courses", icon: "🎓" },
         { label: "Assignments", path: "/student/assignments", icon: "📋" },
         { label: "Results", path: "/student/results", icon: "🏆" },
+        {
+          label: "Class Recordings",
+          path: "/student/class-records",
+          icon: "🎥",
+        },
       ],
     },
     {
@@ -73,6 +88,11 @@ const menuByRole = {
         { label: "My Courses", path: "/teacher/courses", icon: "🎓" },
         { label: "Assignments", path: "/teacher/assignments", icon: "📋" },
         { label: "Students", path: "/teacher/students", icon: "👥" },
+        {
+          label: "Class Recordings",
+          path: "/teacher/class-records",
+          icon: "🎥",
+        },
       ],
     },
     {

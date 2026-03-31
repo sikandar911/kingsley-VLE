@@ -1,4 +1,4 @@
-import prisma from '../../config/prisma.js'
+import prisma from "../../config/prisma.js";
 
 /**
  * @swagger
@@ -11,7 +11,7 @@ const recordInclude = {
   course: { select: { id: true, title: true } },
   section: { select: { id: true, name: true } },
   semester: { select: { id: true, name: true, year: true } },
-}
+};
 
 /**
  * @swagger
@@ -46,12 +46,25 @@ const recordInclude = {
  *               $ref: '#/components/schemas/ClassRecordListResponse'
  */
 export const listClassRecords = async (req, res) => {
-  const { courseId, sectionId, semesterId, page = 1, limit = 20 } = req.query
-  const skip = (Number(page) - 1) * Number(limit)
-  const where = {}
-  if (courseId) where.courseId = courseId
-  if (sectionId) where.sectionId = sectionId
-  if (semesterId) where.semesterId = semesterId
+  const {
+    courseId,
+    sectionId,
+    semesterId,
+    search,
+    page = 1,
+    limit = 20,
+  } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
+  const where = {};
+  if (courseId) where.courseId = courseId;
+  if (sectionId) where.sectionId = sectionId;
+  if (semesterId) where.semesterId = semesterId;
+  if (search) {
+    where.title = {
+      contains: search,
+      mode: "insensitive",
+    };
+  }
 
   try {
     const [records, total] = await Promise.all([
@@ -59,17 +72,22 @@ export const listClassRecords = async (req, res) => {
         where,
         skip,
         take: Number(limit),
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: recordInclude,
       }),
       prisma.classRecord.count({ where }),
-    ])
-    return res.json({ records, total, page: Number(page), limit: Number(limit) })
+    ]);
+    return res.json({
+      records,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
-    console.error('listClassRecords error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("listClassRecords error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -103,14 +121,15 @@ export const getClassRecord = async (req, res) => {
     const record = await prisma.classRecord.findUnique({
       where: { id: req.params.id },
       include: recordInclude,
-    })
-    if (!record) return res.status(404).json({ error: 'Class record not found' })
-    return res.json(record)
+    });
+    if (!record)
+      return res.status(404).json({ error: "Class record not found" });
+    return res.json(record);
   } catch (err) {
-    console.error('getClassRecord error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("getClassRecord error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -156,15 +175,20 @@ export const getClassRecord = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createClassRecord = async (req, res) => {
-  const { title, description, url, courseId, sectionId, semesterId } = req.body
+  const { title, description, url, courseId, sectionId, semesterId } = req.body;
 
-  if (!title?.trim()) return res.status(400).json({ error: 'title is required' })
-  if (!url?.trim()) return res.status(400).json({ error: 'url is required' })
-  if (!courseId) return res.status(400).json({ error: 'courseId is required' })
+  if (!title?.trim())
+    return res.status(400).json({ error: "title is required" });
+  if (!url?.trim()) return res.status(400).json({ error: "url is required" });
+  if (!url.trim().startsWith("https://"))
+    return res
+      .status(400)
+      .json({ error: "URL must use HTTPS (http:// URLs are not allowed)" });
+  if (!courseId) return res.status(400).json({ error: "courseId is required" });
 
   try {
-    const course = await prisma.course.findUnique({ where: { id: courseId } })
-    if (!course) return res.status(400).json({ error: 'Course not found' })
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) return res.status(400).json({ error: "Course not found" });
 
     const record = await prisma.classRecord.create({
       data: {
@@ -176,13 +200,13 @@ export const createClassRecord = async (req, res) => {
         semesterId: semesterId || null,
       },
       include: recordInclude,
-    })
-    return res.status(201).json(record)
+    });
+    return res.status(201).json(record);
   } catch (err) {
-    console.error('createClassRecord error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("createClassRecord error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -229,29 +253,41 @@ export const createClassRecord = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateClassRecord = async (req, res) => {
-  const { title, description, url, sectionId, semesterId } = req.body
+  const { title, description, url, sectionId, semesterId } = req.body;
 
   try {
-    const existing = await prisma.classRecord.findUnique({ where: { id: req.params.id } })
-    if (!existing) return res.status(404).json({ error: 'Class record not found' })
+    const existing = await prisma.classRecord.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing)
+      return res.status(404).json({ error: "Class record not found" });
+
+    // Validate URL if being updated
+    if (url?.trim() && !url.trim().startsWith("https://")) {
+      return res
+        .status(400)
+        .json({ error: "URL must use HTTPS (http:// URLs are not allowed)" });
+    }
 
     const record = await prisma.classRecord.update({
       where: { id: req.params.id },
       data: {
         ...(title?.trim() ? { title: title.trim() } : {}),
-        ...(description !== undefined ? { description: description || null } : {}),
+        ...(description !== undefined
+          ? { description: description || null }
+          : {}),
         ...(url?.trim() ? { url: url.trim() } : {}),
         ...(sectionId !== undefined ? { sectionId: sectionId || null } : {}),
         ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
       },
       include: recordInclude,
-    })
-    return res.json(record)
+    });
+    return res.json(record);
   } catch (err) {
-    console.error('updateClassRecord error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("updateClassRecord error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -282,13 +318,16 @@ export const updateClassRecord = async (req, res) => {
  */
 export const deleteClassRecord = async (req, res) => {
   try {
-    const existing = await prisma.classRecord.findUnique({ where: { id: req.params.id } })
-    if (!existing) return res.status(404).json({ error: 'Class record not found' })
+    const existing = await prisma.classRecord.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing)
+      return res.status(404).json({ error: "Class record not found" });
 
-    await prisma.classRecord.delete({ where: { id: req.params.id } })
-    return res.json({ message: 'Class record deleted successfully' })
+    await prisma.classRecord.delete({ where: { id: req.params.id } });
+    return res.json({ message: "Class record deleted successfully" });
   } catch (err) {
-    console.error('deleteClassRecord error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("deleteClassRecord error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
