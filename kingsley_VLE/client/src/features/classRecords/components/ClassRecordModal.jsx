@@ -23,9 +23,10 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
-  const [filteredSemesters, setFilteredSemesters] = useState([]);
-  const [relationshipMap, setRelationshipMap] = useState({});
+  const [semesterCourseMap, setSemesterCourseMap] = useState({});
+  const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
   useEffect(() => {
@@ -59,25 +60,33 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         setCourses(coursesList);
         setSections(sectionsData);
         setSemesters(semestersData);
-        setFilteredSections(sectionsData);
-        setFilteredSemesters(semestersData);
 
-        // Build relationship map from sections
-        const map = {};
-        sectionsData.forEach((section) => {
-          const courseId = section.courseId;
-          const semesterId = section.semesterId;
-          const sectionId = section.id;
-
-          if (!map[courseId]) map[courseId] = { sections: [], semesters: [] };
-          if (!map[courseId].sections.includes(sectionId)) {
-            map[courseId].sections.push(sectionId);
-          }
-          if (semesterId && !map[courseId].semesters.includes(semesterId)) {
-            map[courseId].semesters.push(semesterId);
+        // Build semester -> courses map
+        const semCxMap = {};
+        coursesList.forEach((course) => {
+          const semId = course.semesterId;
+          if (semId) {
+            if (!semCxMap[semId]) semCxMap[semId] = [];
+            if (!semCxMap[semId].includes(course.id)) {
+              semCxMap[semId].push(course.id);
+            }
           }
         });
-        setRelationshipMap(map);
+
+        // Build course -> sections map
+        const cxSecMap = {};
+        sectionsData.forEach((section) => {
+          const courseId = section.courseId;
+          if (courseId) {
+            if (!cxSecMap[courseId]) cxSecMap[courseId] = [];
+            if (!cxSecMap[courseId].includes(section.id)) {
+              cxSecMap[courseId].push(section.id);
+            }
+          }
+        });
+
+        setSemesterCourseMap(semCxMap);
+        setCourseSectionMap(cxSecMap);
       } catch (err) {
         console.error("Error fetching dropdowns:", err);
       } finally {
@@ -87,28 +96,36 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     fetchDropdowns();
   }, [isOpen, record]);
 
-  // Filter sections and semesters based on selected course + reset selections
+  // Filter courses based on selected semester
   useEffect(() => {
-    if (formData.courseId && relationshipMap[formData.courseId]) {
-      const relatedSectionIds = relationshipMap[formData.courseId].sections;
-      const relatedSemesterIds = relationshipMap[formData.courseId].semesters;
-      setFilteredSections(
-        sections.filter((s) => relatedSectionIds.includes(s.id)),
-      );
-      setFilteredSemesters(
-        semesters.filter((s) => relatedSemesterIds.includes(s.id)),
-      );
+    if (formData.semesterId && semesterCourseMap[formData.semesterId]) {
+      const courseIds = semesterCourseMap[formData.semesterId];
+      setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
     } else {
-      setFilteredSections(sections);
-      setFilteredSemesters(semesters);
+      setFilteredCourses([]);
     }
-    // Reset section and semester when course changes
+    // Reset course and section when semester changes
+    setFormData((prev) => ({
+      ...prev,
+      courseId: "",
+      sectionId: "",
+    }));
+  }, [formData.semesterId, semesterCourseMap, courses]);
+
+  // Filter sections based on selected course
+  useEffect(() => {
+    if (formData.courseId && courseSectionMap[formData.courseId]) {
+      const sectionIds = courseSectionMap[formData.courseId];
+      setFilteredSections(sections.filter((s) => sectionIds.includes(s.id)));
+    } else {
+      setFilteredSections([]);
+    }
+    // Reset section when course changes
     setFormData((prev) => ({
       ...prev,
       sectionId: "",
-      semesterId: "",
     }));
-  }, [formData.courseId, relationshipMap, sections, semesters]);
+  }, [formData.courseId, courseSectionMap, sections]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -394,6 +411,29 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
 
           {/* Dropdowns */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {/* Semester */}
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                Semester <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="semesterId"
+                value={formData.semesterId}
+                onChange={handleChange}
+                disabled={loadingDropdowns || isEdit}
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ "--tw-ring-color": BRAND }}
+              >
+                <option value="">Select Semester</option>
+                {semesters.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Course */}
             <div>
               <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
                 Course <span className="text-red-500">*</span>
@@ -402,18 +442,24 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                 name="courseId"
                 value={formData.courseId}
                 onChange={handleChange}
-                disabled={loadingDropdowns || isEdit}
+                disabled={loadingDropdowns || !formData.semesterId || isEdit}
                 className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ "--tw-ring-color": BRAND }}
               >
-                <option value="">Select Course({courses.length})</option>
-                {courses.map((c) => (
+                <option value="">
+                  {formData.semesterId
+                    ? `Select Course (${filteredCourses.length})`
+                    : "Select Semester First"}
+                </option>
+                {filteredCourses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.title}
                   </option>
                 ))}
               </select>
             </div>
+
+            {/* Section */}
             <div>
               <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
                 Section
@@ -428,34 +474,10 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
               >
                 <option value="">
                   {formData.courseId
-                    ? `All Sections (${filteredSections.length})`
+                    ? `Select Section (${filteredSections.length})`
                     : "Select Course First"}
                 </option>
                 {filteredSections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                Semester
-              </label>
-              <select
-                name="semesterId"
-                value={formData.semesterId}
-                onChange={handleChange}
-                disabled={loadingDropdowns || !formData.courseId}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">
-                  {formData.courseId
-                    ? `All Semesters (${filteredSemesters.length})`
-                    : "Select Course First"}
-                </option>
-                {filteredSemesters.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>

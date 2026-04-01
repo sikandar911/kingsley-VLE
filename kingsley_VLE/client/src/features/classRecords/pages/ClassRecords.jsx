@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Edit2, Trash2, ExternalLink, Video } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  ExternalLink,
+  Video,
+  Grid3x3,
+  List,
+} from "lucide-react";
 import ClassRecordModal from "../components/ClassRecordModal";
+import CustomDropdown from "../components/CustomDropdown";
 import { classRecordsApi } from "../api/classRecords.api";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -27,6 +37,18 @@ const ClassRecords = () => {
   const [relationshipMap, setRelationshipMap] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [viewMode, setViewMode] = useState("grid");
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
+
+  // Handle screen resize for responsive styling
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Fetch all courses on mount
   useEffect(() => {
@@ -172,9 +194,9 @@ const ClassRecords = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-4 md:px-4 lg:px-8  lg:py-8">
+    <div className="min-h-screen bg-gray-50 px-4 py-4 md:px-6 md:py-6 lg:px-8  lg:py-8">
       {/* Header */}
-      <div className="mb-4 md:mb-6 lg:mb-8 lg:flex items-center justify-between">
+      <div className="mb-4 md:mb-6 lg:mb-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
             Class Recordings
@@ -185,78 +207,132 @@ const ClassRecords = () => {
               : "Manage class recording links and videos."}
           </p>
         </div>
-        {canEdit && (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center justify-center gap-2 font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm text-white mt-2 md:mt-3 lg:mt-0"
-            style={{ backgroundColor: BRAND }}
-          >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className=" sm:inline">Add Recording</span>
-            {/* <span className="sm:hidden">Add</span> */}
-          </button>
-        )}
+        <div className="flex justify-between md:items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex items-center gap-2 bg-white rounded-lg p-1 md:p-1 border border-gray-200 shadow-sm h-fit">
+            <button
+              onClick={() => setViewMode("grid")}
+              className="p-1.5 rounded transition"
+              style={{
+                backgroundColor: viewMode === "grid" ? BRAND : "#f3f4f6",
+                color: viewMode === "grid" ? "white" : "#6b7280",
+              }}
+              title="Grid View"
+            >
+              <Grid3x3 className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className="p-1.5 rounded transition"
+              style={{
+                backgroundColor: viewMode === "list" ? BRAND : "#f3f4f6",
+                color: viewMode === "list" ? "white" : "#6b7280",
+              }}
+              title="List View"
+            >
+              <List className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+          </div>
+          {canEdit && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center justify-center gap-2 font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm text-white"
+              style={{ backgroundColor: BRAND }}
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className=" sm:inline">Add Recording</span>
+              {/* <span className="sm:hidden">Add</span> */}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter bar */}
       <div
-        className="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8"
-        style={{ background: "linear-gradient(to right, #6b1d3e, #5a1630)" }}
+        className="rounded-lg lg:p-6 mb-6 sm:mb-8"
+        style={{
+          background: isSmallScreen
+            ? "transparent"
+            : "linear-gradient(to right, #6b1d3e, #5a1630)",
+          padding: isSmallScreen ? "0" : undefined,
+        }}
       >
-        <div className="flex flex-col gap-3 sm:gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5" />
+        <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3">
+          {/* Search */}
+          <div className="flex flex-col">
+            <label
+              className="text-xs sm:text-sm font-semibold mb-1.5 flex items-center gap-1.5"
+              style={{
+                color: isSmallScreen ? "#374151" : "white",
+              }}
+            >
+              <Search className="w-4 h-4" />
+              Search
+            </label>
             <input
               type="text"
-              placeholder="Search by recording title..."
+              placeholder="Search title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 placeholder-gray-400"
-              style={{ "--tw-ring-color": BRAND }}
+              className="w-full px-4 py-2 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:ring-2"
+              style={{
+                "--tw-ring-color": BRAND,
+                backgroundColor: isSmallScreen ? "#5f1834" : "white",
+                color: isSmallScreen ? "white" : "#374151",
+                padding: isSmallScreen ? "10px 8px" : "10px 16px",
+              }}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <select
+
+          {/* Course Dropdown */}
+          <div className="flex flex-col">
+            <CustomDropdown
+              options={filteredCourses.map((course) => ({
+                id: course.id,
+                name: course.title || course.name || "Untitled Course",
+              }))}
               value={selectedCourse}
-              onChange={(e) => setSelectedCourse(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
-              style={{ "--tw-ring-color": BRAND }}
-            >
-              <option value="">All Courses ({filteredCourses.length})</option>
-              {filteredCourses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
-              ))}
-            </select>
-            <select
+              onChange={setSelectedCourse}
+              placeholder="All Courses"
+              label="Course"
+              countText={`(${filteredCourses.length})`}
+              isSmallScreen={isSmallScreen}
+              BRAND={BRAND}
+            />
+          </div>
+
+          {/* Section Dropdown */}
+          <div className="flex flex-col">
+            <CustomDropdown
+              options={filteredSections.map((section) => ({
+                id: section.id,
+                name: section.name || "Untitled Section",
+              }))}
               value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
-              style={{ "--tw-ring-color": BRAND }}
-            >
-              <option value="">All Sections ({filteredSections.length})</option>
-              {filteredSections.map((section) => (
-                <option key={section?.id} value={section?.id}>
-                  {section?.name}
-                </option>
-              ))}
-            </select>
-            <select
+              onChange={setSelectedSection}
+              placeholder="All Sections"
+              label="Section"
+              countText={`(${filteredSections.length})`}
+              isSmallScreen={isSmallScreen}
+              BRAND={BRAND}
+            />
+          </div>
+
+          {/* Semester Dropdown */}
+          <div className="flex flex-col">
+            <CustomDropdown
+              options={filteredSemesters.map((semester) => ({
+                id: semester.id,
+                name: semester.name || "Untitled Semester",
+              }))}
               value={selectedSemester}
-              onChange={(e) => setSelectedSemester(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
-              style={{ "--tw-ring-color": BRAND }}
-            >
-              <option value="">
-                All Semesters ({filteredSemesters.length})
-              </option>
-              {filteredSemesters.map((semester) => (
-                <option key={semester?.id} value={semester?.id}>
-                  {semester?.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedSemester}
+              placeholder="All Semesters"
+              label="Semester"
+              countText={`(${filteredSemesters.length})`}
+              isSmallScreen={isSmallScreen}
+              BRAND={BRAND}
+            />
           </div>
         </div>
       </div>
@@ -292,94 +368,219 @@ const ClassRecords = () => {
       )}
 
       {!loading && !error && records.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {records.map((record) => (
-            <div
-              key={record.id}
-              className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col"
-            >
-              {/* Card header */}
-              <div className="p-4 sm:p-5 flex-1">
-                <div className="flex items-start gap-3 mb-3">
-                  <div
-                    className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: "#fdf2f8" }}
-                  >
-                    <Video className="w-5 h-5" style={{ color: BRAND }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                      {record.title}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">
-                      {record.course?.title || "No course"}
+        <>
+          {/* Grid View */}
+          {viewMode === "grid" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {records.map((record) => (
+                <div
+                  key={record.id}
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col"
+                >
+                  {/* Card header */}
+                  <div className="p-4 sm:p-5 flex-1">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div
+                        className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: "#fdf2f8" }}
+                      >
+                        <Video className="w-5 h-5" style={{ color: BRAND }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                          {record.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          {record.course?.title || "No course"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {record.description && (
+                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-3">
+                        {record.description}
+                      </p>
+                    )}
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {record.section && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                          {record.section.name}
+                        </span>
+                      )}
+                      {record.semester && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                          {record.semester.name}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-400">
+                      {new Date(record.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </p>
                   </div>
-                </div>
 
-                {record.description && (
-                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-3">
-                    {record.description}
-                  </p>
-                )}
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {record.section && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                      {record.section.name}
-                    </span>
-                  )}
-                  {record.semester && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
-                      {record.semester.name}
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-xs text-gray-400">
-                  {new Date(record.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
-
-              {/* Card footer */}
-              <div className="px-4 sm:px-5 py-3 border-t border-gray-100 flex items-center justify-between gap-2">
-                <a
-                  href={record.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs sm:text-sm font-medium transition hover:underline"
-                  style={{ color: BRAND }}
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Open Recording
-                </a>
-                {canEdit && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openEdit(record)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                      title="Edit"
+                  {/* Card footer */}
+                  <div className="px-4 sm:px-5 py-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <a
+                      href={record.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs sm:text-sm font-medium transition hover:underline"
+                      style={{ color: BRAND }}
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(record.id)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Open Recording
+                    </a>
+                    {canEdit && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEdit(record)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(record.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* List View */}
+          {viewMode === "list" && (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                        Title
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                        Course
+                      </th>
+                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                        Section
+                      </th>
+                      <th className="hidden lg:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                        Date
+                      </th>
+                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.map((record) => (
+                      <tr
+                        key={record.id}
+                        className="border-b border-gray-200 hover:bg-gray-50 transition"
+                      >
+                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                          <div className="flex items-center gap-2 max-w-xs">
+                            <div
+                              className="flex-shrink-0 w-8 h-8 rounded flex items-center justify-center"
+                              style={{ backgroundColor: "#fdf2f8" }}
+                            >
+                              <Video
+                                className="w-4 h-4"
+                                style={{ color: BRAND }}
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
+                                {record.title}
+                              </p>
+                              {record.description && (
+                                <p className="text-xs text-gray-500 truncate">
+                                  {record.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                          <p className="text-xs sm:text-sm text-gray-900">
+                            {record.course?.title || "-"}
+                          </p>
+                        </td>
+                        <td className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {record.section ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                                {record.section.name}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="hidden lg:table-cell px-4 sm:px-6 py-3 sm:py-4">
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            {new Date(record.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              },
+                            )}
+                          </p>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <a
+                              href={record.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                              title="Open Recording"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                            {canEdit && (
+                              <>
+                                <button
+                                  onClick={() => openEdit(record)}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                                  title="Edit"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(record.id)}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Modal */}
