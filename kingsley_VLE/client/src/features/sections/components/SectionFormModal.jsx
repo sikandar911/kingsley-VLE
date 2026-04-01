@@ -37,7 +37,7 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
       adminApi.listUsers('teacher'),
     ])
       .then(([coursesRes, semestersRes, teachersRes]) => {
-        setCourses(coursesRes.data.courses || [])
+        setCourses(coursesRes.data?.data || [])
         setSemesters(semestersRes.data || [])
         setTeachers(teachersRes.data || [])
       })

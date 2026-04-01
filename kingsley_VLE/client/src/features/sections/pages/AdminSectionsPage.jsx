@@ -16,7 +16,7 @@ export default function AdminSectionsPage() {
   useEffect(() => {
     coursesApi
       .list({ limit: 200 })
-      .then((res) => setCourses(res.data.courses || []));
+      .then((res) => setCourses(res.data?.data || []));
   }, []);
 
   const fetchSections = useCallback(async () => {

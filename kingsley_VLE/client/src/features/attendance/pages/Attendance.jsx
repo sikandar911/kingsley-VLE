@@ -58,13 +58,10 @@ const Attendance = () => {
       // Fetch courses - IMPORTANT: API returns { courses, total, page, limit }
       const courseRes = (await attendanceApi.getCourses?.()) || { data: {} };
       let coursesData = [];
-      if (Array.isArray(courseRes?.data)) {
-        coursesData = courseRes.data; // Direct array response
-      } else if (
-        courseRes?.data?.courses &&
-        Array.isArray(courseRes.data.courses)
-      ) {
-        coursesData = courseRes.data.courses; // { courses: [...] } response
+      if (Array.isArray(courseRes?.data?.data)) {
+        coursesData = courseRes.data.data; // New { data: [...] } response
+      } else if (Array.isArray(courseRes?.data)) {
+        coursesData = courseRes.data; // Fallback for direct array response
       }
       setCourses(coursesData);
 

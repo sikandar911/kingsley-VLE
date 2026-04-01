@@ -23,7 +23,7 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
       adminApi.listUsers('student'),
     ])
       .then(([coursesRes, semestersRes, studentsRes]) => {
-        setCourses(coursesRes.data.courses || [])
+        setCourses(coursesRes.data?.data || [])
         setSemesters(semestersRes.data || [])
         setStudents(studentsRes.data || [])
       })

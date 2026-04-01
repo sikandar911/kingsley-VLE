@@ -69,7 +69,10 @@ export const listCourses = async (req, res) => {
       }),
       prisma.course.count({ where }),
     ])
-    return res.json({ courses, total, page: Number(page), limit: Number(limit) })
+    return res.json({
+      data: courses,
+      meta: { total, page: Number(page), limit: Number(limit), pages: Math.ceil(total / Number(limit)) },
+    })
   } catch (err) {
     console.error('listCourses error:', err)
     return res.status(500).json({ error: 'Server error' })

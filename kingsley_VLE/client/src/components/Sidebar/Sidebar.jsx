@@ -48,6 +48,11 @@ const menuByRole = {
       path: "/admin/attendance",
       icon: "✓",
     },
+    {
+      label: "Events",
+      path: "/admin/events",
+      icon: "📅",
+    },
   ],
   student: [
     {
@@ -66,6 +71,11 @@ const menuByRole = {
           label: "Class Recordings",
           path: "/student/class-records",
           icon: "🎥",
+        },
+        {
+          label: "Events Calendar",
+          path: "/student/events",
+          icon: "📅",
         },
       ],
     },
@@ -92,6 +102,11 @@ const menuByRole = {
           label: "Class Recordings",
           path: "/teacher/class-records",
           icon: "🎥",
+        },
+        {
+          label: "Events Calendar",
+          path: "/teacher/events",
+          icon: "📅",
         },
       ],
     },

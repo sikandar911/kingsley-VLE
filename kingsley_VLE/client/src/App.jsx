@@ -23,6 +23,9 @@ import AdminEnrollmentsPage from "./features/enrollments/pages/AdminEnrollmentsP
 import ClassMaterials from "./features/classMaterials/pages/ClassMaterials";
 import ClassRecords from "./features/classRecords/pages/ClassRecords";
 import Attendance from "./features/attendance/pages/Attendance";
+import AdminEventsPage from "./features/events/pages/AdminEventsPage";
+import TeacherEventsPage from "./features/events/pages/TeacherEventsPage";
+import StudentEventsPage from "./features/events/pages/StudentEventsPage";
 
 export default function App() {
   return (
@@ -48,6 +51,7 @@ export default function App() {
               />
               <Route path="/admin/class-records" element={<ClassRecords />} />
               <Route path="/admin/attendance" element={<Attendance />} />
+              <Route path="/admin/events" element={<AdminEventsPage />} />
               <Route path="/admin/courses" element={<AdminCoursesPage />} />
               <Route path="/admin/sections" element={<AdminSectionsPage />} />
               <Route path="/admin/academic" element={<AdminAcademicPage />} />
@@ -68,6 +72,7 @@ export default function App() {
                 element={<StudentAssignmentsPage />}
               />
               <Route path="/student/results" element={<StudentResultsPage />} />
+              <Route path="/student/events" element={<StudentEventsPage />} />
               <Route path="/student/class-records" element={<ClassRecords />} />
               <Route path="/student/profile" element={<StudentProfilePage />} />
             </Route>
@@ -88,6 +93,7 @@ export default function App() {
                 path="/teacher/students"
                 element={<TeacherStudentsPage />}
               />
+              <Route path="/teacher/events" element={<TeacherEventsPage />} />
               <Route path="/teacher/class-records" element={<ClassRecords />} />
               <Route path="/teacher/profile" element={<TeacherProfilePage />} />
             </Route>

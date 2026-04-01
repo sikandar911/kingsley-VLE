@@ -50,7 +50,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           classRecordsApi.getSections(),
           classRecordsApi.getSemesters(),
         ]);
-        const coursesList = cRes.data.courses || [];
+        const coursesList = cRes.data?.data || [];;
         const sectionsData = Array.isArray(sRes.data) ? sRes.data : sRes || [];
         const semestersData = Array.isArray(smRes.data)
           ? smRes.data

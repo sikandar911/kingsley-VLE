@@ -15,6 +15,8 @@ import fileRoutes from './features/files/files.routes.js'
 import attendanceRoutes from './features/attendance/attendance.routes.js'
 import classMaterialRoutes from './features/class-materials/classMaterials.routes.js'
 import classRecordRoutes from './features/class-records/classRecords.routes.js'
+import eventRoutes from './features/events/events.routes.js'
+import calendarRoutes from './features/calendar/calendar.routes.js'
 import prisma from './config/prisma.js'
 
 const app = express()
@@ -40,6 +42,8 @@ app.use('/api/files', fileRoutes)
 app.use('/api/attendance', attendanceRoutes)
 app.use('/api/class-materials', classMaterialRoutes)
 app.use('/api/class-records', classRecordRoutes)
+app.use('/api/events', eventRoutes)
+app.use('/api/calendar', calendarRoutes)
 
 // Health check
 app.get('/health', (req, res) => {

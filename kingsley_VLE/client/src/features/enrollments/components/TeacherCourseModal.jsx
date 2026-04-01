@@ -19,7 +19,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
       adminApi.listUsers('teacher'),
     ])
       .then(([coursesRes, teachersRes]) => {
-        setCourses(coursesRes.data.courses || [])
+        setCourses(coursesRes.data?.data || [])
         setTeachers(teachersRes.data || [])
       })
       .catch(() => setError('Failed to load form data'))

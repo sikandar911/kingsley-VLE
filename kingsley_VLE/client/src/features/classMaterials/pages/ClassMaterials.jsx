@@ -34,7 +34,7 @@ const ClassMaterials = () => {
     const fetchCourses = async () => {
       try {
         const response = await coursesApi.list({ limit: 200 });
-        const coursesList = response.data?.courses || [];
+        const coursesList = response.data?.data || [];
         setCourses(coursesList);
         setFilteredCourses(coursesList);
       } catch (err) {

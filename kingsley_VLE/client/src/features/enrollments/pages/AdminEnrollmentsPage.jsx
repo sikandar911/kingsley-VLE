@@ -33,7 +33,7 @@ export default function AdminEnrollmentsPage() {
       coursesApi.list({ limit: 200 }),
       academicApi.semesters.list(),
     ]).then(([c, s]) => {
-      setCourses(c.data.courses || []);
+      setCourses(c.data?.data || []);
       setSemesters(s.data || []);
     });
   }, []);

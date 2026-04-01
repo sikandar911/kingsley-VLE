@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { assignmentsApi } from "../api/assignments.api";
+import { coursesApi } from "../../courses/api/courses.api";
+import { adminApi } from "../../../Dashboard/Admin/api/admin.api";
 import { useAuth } from "../../../context/AuthContext";
 
 const INITIAL = {
@@ -62,12 +64,25 @@ export default function CreateAssignmentModal({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    assignmentsApi
-      .getMeta()
-      .then((res) => {
-        const courseList = res.data.courses || [];
+    // Build fetch promises based on user role
+    const promises = [coursesApi.list({ limit: 200 })];
+    
+    // Only admins can assign teachers, so only fetch for admins
+    if (isAdmin) {
+      promises.push(adminApi.listUsers('teacher'));
+    }
+    
+    Promise.all(promises)
+      .then((responses) => {
+        const coursesRes = responses[0];
+        const courseList = coursesRes.data?.data || [];
         setCourses(courseList);
-        setTeachers(res.data.teachers || []);
+        
+        // Set teachers only if admin and response provided
+        if (isAdmin && responses[1]) {
+          setTeachers(responses[1].data || []);
+        }
+        
         if (form.courseId) {
           const c = courseList.find((c) => c.id === form.courseId);
           setSections(c?.sections || []);
@@ -78,7 +93,7 @@ export default function CreateAssignmentModal({
         setError("Failed to load form data. Make sure the server is running."),
       )
       .finally(() => setMetaLoading(false));
-  }, []);
+  }, [isAdmin]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -247,7 +262,7 @@ export default function CreateAssignmentModal({
                       <option value="">Select teacher…</option>
                       {teachers.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {t.fullName} ({t.teacherId})
+                          {t.teacherProfile?.fullName} ({t.teacherProfile?.teacherId})
                         </option>
                       ))}
                     </select>

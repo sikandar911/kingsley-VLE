@@ -16,8 +16,8 @@ export default function AdminCoursesPage() {
     setLoading(true);
     try {
       const res = await coursesApi.list({ search, limit: 100 });
-      setCourses(res.data.courses || []);
-      setTotal(res.data.total || 0);
+      setCourses(res.data?.data || []);
+      setTotal(res.data?.meta?.total || 0);
     } catch {
       // error silently handled
     } finally {
