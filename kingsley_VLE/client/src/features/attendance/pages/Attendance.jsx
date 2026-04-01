@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { attendanceApi } from "../api/attendance.api";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const Attendance = () => {
   const [records, setRecords] = useState([]);
@@ -35,6 +36,19 @@ const Attendance = () => {
   const [sessionSemesterMap, setSessionSemesterMap] = useState({}); // sessionId -> [semesterIds]
   const [semesterCourseMap, setSemesterCourseMap] = useState({}); // semesterId -> [courseIds]
   const [courseSectionMap, setCourseSectionMap] = useState({}); // courseId -> [sectionIds]
+
+  // Screen size detection for responsive button sizing
+  // Screen size detection - small and medium use dark styling
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Fetch all data and build relationship maps
   const fetchAllData = async () => {
@@ -390,7 +404,7 @@ const Attendance = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="px-4 py-4 md:px-4 lg:px-8  lg:py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-4 md:mb-6 lg:mb-8">
         <div>
@@ -407,122 +421,115 @@ const Attendance = () => {
 
       {/* Filter - DEPENDENT DROPDOWNS */}
       <div
-        className="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8"
-        style={{ background: "linear-gradient(to right, #6b1d3e, #5a1630)" }}
+        className="rounded-lg  lg:p-6 mb-6 sm:mb-8"
+        style={{
+          background: isSmallScreen
+            ? "transparent"
+            : "linear-gradient(to right, #6b1d3e, #5a1630)",
+        }}
       >
-        <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4 lg:gap-3">
+        <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3">
           {/* Session Dropdown */}
           <div className="flex flex-col">
-            <label className="text-white text-xs sm:text-sm font-semibold mb-1.5">
-              Session
-            </label>
-            <select
+            <CustomDropdown
+              options={sessions.map((session) => ({
+                id: session.id,
+                name: session.name || session.year || "Session",
+              }))}
               value={selectedSession}
-              onChange={(e) => handleSessionChange(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
-              style={{ "--tw-ring-color": "#6b1d3a" }}
-            >
-              <option value="">Select Session</option>
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.name || session.year || "Session"}
-                </option>
-              ))}
-            </select>
+              onChange={handleSessionChange}
+              placeholder="Select Session"
+              label="Session"
+              isSmallScreen={isSmallScreen}
+              BRAND="#6b1d3e"
+            />
           </div>
 
           {/* Semester Dropdown */}
           <div className="flex flex-col">
-            <label className="text-white text-xs sm:text-sm font-semibold mb-1.5">
-              Semester
-            </label>
-            <select
+            <CustomDropdown
+              options={filteredSemesters.map((semester) => ({
+                id: semester.id,
+                name: semester.name || `Semester ${semester.semesterNumber}`,
+              }))}
               value={selectedSemester}
-              onChange={(e) => handleSemesterChange(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer disabled:bg-gray-200 disabled:cursor-not-allowed"
-              style={{ "--tw-ring-color": "#6b1d3a" }}
+              onChange={handleSemesterChange}
+              placeholder="Select Semester"
+              label="Semester"
+              isSmallScreen={isSmallScreen}
+              BRAND="#6b1d3e"
               disabled={!selectedSession}
-            >
-              <option value="">Select Semester</option>
-              {filteredSemesters.map((semester) => (
-                <option key={semester.id} value={semester.id}>
-                  {semester.name || `Semester ${semester.semesterNumber}`}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Course Dropdown */}
           <div className="flex flex-col">
-            <label className="text-white text-xs sm:text-sm font-semibold mb-1.5">
-              Course
-            </label>
-            <select
+            <CustomDropdown
+              options={filteredCourses.map((course) => ({
+                id: course.id,
+                name: course.title || course.name || "Course",
+              }))}
               value={selectedCourse}
-              onChange={(e) => handleCourseChange(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer disabled:bg-gray-200 disabled:cursor-not-allowed"
-              style={{ "--tw-ring-color": "#6b1d3a" }}
+              onChange={handleCourseChange}
+              placeholder="Select Course"
+              label="Course"
+              isSmallScreen={isSmallScreen}
+              BRAND="#6b1d3e"
               disabled={!selectedSemester}
-            >
-              <option value="">Select Course</option>
-              {filteredCourses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title || course.name || "Course"}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Section Dropdown */}
           <div className="flex flex-col">
-            <label className="text-white text-xs sm:text-sm font-semibold mb-1.5">
-              Section
-            </label>
-            <select
+            <CustomDropdown
+              options={filteredSections.map((section) => ({
+                id: section.id,
+                name: section.name || section.code || "Section",
+              }))}
               value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer disabled:bg-gray-200 disabled:cursor-not-allowed"
-              style={{ "--tw-ring-color": "#6b1d3a" }}
+              onChange={setSelectedSection}
+              placeholder="Select Section"
+              label="Section"
+              isSmallScreen={isSmallScreen}
+              BRAND="#6b1d3e"
               disabled={!selectedCourse}
-            >
-              <option value="">Select Section</option>
-              {filteredSections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.name || section.code}
-                </option>
-              ))}
-            </select>
+            />
           </div>
+        </div>
+      </div>
 
-          {/* Date Input */}
-          <div className="flex flex-col">
-            <label className="text-white text-xs sm:text-sm font-semibold mb-1.5">
+      {/* Reset and Save Buttons with Date */}
+      <div className="mb-4 flex flex-col md:flex-row justify-between items-start gap-4">
+        {/* Left: Reset Filters and Date (flex-row on md screens and above) */}
+        <div className="flex flex-col-reverse gap-4 w-full md:w-auto md:flex-row md:items-end md:gap-3">
+          {/* Reset Filters Button */}
+          <button
+            onClick={() => {
+              setDateFilter("");
+              handleSessionChange("");
+              setSelectedStatuses({});
+            }}
+            className="px-4 py-2.5 sm:py-3 bg-white text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-100 transition border border-gray-300 w-full md:w-auto"
+          >
+            Reset Filters
+          </button>
+
+          {/* Date Input div - Full width on small screens, auto on md screens and above */}
+          <div className="flex flex-col w-full md:w-auto lg:w-[270px]">
+            <label className="text-gray-700 text-xs sm:text-sm font-semibold mb-1.5 md:mb-0 md:sr-only">
               Date
             </label>
             <input
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2"
+              className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 border border-gray-300"
               style={{ "--tw-ring-color": "#6b1d3a" }}
             />
           </div>
         </div>
-      </div>
 
-      {/* Reset and Save Buttons */}
-      <div className="mb-4 flex gap-2">
-        <button
-          onClick={() => {
-            setDateFilter("");
-            handleSessionChange("");
-            setSelectedStatuses({});
-          }}
-          className="px-4 py-2.5 sm:py-3 bg-white text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-100 transition border border-gray-300"
-        >
-          Reset Filters
-        </button>
-
+        {/* Right: Save Attendance Button */}
         {records.length > 0 && (
           <button
             onClick={saveBulkAttendance}
@@ -534,7 +541,7 @@ const Attendance = () => {
               !selectedSection ||
               !dateFilter
             }
-            className="px-4 py-2.5 sm:py-3 bg-[#611936] text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#7e2347] transition disabled:bg-gray-400 disabled:cursor-not-allowed hover:disabled:bg-gray-400"
+            className="px-4 py-2.5 sm:py-3 bg-[#611936] text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#7e2347] transition disabled:bg-gray-400 disabled:cursor-not-allowed hover:disabled:bg-gray-400 w-full md:w-auto"
           >
             {isSaving ? "⏳ Saving & Loading..." : "💾 Save Attendance"}
           </button>
@@ -572,10 +579,10 @@ const Attendance = () => {
                   onClick={() => handleStatusChange(item, "present")}
                   disabled={!dateFilter}
                   style={{
-                    padding: "8px 16px",
+                    padding: isSmallScreen ? "6px 10px" : "8px 16px",
                     borderRadius: "8px",
                     fontWeight: "600",
-                    fontSize: "14px",
+                    fontSize: isSmallScreen ? "12px" : "14px",
                     border: "none",
                     cursor: !dateFilter ? "not-allowed" : "pointer",
                     backgroundColor: !dateFilter
@@ -600,10 +607,10 @@ const Attendance = () => {
                   onClick={() => handleStatusChange(item, "absent")}
                   disabled={!dateFilter}
                   style={{
-                    padding: "8px 16px",
+                    padding: isSmallScreen ? "6px 10px" : "8px 16px",
                     borderRadius: "8px",
                     fontWeight: "600",
-                    fontSize: "14px",
+                    fontSize: isSmallScreen ? "12px" : "14px",
                     border: "none",
                     cursor: !dateFilter ? "not-allowed" : "pointer",
                     backgroundColor: !dateFilter
@@ -628,10 +635,10 @@ const Attendance = () => {
                   onClick={() => handleStatusChange(item, "late")}
                   disabled={!dateFilter}
                   style={{
-                    padding: "8px 16px",
+                    padding: isSmallScreen ? "6px 10px" : "8px 16px",
                     borderRadius: "8px",
                     fontWeight: "600",
-                    fontSize: "14px",
+                    fontSize: isSmallScreen ? "12px" : "14px",
                     border: "none",
                     cursor: !dateFilter ? "not-allowed" : "pointer",
                     backgroundColor: !dateFilter
@@ -656,10 +663,10 @@ const Attendance = () => {
                   onClick={() => handleStatusChange(item, "excused")}
                   disabled={!dateFilter}
                   style={{
-                    padding: "8px 16px",
+                    padding: isSmallScreen ? "6px 10px" : "8px 16px",
                     borderRadius: "8px",
                     fontWeight: "600",
-                    fontSize: "14px",
+                    fontSize: isSmallScreen ? "12px" : "14px",
                     border: "none",
                     cursor: !dateFilter ? "not-allowed" : "pointer",
                     backgroundColor: !dateFilter
