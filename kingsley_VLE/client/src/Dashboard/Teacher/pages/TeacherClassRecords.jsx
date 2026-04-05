@@ -9,17 +9,16 @@ import {
   Grid3x3,
   List,
 } from "lucide-react";
-import ClassRecordModal from "../components/ClassRecordModal";
-import CustomDropdown from "../components/CustomDropdown";
-import { classRecordsApi } from "../api/classRecords.api";
+import TeacherClassRecordModal from "../components/TeacherClassRecordModal";
+import CustomDropdown from "../../../features/classRecords/components/CustomDropdown";
+import { classRecordsApi } from "../../../features/classRecords/api/classRecords.api";
+import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.api";
 import { useAuth } from "../../../context/AuthContext";
 
 const BRAND = "#6b1d3e";
 
-const ClassRecords = () => {
+const TeacherClassRecords = () => {
   const { user } = useAuth();
-  const isStudent = user?.role === "student";
-  const canEdit = user?.role === "admin" || user?.role === "teacher";
 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -28,6 +27,7 @@ const ClassRecords = () => {
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
+  const [teacherCourseIds, setTeacherCourseIds] = useState([]);
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
@@ -52,50 +52,81 @@ const ClassRecords = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Fetch all courses on mount
+  // Fetch teacher's enrolled courses with semesters and sections
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchTeacherCoursesAndData = async () => {
       try {
-        const res = await classRecordsApi.getCourses();
-        const coursesList = res.data?.data || res.data?.courses || [];
-        console.log("Courses fetched:", coursesList);
-        setCourses(coursesList);
-        setFilteredCourses(coursesList);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-      }
-    };
-    fetchCourses();
-  }, []);
+        // Fetch teacher's courses from enrollments
+        const enrollmentsResponse = await enrollmentsApi.teachers.list();
+        const enrollments = enrollmentsResponse.data;
 
-  // Fetch all sections and semesters on mount + build relationship map
-  useEffect(() => {
-    const fetchDropdownData = async () => {
-      try {
-        const [cRes, sRes, smRes] = await Promise.all([
-          classRecordsApi.getCourses(),
-          classRecordsApi.getSections(),
+        // Filter enrollments to only current teacher's courses
+        let teacherCourseIds = [];
+        if (enrollments && Array.isArray(enrollments)) {
+          const currentTeacherId = user?.teacherProfile?.id;
+
+          console.log("Current Teacher ID:", currentTeacherId);
+          console.log("All Enrollments:", enrollments);
+
+          // Filter to only this teacher's enrollments
+          const currentTeacherEnrollments = enrollments.filter(
+            (enrollment) => enrollment.teacher?.id === currentTeacherId,
+          );
+
+          console.log(
+            "Current Teacher Enrollments:",
+            currentTeacherEnrollments,
+          );
+
+          teacherCourseIds = currentTeacherEnrollments
+            .map((enrollment) => enrollment.course?.id)
+            .filter(Boolean); // Remove null/undefined values
+        }
+
+        // Store teacher course IDs for record filtering
+        setTeacherCourseIds(teacherCourseIds);
+
+        // Fetch ALL courses to get complete data with semesterId
+        const coursesRes = await classRecordsApi.getCourses();
+        const allCourses = Array.isArray(coursesRes.data?.data)
+          ? coursesRes.data.data
+          : Array.isArray(coursesRes.data?.courses)
+            ? coursesRes.data.courses
+            : Array.isArray(coursesRes.data)
+              ? coursesRes.data
+              : [];
+
+        // Filter to show only teacher's courses
+        const coursesList = allCourses.filter((course) =>
+          teacherCourseIds.includes(course.id),
+        );
+
+        // Fetch all semesters and sections
+        const [semestersRes, sectionsRes] = await Promise.all([
           classRecordsApi.getSemesters(),
+          classRecordsApi.getSections(),
         ]);
 
-        const coursesList = cRes.data?.data || cRes.data?.courses || [];
-        const sectionsData = Array.isArray(sRes.data) ? sRes.data : sRes || [];
-        const semestersData = Array.isArray(smRes.data)
-          ? smRes.data
-          : smRes || [];
+        const semestersData = Array.isArray(semestersRes.data)
+          ? semestersRes.data
+          : semestersRes || [];
+        const sectionsData = Array.isArray(sectionsRes.data)
+          ? sectionsRes.data
+          : sectionsRes || [];
 
-        console.log("Courses data:", coursesList);
-        console.log("Sections data:", sectionsData);
-        console.log("Semesters data:", semestersData);
+        console.log("All Courses:", allCourses);
+        console.log("Teacher Courses:", coursesList);
+        console.log("Semesters:", semestersData);
+        console.log("Sections:", sectionsData);
 
         setCourses(coursesList);
-        setSections(sectionsData);
         setSemesters(semestersData);
+        setSections(sectionsData);
         setFilteredCourses(coursesList);
         setFilteredSections(sectionsData);
         setFilteredSemesters(semestersData);
 
-        // Build semester -> courses map (from courses table)
+        // Build semester -> courses map (from teacher's courses)
         const semCxMap = {};
         coursesList.forEach((course) => {
           const semId = course.semesterId;
@@ -125,18 +156,18 @@ const ClassRecords = () => {
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
       } catch (err) {
-        console.error("Error fetching dropdown data:", err);
+        console.error("Error fetching teacher courses and data:", err);
       }
     };
-    fetchDropdownData();
-  }, []);
+    fetchTeacherCoursesAndData();
+  }, [user]);
 
   // Filter courses based on selected semester
   useEffect(() => {
     if (selectedSemester) {
       // Semester is selected
       if (semesterCourseMap[selectedSemester]) {
-        // Semester exists in map - show its courses
+        // Semester exists in map - show its courses (only teacher's courses)
         const courseIds = semesterCourseMap[selectedSemester];
         console.log(
           "Filtering courses for semester:",
@@ -146,12 +177,12 @@ const ClassRecords = () => {
         setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
       } else {
         // Semester selected but has no courses - show empty
-        console.log("Semester selected but has no courses");
+        console.log("Semester selected but has no courses for this teacher");
         setFilteredCourses([]);
       }
     } else {
-      // No semester selected - show all courses
-      console.log("No semester selected - showing all courses");
+      // No semester selected - show all teacher's courses
+      console.log("No semester selected - showing all teacher courses");
       setFilteredCourses(courses);
     }
     // Reset course and section when semester changes
@@ -191,6 +222,7 @@ const ClassRecords = () => {
     setFilteredSemesters(semesters);
   }, [semesters]);
 
+  // Fetch class records for selected filters
   useEffect(() => {
     const fetchRecords = async () => {
       try {
@@ -201,7 +233,18 @@ const ClassRecords = () => {
         if (selectedSection) params.sectionId = selectedSection;
         if (selectedSemester) params.semesterId = selectedSemester;
         const res = await classRecordsApi.list(params);
-        const data = res.data?.records || res.data || [];
+        let data = res.data?.records || res.data || [];
+
+        // Filter to show only records from teacher's assigned courses
+        if (teacherCourseIds.length > 0) {
+          data = data.filter((record) =>
+            teacherCourseIds.includes(record.courseId),
+          );
+        }
+
+        console.log("Teacher Course IDs:", teacherCourseIds);
+        console.log("Fetched Records:", data);
+
         // Client-side search filter
         setRecords(
           searchTerm
@@ -219,19 +262,38 @@ const ClassRecords = () => {
       }
     };
     fetchRecords();
-  }, [selectedCourse, selectedSection, selectedSemester, searchTerm]);
+  }, [
+    selectedCourse,
+    selectedSection,
+    selectedSemester,
+    searchTerm,
+    teacherCourseIds,
+  ]);
 
   const handleCreate = async (payload) => {
-    const res = await classRecordsApi.create(payload);
-    setRecords((prev) => [res.data, ...prev]);
+    try {
+      const res = await classRecordsApi.create(payload);
+      setRecords((prev) => [res.data, ...prev]);
+      setIsModalOpen(false);
+      setEditingRecord(null);
+    } catch (err) {
+      console.error("Error creating record:", err);
+      alert("Failed to create record. Please try again.");
+    }
   };
 
   const handleUpdate = async (payload) => {
-    const res = await classRecordsApi.update(editingRecord.id, payload);
-    setRecords((prev) =>
-      prev.map((r) => (r.id === editingRecord.id ? res.data : r)),
-    );
-    setEditingRecord(null);
+    try {
+      const res = await classRecordsApi.update(editingRecord.id, payload);
+      setRecords((prev) =>
+        prev.map((r) => (r.id === editingRecord.id ? res.data : r)),
+      );
+      setEditingRecord(null);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error updating record:", err);
+      alert("Failed to update record. Please try again.");
+    }
   };
 
   const handleDelete = async (id) => {
@@ -264,9 +326,7 @@ const ClassRecords = () => {
             Class Recordings
           </h1>
           <p className="text-sm sm:text-base text-gray-600">
-            {isStudent
-              ? "View recorded class sessions for your courses."
-              : "Manage class recording links and videos."}
+            Manage class recording links and videos for your courses.
           </p>
         </div>
         <div className="flex justify-between md:items-center gap-3">
@@ -295,17 +355,15 @@ const ClassRecords = () => {
               <List className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </div>
-          {canEdit && (
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm text-white"
-              style={{ backgroundColor: BRAND }}
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className=" sm:inline">Add Recording</span>
-              {/* <span className="sm:hidden">Add</span> */}
-            </button>
-          )}
+          {/* Add Button */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 font-semibold px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm text-white"
+            style={{ backgroundColor: BRAND }}
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="sm:inline">Add Recording</span>
+          </button>
         </div>
       </div>
 
@@ -417,16 +475,27 @@ const ClassRecords = () => {
         </div>
       )}
 
-      {!loading && !error && records.length === 0 && (
+      {!loading && courses.length === 0 && (
+        <div className="text-center py-16">
+          <Video className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 text-base font-medium">
+            No Courses Assigned
+          </p>
+          <p className="text-gray-400 text-sm mt-1">
+            You don't have any courses assigned yet. Once courses are assigned,
+            you can manage class recordings here.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && records.length === 0 && courses.length > 0 && (
         <div className="text-center py-16">
           <Video className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 text-base font-medium">
             No class recordings found
           </p>
           <p className="text-gray-400 text-sm mt-1">
-            {canEdit
-              ? "Add your first recording using the button above."
-              : "No recordings are available yet."}
+            Add your first recording using the button above.
           </p>
         </div>
       )}
@@ -501,24 +570,22 @@ const ClassRecords = () => {
                       <ExternalLink className="w-3.5 h-3.5" />
                       Open Recording
                     </a>
-                    {canEdit && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEdit(record)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(record.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openEdit(record)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(record.id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -631,24 +698,20 @@ const ClassRecords = () => {
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
-                            {canEdit && (
-                              <>
-                                <button
-                                  onClick={() => openEdit(record)}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                                  title="Edit"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(record.id)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
+                            <button
+                              onClick={() => openEdit(record)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(record.id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -662,16 +725,14 @@ const ClassRecords = () => {
       )}
 
       {/* Modal */}
-      {canEdit && (
-        <ClassRecordModal
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          onSubmit={editingRecord ? handleUpdate : handleCreate}
-          record={editingRecord}
-        />
-      )}
+      <TeacherClassRecordModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSubmit={editingRecord ? handleUpdate : handleCreate}
+        record={editingRecord}
+      />
     </div>
   );
 };
 
-export default ClassRecords;
+export default TeacherClassRecords;

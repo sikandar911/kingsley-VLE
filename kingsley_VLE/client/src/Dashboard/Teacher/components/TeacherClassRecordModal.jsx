@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { X, Upload, Link, Video } from "lucide-react";
-import { classRecordsApi } from "../api/classRecords.api";
+import { classRecordsApi } from "../../../features/classRecords/api/classRecords.api";
+import { teacherClassRecordsApi } from "../api/classRecords/teacherClassRecords.api";
 
 const BRAND = "#6b1d3e";
 const BRAND_DARK = "#5a1630";
 
-const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
+const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const isEdit = Boolean(record);
   const [inputMode, setInputMode] = useState("url"); // "url" | "file"
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     url: "",
+    semesterId: "",
     courseId: "",
     sectionId: "",
-    semesterId: "",
   });
   const [loading, setLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -24,46 +25,69 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
-  const [filteredSections, setFilteredSections] = useState([]);
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
+
     // Populate form when editing
     if (record) {
       setFormData({
         title: record.title || "",
         description: record.description || "",
         url: record.url || "",
+        semesterId: record.semesterId || "",
         courseId: record.courseId || "",
         sectionId: record.sectionId || "",
-        semesterId: record.semesterId || "",
       });
       setInputMode("url");
     }
+
     const fetchDropdowns = async () => {
       try {
         setLoadingDropdowns(true);
-        const [cRes, sRes, smRes] = await Promise.all([
-          classRecordsApi.getCourses(),
+
+        // Fetch teacher's assigned courses and ALL courses (for semesterId)
+        const { courses: teacherCoursesList } =
+          await teacherClassRecordsApi.getTeacherCourses();
+        const allCoursesRes = await classRecordsApi.getCourses();
+        const allCourses = allCoursesRes.data?.data || [];
+
+        // Fetch all sections and semesters
+        const [sectionsRes, semestersRes] = await Promise.all([
           classRecordsApi.getSections(),
           classRecordsApi.getSemesters(),
         ]);
-        const coursesList = cRes.data?.data || [];
-        const sectionsData = Array.isArray(sRes.data) ? sRes.data : sRes || [];
-        const semestersData = Array.isArray(smRes.data)
-          ? smRes.data
-          : smRes || [];
+        const sectionsData = Array.isArray(sectionsRes.data)
+          ? sectionsRes.data
+          : sectionsRes || [];
+        const semestersData = Array.isArray(semestersRes.data)
+          ? semestersRes.data
+          : semestersRes || [];
 
-        setCourses(coursesList);
+        // Get teacher's course IDs
+        const teacherCourseIds = teacherCoursesList.map((c) => c.id);
+
+        // Filter ALL courses to only include those assigned to teacher, and enrich with semesterId
+        const enrichedTeacherCourses = allCourses.filter((c) =>
+          teacherCourseIds.includes(c.id),
+        );
+
+        console.log("Teacher Assigned Course IDs:", teacherCourseIds);
+        console.log("All Courses:", allCourses);
+        console.log("Enriched Teacher Courses:", enrichedTeacherCourses);
+        console.log("All Sections:", sectionsData);
+        console.log("All Semesters:", semestersData);
+
+        setCourses(enrichedTeacherCourses);
         setSections(sectionsData);
         setSemesters(semestersData);
 
-        // Build semester -> courses map
+        // Build semester -> courses map from enriched teacher courses
         const semCxMap = {};
-        coursesList.forEach((course) => {
+        enrichedTeacherCourses.forEach((course) => {
           const semId = course.semesterId;
           if (semId) {
             if (!semCxMap[semId]) semCxMap[semId] = [];
@@ -85,6 +109,8 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           }
         });
 
+        console.log("Semester course map:", semCxMap);
+        console.log("Course section map:", cxSecMap);
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
       } catch (err) {
@@ -93,6 +119,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         setLoadingDropdowns(false);
       }
     };
+
     fetchDropdowns();
   }, [isOpen, record]);
 
@@ -115,17 +142,23 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   // Filter sections based on selected course
   useEffect(() => {
     if (formData.courseId && courseSectionMap[formData.courseId]) {
-      const sectionIds = courseSectionMap[formData.courseId];
-      setFilteredSections(sections.filter((s) => sectionIds.includes(s.id)));
+      // Sections already filtered via map
     } else {
-      setFilteredSections([]);
+      // Reset section when course changes
+      setFormData((prev) => ({
+        ...prev,
+        sectionId: "",
+      }));
     }
-    // Reset section when course changes
-    setFormData((prev) => ({
-      ...prev,
-      sectionId: "",
-    }));
-  }, [formData.courseId, courseSectionMap, sections]);
+  }, [formData.courseId, courseSectionMap]);
+
+  const getFilteredSections = () => {
+    if (formData.courseId && courseSectionMap[formData.courseId]) {
+      const sectionIds = courseSectionMap[formData.courseId];
+      return sections.filter((s) => sectionIds.includes(s.id));
+    }
+    return [];
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -147,7 +180,6 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
       setUploadingFile(true);
       const res = await classRecordsApi.uploadFile(file);
       const fileData = res.data;
-      // Store the azure blob URL in the url field
       setFormData((prev) => ({ ...prev, url: fileData.fileUrl }));
       setUploadedFileName(fileData.name || file.name);
       setUrlError("");
@@ -194,9 +226,9 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         title: formData.title.trim(),
         description: formData.description || undefined,
         url: formData.url.trim(),
+        semesterId: formData.semesterId || undefined,
         courseId: formData.courseId,
         sectionId: formData.sectionId || undefined,
-        semesterId: formData.semesterId || undefined,
       };
       await onSubmit(payload);
       handleClose();
@@ -213,9 +245,9 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
       title: "",
       description: "",
       url: "",
+      semesterId: "",
       courseId: "",
       sectionId: "",
-      semesterId: "",
     });
     setUrlError("");
     setUploadedFileName("");
@@ -224,6 +256,8 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   };
 
   if (!isOpen) return null;
+
+  const filteredSections = getFilteredSections();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -410,81 +444,94 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           </div>
 
           {/* Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            {/* Semester */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                Semester <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="semesterId"
-                value={formData.semesterId}
-                onChange={handleChange}
-                disabled={loadingDropdowns}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">Select Semester</option>
-                {semesters.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+          {courses.length === 0 ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-blue-800 font-medium">
+                No courses assigned to you. Please contact the administrator.
+              </p>
             </div>
+          ) : (
+            <div className="space-y-4 sm:space-y-5">
+              {/* Semester and Course Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {/* Semester */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                    Semester <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="semesterId"
+                    value={formData.semesterId}
+                    onChange={handleChange}
+                    disabled={loadingDropdowns}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ "--tw-ring-color": BRAND }}
+                  >
+                    <option value="">Select Semester</option>
+                    {semesters.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Course */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                Course <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="courseId"
-                value={formData.courseId}
-                onChange={handleChange}
-                disabled={loadingDropdowns || !formData.semesterId}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">
-                  {formData.semesterId
-                    ? `Select Course (${filteredCourses.length})`
-                    : "Select Semester First"}
-                </option>
-                {filteredCourses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {/* Course */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                    Course <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="courseId"
+                    value={formData.courseId}
+                    onChange={handleChange}
+                    disabled={loadingDropdowns || !formData.semesterId}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ "--tw-ring-color": BRAND }}
+                  >
+                    <option value="">
+                      {formData.semesterId
+                        ? `Select Course (${filteredCourses.length})`
+                        : "Select Semester First"}
+                    </option>
+                    {filteredCourses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-            {/* Section */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                Section
-              </label>
-              <select
-                name="sectionId"
-                value={formData.sectionId}
-                onChange={handleChange}
-                disabled={loadingDropdowns || !formData.courseId}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">
-                  {formData.courseId
-                    ? `Select Section (${filteredSections.length})`
-                    : "Select Course First"}
-                </option>
-                {filteredSections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              {/* Section */}
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 max-w-xs">
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                    Section
+                  </label>
+                  <select
+                    name="sectionId"
+                    value={formData.sectionId}
+                    onChange={handleChange}
+                    disabled={loadingDropdowns || !formData.courseId}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ "--tw-ring-color": BRAND }}
+                  >
+                    <option value="">
+                      {formData.courseId
+                        ? `Select Section (${filteredSections.length})`
+                        : "Select Course First"}
+                    </option>
+                    {filteredSections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </form>
 
         {/* Footer */}
@@ -500,12 +547,13 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading || uploadingFile}
+            disabled={loading || uploadingFile || courses.length === 0}
             className="px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white rounded-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: BRAND }}
             onMouseEnter={(e) =>
               !loading &&
               !uploadingFile &&
+              courses.length > 0 &&
               (e.currentTarget.style.backgroundColor = BRAND_DARK)
             }
             onMouseLeave={(e) =>
@@ -527,4 +575,4 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   );
 };
 
-export default ClassRecordModal;
+export default TeacherClassRecordModal;

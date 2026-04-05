@@ -14,6 +14,7 @@ import TeacherDashboard from "./Dashboard/Teacher/pages/TeacherDashboard";
 import TeacherCoursesPage from "./Dashboard/Teacher/pages/TeacherCoursesPage";
 import TeacherAssignmentsPage from "./Dashboard/Teacher/pages/TeacherAssignmentsPage";
 import TeacherStudentsPage from "./Dashboard/Teacher/pages/TeacherStudentsPage";
+import TeacherClassRecords from "./Dashboard/Teacher/pages/TeacherClassRecords";
 import TeacherProfilePage from "./Profile/teacher/pages/TeacherProfilePage";
 import AdminAssignmentsPage from "./features/assignments/pages/AdminAssignmentsPage";
 import AdminCoursesPage from "./features/courses/pages/AdminCoursesPage";
@@ -94,7 +95,11 @@ export default function App() {
                 element={<TeacherStudentsPage />}
               />
               <Route path="/teacher/events" element={<TeacherEventsPage />} />
-              <Route path="/teacher/class-records" element={<ClassRecords />} />
+              <Route
+                path="/teacher/class-records"
+                element={<TeacherClassRecords />}
+              />
+              <Route path="/teacher/attendance" element={<Attendance />} />
               <Route path="/teacher/profile" element={<TeacherProfilePage />} />
             </Route>
           </Route>

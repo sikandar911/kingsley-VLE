@@ -2,118 +2,159 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
+// Icon mapping function
+const getIconPath = (iconName) => {
+  const iconMap = {
+    dashboard: "/dashboard-icon.png",
+    user: "/users-managment.png",
+    academic: "/academic.png",
+    sessions: "/Sessions-semesters.png",
+    courses: "/courses-icon.png",
+    sections: "/sections-icon.png",
+    enrollments: "/enrollments-icon.png",
+    assignments: "/assignments-icon.png",
+    materials: "/class-materials-icon.png",
+    records: "/records-icon.png",
+    attendance: "/attendance-icon.png",
+    events: "/events-icon.png",
+    teacher: "/teacher-icon.png",
+    student: "/student-icon.png",
+    learning: "/learning.png",
+    result: "/results-icon.png",
+    profile: "/profile-icon.png",
+  };
+  return iconMap[iconName] || null;
+};
+
+// Icon component for consistent rendering
+const IconComponent = ({ iconKey, size = "w-7 h-7" }) => {
+  const path = getIconPath(iconKey);
+  if (!path) return <span className="text-base">📌</span>;
+  return <img src={path} alt="icon" className={`${size} object-contain`} />;
+};
+
 const menuByRole = {
   admin: [
     {
       label: "Dashboard",
       path: "/admin/dashboard",
-      icon: "⊞",
+      icon: "dashboard",
     },
     {
       label: "User Management",
       path: "/admin/users",
-      icon: "👥",
+      icon: "user",
     },
     {
       label: "Academic",
-      icon: "🏛️",
+      icon: "academic",
       submenu: [
-        { label: "Sessions & Semesters", path: "/admin/academic", icon: "📅" },
-        { label: "Courses", path: "/admin/courses", icon: "📚" },
-        { label: "Sections", path: "/admin/sections", icon: "🏫" },
+        {
+          label: "Sessions & Semesters",
+          path: "/admin/academic",
+          icon: "sessions",
+        },
+        { label: "Courses", path: "/admin/courses", icon: "courses" },
+        { label: "Sections", path: "/admin/sections", icon: "sections" },
       ],
     },
     {
       label: "Enrollments",
       path: "/admin/enrollments",
-      icon: "📝",
+      icon: "enrollments",
     },
     {
       label: "Assignments",
       path: "/admin/assignments",
-      icon: "📋",
+      icon: "assignments",
     },
     {
       label: "Class Materials",
       path: "/admin/class-materials",
-      icon: "📄",
+      icon: "materials",
     },
     {
       label: "Class Recordings",
       path: "/admin/class-records",
-      icon: "🎥",
+      icon: "records",
     },
     {
       label: "Class Attendance",
       path: "/admin/attendance",
-      icon: "✓",
+      icon: "attendance",
     },
     {
       label: "Events",
       path: "/admin/events",
-      icon: "📅",
+      icon: "events",
     },
   ],
   student: [
     {
       label: "Dashboard",
       path: "/student/dashboard",
-      icon: "⊞",
+      icon: "dashboard",
     },
     {
       label: "Courses & Learning",
-      icon: "📚",
+      icon: "learning",
       submenu: [
-        { label: "My Courses", path: "/student/courses", icon: "🎓" },
-        { label: "Assignments", path: "/student/assignments", icon: "📋" },
-        { label: "Results", path: "/student/results", icon: "🏆" },
+        { label: "My Courses", path: "/student/courses", icon: "courses" },
+        { label: "Assignments", path: "/student/assignments", icon: "assignments" },
+        { label: "Results", path: "/student/results", icon: "result" },
         {
           label: "Class Recordings",
           path: "/student/class-records",
-          icon: "🎥",
+          icon: "records",
         },
         {
           label: "Events Calendar",
           path: "/student/events",
-          icon: "📅",
+          icon: "events",
         },
       ],
     },
     {
       label: "Profile",
       path: "/student/profile",
-      icon: "👤",
+      icon: "profile",
     },
   ],
   teacher: [
     {
       label: "Dashboard",
       path: "/teacher/dashboard",
-      icon: "⊞",
+      icon: "dashboard",
     },
+    { label: "My Courses", path: "/teacher/courses", icon: "courses" },
     {
-      label: "Teacher",
-      icon: "📚",
-      submenu: [
-        { label: "My Courses", path: "/teacher/courses", icon: "🎓" },
-        { label: "Assignments", path: "/teacher/assignments", icon: "📋" },
-        { label: "Students", path: "/teacher/students", icon: "👥" },
-        {
+          label: "Assignments",
+          path: "/teacher/assignments",
+          icon: "assignments",
+        },
+    
+        { label: "Students", path: "/teacher/students", icon: "student" },
+
+         {
           label: "Class Recordings",
           path: "/teacher/class-records",
-          icon: "🎥",
+          icon: "records",
+        },
+        {
+          label: "Class Attendance",
+          path: "/teacher/attendance",
+          icon: "attendance",
         },
         {
           label: "Events Calendar",
           path: "/teacher/events",
-          icon: "📅",
+          icon: "events",
         },
-      ],
-    },
+
     {
       label: "Profile",
       path: "/teacher/profile",
-      icon: "👤",
+      icon: "profile",
     },
   ],
 };
@@ -193,7 +234,7 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
                 className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-white/75 hover:bg-white/10 hover:text-white"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-5 text-center text-base">{item.icon}</span>
+                  <IconComponent iconKey={item.icon} size="w-[19px] h-[19px]" />
                   <span className="text-[13px]">{item.label}</span>
                 </div>
                 <span
@@ -215,7 +256,7 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
                   }`
                 }
               >
-                <span className="w-5 text-center text-base">{item.icon}</span>
+                <IconComponent iconKey={item.icon} size="w-[17px] h-[17px]" />
                 <span>{item.label}</span>
               </NavLink>
             )}
@@ -236,9 +277,7 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
                       }`
                     }
                   >
-                    <span className="w-4 text-center text-sm">
-                      {subitem.icon}
-                    </span>
+                    <IconComponent iconKey={subitem.icon} size="w-[16px] h-[16px]" />
                     <span>{subitem.label}</span>
                   </NavLink>
                 ))}
