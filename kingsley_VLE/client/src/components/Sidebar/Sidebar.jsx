@@ -100,7 +100,11 @@ const menuByRole = {
       icon: "learning",
       submenu: [
         { label: "My Courses", path: "/student/courses", icon: "courses" },
-        { label: "Assignments", path: "/student/assignments", icon: "assignments" },
+        {
+          label: "Assignments",
+          path: "/student/assignments",
+          icon: "assignments",
+        },
         { label: "Results", path: "/student/results", icon: "result" },
         {
           label: "Class Recordings",
@@ -128,28 +132,26 @@ const menuByRole = {
     },
     { label: "My Courses", path: "/teacher/courses", icon: "courses" },
     {
-          label: "Assignments",
-          path: "/teacher/assignments",
-          icon: "assignments",
-        },
-    
-        { label: "Students", path: "/teacher/students", icon: "student" },
+      label: "Assignments",
+      path: "/teacher/assignments",
+      icon: "assignments",
+    },
 
-         {
-          label: "Class Recordings",
-          path: "/teacher/class-records",
-          icon: "records",
-        },
-        {
-          label: "Class Attendance",
-          path: "/teacher/attendance",
-          icon: "attendance",
-        },
-        {
-          label: "Events Calendar",
-          path: "/teacher/events",
-          icon: "events",
-        },
+    {
+      label: "Class Recordings",
+      path: "/teacher/class-records",
+      icon: "records",
+    },
+    {
+      label: "Class Attendance",
+      path: "/teacher/attendance",
+      icon: "attendance",
+    },
+    {
+      label: "Events Calendar",
+      path: "/teacher/events",
+      icon: "events",
+    },
 
     {
       label: "Profile",
@@ -277,7 +279,10 @@ export default function Sidebar({ isOpen = true, onClose = () => {} }) {
                       }`
                     }
                   >
-                    <IconComponent iconKey={subitem.icon} size="w-[16px] h-[16px]" />
+                    <IconComponent
+                      iconKey={subitem.icon}
+                      size="w-[16px] h-[16px]"
+                    />
                     <span>{subitem.label}</span>
                   </NavLink>
                 ))}

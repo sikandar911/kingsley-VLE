@@ -5,6 +5,9 @@ import { adminApi } from "../../../Dashboard/Admin/api/admin.api";
 import { enrollmentsApi } from "../../enrollments/api/enrollments.api";
 import api from "../../../lib/api";
 import { useAuth } from "../../../context/AuthContext";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
+
+const BRAND = "#6b1142";
 
 const INITIAL = {
   teacherId: "",
@@ -440,107 +443,95 @@ export default function CreateAssignmentModal({
               >
                 {/* Semester - First selector (always enabled) */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Semester
-                  </label>
-                  <select
-                    name="semesterId"
+                  <CustomDropdown
+                    options={filteredSemesters.map((s) => ({
+                      id: s.id,
+                      name: `${s.name} ${s.year ? `(${s.year})` : ""}`,
+                    }))}
                     value={form.semesterId}
-                    onChange={handleChange}
+                    onChange={(val) =>
+                      handleChange({
+                        target: { name: "semesterId", value: val },
+                      })
+                    }
+                    placeholder={metaLoading ? "Loading…" : "Select semester…"}
+                    label="Semester"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
                     disabled={metaLoading}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white disabled:bg-gray-100"
-                  >
-                    <option value="">
-                      {metaLoading ? "Loading…" : "Select semester…"}
-                    </option>
-                    {filteredSemesters.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} {s.year ? `(${s.year})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 {/* Course - Second selector (disabled until semester selected) */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Select Course *
-                  </label>
-                  <select
-                    name="courseId"
+                  <CustomDropdown
+                    options={filteredCourses.map((c) => ({
+                      id: c.id,
+                      name: c.title,
+                    }))}
                     value={form.courseId}
-                    onChange={handleChange}
-                    disabled={!form.semesterId || metaLoading}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white disabled:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">
-                      {!form.semesterId
+                    onChange={(val) =>
+                      handleChange({ target: { name: "courseId", value: val } })
+                    }
+                    placeholder={
+                      !form.semesterId
                         ? "Select semester first"
-                        : "Select course…"}
-                    </option>
-                    {filteredCourses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.title}
-                      </option>
-                    ))}
-                  </select>
+                        : "Select course…"
+                    }
+                    label="Select Course *"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={!form.semesterId || metaLoading}
+                  />
                 </div>
 
                 {/* Section - Third selector (disabled until course selected) */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Select Section
-                  </label>
-                  <select
-                    name="sectionId"
+                  <CustomDropdown
+                    options={filteredSections.map((s) => ({
+                      id: s.id,
+                      name: s.name,
+                    }))}
                     value={form.sectionId}
-                    onChange={handleChange}
+                    onChange={(val) =>
+                      handleChange({
+                        target: { name: "sectionId", value: val },
+                      })
+                    }
+                    placeholder={
+                      !form.courseId ? "Select course first" : "Select section"
+                    }
+                    label="Select Section"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
                     disabled={!form.courseId || metaLoading}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white disabled:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">
-                      {!form.courseId
-                        ? "Select course first"
-                        : "Select section"}
-                    </option>
-                    {filteredSections.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 {/* Assigning Teacher - Fourth selector (admin only, depends on course) */}
                 {isAdmin && (
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Assigning Teacher *
-                    </label>
-                    <select
-                      name="teacherId"
+                    <CustomDropdown
+                      options={filteredTeachers.map((enrollment) => ({
+                        id: enrollment.teacher.id,
+                        name: enrollment.teacher.fullName,
+                      }))}
                       value={form.teacherId}
-                      onChange={handleChange}
-                      disabled={!form.courseId || metaLoading}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white disabled:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">
-                        {!form.courseId
+                      onChange={(val) =>
+                        handleChange({
+                          target: { name: "teacherId", value: val },
+                        })
+                      }
+                      placeholder={
+                        !form.courseId
                           ? "Select course first"
-                          : "Select teacher…"}
-                      </option>
-                      {filteredTeachers.map((enrollment) => {
-                        // enrollment structure: { id, teacherId, courseId, teacher: { id, teacherId, fullName, specialization }, course: { id, title } }
-                        return (
-                          <option
-                            key={enrollment.teacher.id}
-                            value={enrollment.teacher.id}
-                          >
-                            {enrollment.teacher.fullName}
-                          </option>
-                        );
-                      })}
-                    </select>
+                          : "Select teacher…"
+                      }
+                      label="Assigning Teacher *"
+                      isSmallScreen={false}
+                      BRAND={BRAND}
+                      disabled={!form.courseId || metaLoading}
+                    />
                   </div>
                 )}
               </div>

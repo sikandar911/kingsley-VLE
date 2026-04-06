@@ -13,6 +13,7 @@ const CustomDropdown = ({
   disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hoveredId, setHoveredId] = useState(null);
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -55,7 +56,7 @@ const CustomDropdown = ({
         <button
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
-          className="relative w-full px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-left focus:outline-none focus:ring-2 transition flex items-center justify-between disabled:cursor-not-allowed"
+          className="relative w-full px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-left focus:outline-none focus:ring-2 transition flex items-center justify-between disabled:cursor-not-allowed border border-gray-300"
           style={{
             "--tw-ring-color": BRAND,
             backgroundColor: isSmallScreen ? "#5f1834" : "white",
@@ -63,6 +64,7 @@ const CustomDropdown = ({
             padding: isSmallScreen ? "10px 8px" : "10px 16px",
             minHeight: "40px",
             opacity: disabled ? 0.6 : 1,
+            borderColor: isSmallScreen ? "#a1416e" : "#d1d5db",
           }}
         >
           <span className="truncate flex-1 text-left">{displayText}</span>
@@ -104,10 +106,16 @@ const CustomDropdown = ({
                       onChange(option.id);
                       setIsOpen(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-100 transition break-words whitespace-normal"
+                    onMouseEnter={() => setHoveredId(option.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    className="w-full px-4 py-2 text-left text-xs sm:text-sm font-medium transition break-words whitespace-normal"
                     style={{
                       backgroundColor:
-                        value === option.id ? "#f0f4ff" : "transparent",
+                        value === option.id
+                          ? "#f0f4ff"
+                          : hoveredId === option.id
+                            ? "#f3f4f6"
+                            : "transparent",
                       color: value === option.id ? BRAND : "#374151",
                       borderLeft:
                         value === option.id

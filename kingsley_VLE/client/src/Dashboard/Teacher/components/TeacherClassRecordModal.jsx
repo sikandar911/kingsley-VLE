@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, Link, Video } from "lucide-react";
 import { classRecordsApi } from "../../../features/classRecords/api/classRecords.api";
 import { teacherClassRecordsApi } from "../api/classRecords/teacherClassRecords.api";
+import CustomDropdown from "../../../features/classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1d3e";
 const BRAND_DARK = "#5a1630";
@@ -21,6 +22,8 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [urlError, setUrlError] = useState("");
+  const [titleError, setTitleError] = useState("");
+  const [courseError, setCourseError] = useState("");
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
@@ -28,6 +31,8 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const prevSemesterIdRef = useRef(null);
+  const prevCourseIdRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -42,6 +47,9 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         courseId: record.courseId || "",
         sectionId: record.sectionId || "",
       });
+      // Initialize refs with the existing values so they don't get cleared
+      prevSemesterIdRef.current = record.semesterId || "";
+      prevCourseIdRef.current = record.courseId || "";
       setInputMode("url");
     }
 
@@ -131,12 +139,19 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     } else {
       setFilteredCourses([]);
     }
-    // Reset course and section when semester changes
-    setFormData((prev) => ({
-      ...prev,
-      courseId: "",
-      sectionId: "",
-    }));
+
+    // Only reset course and section if the semester actually changed by user action
+    if (
+      formData.semesterId !== prevSemesterIdRef.current &&
+      prevSemesterIdRef.current !== null
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        courseId: "",
+        sectionId: "",
+      }));
+    }
+    prevSemesterIdRef.current = formData.semesterId;
   }, [formData.semesterId, semesterCourseMap, courses]);
 
   // Filter sections based on selected course
@@ -144,12 +159,18 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     if (formData.courseId && courseSectionMap[formData.courseId]) {
       // Sections already filtered via map
     } else {
-      // Reset section when course changes
-      setFormData((prev) => ({
-        ...prev,
-        sectionId: "",
-      }));
+      // Reset section only if course actually changed by user action
+      if (
+        formData.courseId !== prevCourseIdRef.current &&
+        prevCourseIdRef.current !== null
+      ) {
+        setFormData((prev) => ({
+          ...prev,
+          sectionId: "",
+        }));
+      }
     }
+    prevCourseIdRef.current = formData.courseId;
   }, [formData.courseId, courseSectionMap]);
 
   const getFilteredSections = () => {
@@ -163,6 +184,7 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "url") setUrlError("");
+    if (name === "title") setTitleError("");
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -205,14 +227,24 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+
+    let hasError = false;
+
     if (!formData.title.trim()) {
-      alert("Title is required");
-      return;
+      setTitleError("Title is required");
+      hasError = true;
+    } else {
+      setTitleError("");
     }
+
     if (!formData.courseId) {
-      alert("Please select a Course");
-      return;
+      setCourseError("Please select a Course");
+      hasError = true;
+    } else {
+      setCourseError("");
     }
+
+    if (hasError) return;
 
     const urlErr = validateUrl(formData.url);
     if (urlErr) {
@@ -250,6 +282,8 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
       sectionId: "",
     });
     setUrlError("");
+    setTitleError("");
+    setCourseError("");
     setUploadedFileName("");
     setInputMode("url");
     onClose();
@@ -261,7 +295,7 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg sm:max-w-[630px] max-h-[90vh] overflow-y-auto shadow-lg">
+      <div className="bg-white rounded-lg w-full max-w-lg sm:max-w-[680px] max-h-[90vh] overflow-y-auto shadow-lg">
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white">
           <div className="flex items-center gap-2">
@@ -279,7 +313,7 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         </div>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(e) => e.preventDefault()}
           className="p-4 sm:p-6 space-y-4 sm:space-y-5"
         >
           {/* Title */}
@@ -293,9 +327,14 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
               value={formData.title}
               onChange={handleChange}
               placeholder="e.g. Lecture 01 - Introduction to Algorithms"
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400"
+              className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
+                titleError ? "border-red-400" : "border-gray-300"
+              }`}
               style={{ "--tw-ring-color": BRAND }}
             />
+            {titleError && (
+              <p className="text-xs text-red-500 mt-1">{titleError}</p>
+            )}
           </div>
 
           {/* Description */}
@@ -444,94 +483,102 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           </div>
 
           {/* Dropdowns */}
-          {courses.length === 0 ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-blue-800 font-medium">
-                No courses assigned to you. Please contact the administrator.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4 sm:space-y-5">
-              {/* Semester and Course Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {/* Semester */}
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                    Semester <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="semesterId"
-                    value={formData.semesterId}
-                    onChange={handleChange}
-                    disabled={loadingDropdowns}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ "--tw-ring-color": BRAND }}
-                  >
-                    <option value="">Select Semester</option>
-                    {semesters.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          <div className="space-y-4 sm:space-y-5">
+            {/* Loading Indicator */}
+            {loadingDropdowns && (
+              <div className="flex items-center justify-center gap-2 p-4">
+                <div
+                  className="w-5 h-5 border-2 border-gray-200 rounded-full animate-spin"
+                  style={{ borderTopColor: BRAND }}
+                />
+                <p className="text-xs sm:text-sm text-gray-600 font-medium">
+                  Loading courses...
+                </p>
+              </div>
+            )}
 
-                {/* Course */}
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                    Course <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="courseId"
-                    value={formData.courseId}
-                    onChange={handleChange}
-                    disabled={loadingDropdowns || !formData.semesterId}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ "--tw-ring-color": BRAND }}
-                  >
-                    <option value="">
-                      {formData.semesterId
-                        ? `Select Course (${filteredCourses.length})`
-                        : "Select Semester First"}
-                    </option>
-                    {filteredCourses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {/* Semester and Course Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {/* Semester */}
+              <div>
+                <CustomDropdown
+                  options={semesters.map((s) => ({
+                    id: s.id,
+                    name: s.name || "Untitled Semester",
+                  }))}
+                  value={formData.semesterId}
+                  onChange={(val) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      semesterId: val,
+                    }))
+                  }
+                  placeholder="Select Semester"
+                  label="Semester"
+                  isSmallScreen={false}
+                  BRAND={BRAND}
+                  disabled={loadingDropdowns}
+                />
+              </div>
+
+              {/* Course */}
+              <div>
+                <CustomDropdown
+                  options={filteredCourses.map((c) => ({
+                    id: c.id,
+                    name: c.title || "Untitled Course",
+                  }))}
+                  value={formData.courseId}
+                  onChange={(val) => {
+                    setCourseError("");
+                    setFormData((prev) => ({
+                      ...prev,
+                      courseId: val,
+                    }));
+                  }}
+                  placeholder="Select Course"
+                  label="Course"
+                  isSmallScreen={false}
+                  BRAND={BRAND}
+                  disabled={loadingDropdowns || !formData.semesterId}
+                />
+                {formData.semesterId && filteredCourses.length === 0 ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 mt-2">
+                    <p className="text-xs sm:text-sm text-blue-800 font-medium">
+                      No courses assigned to you. Please contact the
+                      administrator.
+                    </p>
+                  </div>
+                ) : (
+                  courseError && (
+                    <p className="text-xs text-red-500 mt-1">{courseError}</p>
+                  )
+                )}
               </div>
 
               {/* Section */}
-              <div className="grid grid-cols-1 gap-3 sm:gap-4 max-w-xs">
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                    Section
-                  </label>
-                  <select
-                    name="sectionId"
-                    value={formData.sectionId}
-                    onChange={handleChange}
-                    disabled={loadingDropdowns || !formData.courseId}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ "--tw-ring-color": BRAND }}
-                  >
-                    <option value="">
-                      {formData.courseId
-                        ? `Select Section (${filteredSections.length})`
-                        : "Select Course First"}
-                    </option>
-                    {filteredSections.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <CustomDropdown
+                  options={getFilteredSections().map((s) => ({
+                    id: s.id,
+                    name: s.name || "Untitled Section",
+                  }))}
+                  value={formData.sectionId}
+                  onChange={(val) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      sectionId: val,
+                    }))
+                  }
+                  placeholder="Select Section"
+                  label="Section"
+                  isSmallScreen={false}
+                  BRAND={BRAND}
+                  disabled={loadingDropdowns || !formData.courseId}
+                />
               </div>
             </div>
-          )}
+          </div>
         </form>
 
         {/* Footer */}
@@ -547,12 +594,18 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading || uploadingFile || courses.length === 0}
+            disabled={
+              loading ||
+              uploadingFile ||
+              loadingDropdowns ||
+              courses.length === 0
+            }
             className="px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white rounded-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: BRAND }}
             onMouseEnter={(e) =>
               !loading &&
               !uploadingFile &&
+              !loadingDropdowns &&
               courses.length > 0 &&
               (e.currentTarget.style.backgroundColor = BRAND_DARK)
             }
