@@ -1,4 +1,5 @@
 import { BlobServiceClient } from '@azure/storage-blob'
+import { randomUUID } from 'crypto'
 
 const getContainerClient = () => {
   const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING
@@ -19,7 +20,7 @@ const getContainerClient = () => {
 export const uploadToAzure = async (buffer, originalName, mimeType) => {
   const containerClient = getContainerClient()
   const ext = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : 'bin'
-  const blobName = `${crypto.randomUUID()}.${ext}`
+  const blobName = `${randomUUID()}.${ext}`
   const blockBlobClient = containerClient.getBlockBlobClient(blobName)
 
   await blockBlobClient.upload(buffer, buffer.length, {

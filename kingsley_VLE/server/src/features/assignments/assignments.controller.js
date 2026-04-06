@@ -959,7 +959,7 @@ export const submitAssignment = async (req, res) => {
     return res.status(201).json(submission)
   } catch (err) {
     console.error('Submit assignment error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    return res.status(500).json({ error: err.message || 'Server error' })
   }
 }
 
@@ -994,6 +994,20 @@ export const listAssignmentSubmissions = async (req, res) => {
       return res.status(404).json({ error: 'Assignment not found' })
     }
 
+    // Students can only view their own submissions for this assignment
+    if (req.user.role === 'student') {
+      const studentProfile = await getStudentProfileByUserId(req.user.id)
+      if (!studentProfile) {
+        return res.status(400).json({ error: 'Student profile not found' })
+      }
+      const submissions = await prisma.assignmentSubmission.findMany({
+        where: { assignmentId: req.params.id, studentId: studentProfile.id, deletedAt: null },
+        include: submissionInclude,
+        orderBy: [{ attemptNumber: 'desc' }],
+      })
+      return res.json(submissions)
+    }
+
     if (req.user.role === 'teacher') {
       const teacherProfile = await getTeacherProfileByUserId(req.user.id)
       if (!teacherProfile || teacherProfile.id !== assignment.teacherId) {
@@ -1013,7 +1027,7 @@ export const listAssignmentSubmissions = async (req, res) => {
     return res.json(submissions)
   } catch (err) {
     console.error('List assignment submissions error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    return res.status(500).json({ error: err.message || 'Server error' })
   }
 }
 

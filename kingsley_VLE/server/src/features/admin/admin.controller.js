@@ -322,7 +322,7 @@ export const listUsers = async (req, res) => {
  */
 export const updateUser = async (req, res) => {
   const { id } = req.params
-  const { username, email, password, isActive, fullName, ...profileRest } = req.body
+  const { username, email, password, isActive, fullName, role, ...profileRest } = req.body
 
   try {
     const user = await prisma.user.findUnique({
@@ -331,20 +331,56 @@ export const updateUser = async (req, res) => {
     })
     if (!user) return res.status(404).json({ error: 'User not found' })
 
+    // Check for email/username conflicts
+    if (email !== undefined && email !== user.email) {
+      const existingEmail = await prisma.user.findFirst({
+        where: { email, id: { not: id } },
+      })
+      if (existingEmail) return res.status(409).json({ error: 'Email already in use' })
+    }
+
+    if (username !== undefined && username !== user.username) {
+      const existingUsername = await prisma.user.findFirst({
+        where: { username, id: { not: id } },
+      })
+      if (existingUsername) return res.status(409).json({ error: 'Username already in use' })
+    }
+
     const updateData = {}
     if (username !== undefined) updateData.username = username
     if (email !== undefined) updateData.email = email
     if (isActive !== undefined) updateData.isActive = isActive
     if (password) updateData.passwordHash = await bcrypt.hash(password, 10)
 
+    // Handle profile updates separately for one-to-one relations
     if (user.role === 'student') {
       const profileUpdate = { fullName: fullName || user.studentProfile?.fullName }
       Object.assign(profileUpdate, profileRest)
-      updateData.studentProfile = { upsert: { create: profileUpdate, update: profileUpdate } }
+      
+      if (user.studentProfile) {
+        // Profile exists - update it
+        await prisma.studentProfile.update({
+          where: { userId: id },
+          data: profileUpdate,
+        })
+      } else {
+        // Profile doesn't exist - create it
+        updateData.studentProfile = { create: profileUpdate }
+      }
     } else if (user.role === 'teacher') {
       const profileUpdate = { fullName: fullName || user.teacherProfile?.fullName }
       Object.assign(profileUpdate, profileRest)
-      updateData.teacherProfile = { upsert: { create: profileUpdate, update: profileUpdate } }
+      
+      if (user.teacherProfile) {
+        // Profile exists - update it
+        await prisma.teacherProfile.update({
+          where: { userId: id },
+          data: profileUpdate,
+        })
+      } else {
+        // Profile doesn't exist - create it
+        updateData.teacherProfile = { create: profileUpdate }
+      }
     }
 
     const updated = await prisma.user.update({
@@ -357,7 +393,7 @@ export const updateUser = async (req, res) => {
     return res.json(result)
   } catch (err) {
     console.error('Update user error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    return res.status(500).json({ error: err.message || 'Server error' })
   }
 }
 

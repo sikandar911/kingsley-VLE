@@ -185,6 +185,81 @@ export const createEnrollment = async (req, res) => {
 
 /**
  * @swagger
+ * /api/enrollments/user/{userId}:
+ *   get:
+ *     summary: Get all enrollments for a specific user by their user UUID
+ *     tags: [Enrollments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema: { type: string }
+ *         description: User.id (UUID) — admin can query any user, student can only query their own
+ *     responses:
+ *       200:
+ *         description: List of enrollments for the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Enrollment'
+ *       403:
+ *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Student profile not found for user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+export const getEnrollmentsByUser = async (req, res) => {
+  const { userId } = req.params
+
+  // Students may only access their own enrollments
+  if (req.user.role === 'student' && req.user.id !== userId) {
+    return res.status(403).json({ error: 'Forbidden: You can only view your own enrollments' })
+  }
+
+  try {
+    const studentProfile = await prisma.studentProfile.findUnique({ where: { userId } })
+    if (!studentProfile) {
+      return res.status(404).json({ error: 'No student profile found for this user' })
+    }
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { studentId: studentProfile.id },
+      orderBy: { enrolledAt: 'desc' },
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            fullName: true,
+            user: { select: { id: true, email: true } },
+          },
+        },
+        course: { select: { id: true, title: true, description: true } },
+        section: { select: { id: true, name: true } },
+        semester: { select: { id: true, name: true, year: true } },
+      },
+    })
+
+    return res.json(enrollments)
+  } catch (err) {
+    console.error('getEnrollmentsByUser error:', err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+}
+
+/**
+ * @swagger
  * /api/enrollments/{id}:
  *   get:
  *     summary: Get an enrollment by ID

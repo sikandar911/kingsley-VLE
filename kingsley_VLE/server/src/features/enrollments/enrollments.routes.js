@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   listEnrollments, createEnrollment, getEnrollment, deleteEnrollment,
+  getEnrollmentsByUser,
   listTeacherCourses, createTeacherCourse, deleteTeacherCourse,
 } from './enrollments.controller.js'
 import { authenticate, authorize } from '../../middleware/auth.middleware.js'
@@ -17,6 +18,7 @@ router.delete('/teachers/:id', authorize('admin'), deleteTeacherCourse)
 // ── Student enrollments ───────────────────────────────────────────────────────
 router.get('/', listEnrollments)
 router.post('/', authorize('admin'), createEnrollment)
+router.get('/user/:userId', getEnrollmentsByUser)   // must be before /:id
 router.get('/:id', getEnrollment)
 router.delete('/:id', authorize('admin'), deleteEnrollment)
 

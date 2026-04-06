@@ -8,6 +8,7 @@ export const assignmentsApi = {
   update: (id, data) => api.put(`/assignments/${id}`, data),
   updateStatus: (id, status) => api.patch(`/assignments/${id}/status`, { status }),
 
+  // Returns student's own submissions (student role) or all submissions (admin/teacher)
   getSubmissions: (assignmentId) => api.get(`/assignments/${assignmentId}/submissions`),
   submit: (assignmentId, data) => api.post(`/assignments/${assignmentId}/submissions`, data),
   grade: (submissionId, data) =>

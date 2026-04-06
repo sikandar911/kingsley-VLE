@@ -25,7 +25,7 @@ router.put('/:id', authorize('admin', 'teacher'), updateAssignment)
 router.patch('/:id/status', authorize('admin', 'teacher'), updateAssignmentStatus)
 
 router.post('/:id/submissions', authorize('student'), submitAssignment)
-router.get('/:id/submissions', authorize('admin', 'teacher'), listAssignmentSubmissions)
+router.get('/:id/submissions', authorize('admin', 'teacher', 'student'), listAssignmentSubmissions)
 router.patch('/submissions/:submissionId/grade', authorize('admin', 'teacher'), gradeSubmission)
 
 export default router
