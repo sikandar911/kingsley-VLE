@@ -2,7 +2,6 @@
 import { Search, Plus, Eye, Trash2, FileText, Link } from "lucide-react";
 import ClassMaterialsModal from "../components/ClassMaterialsModal";
 import { classMaterialsApi } from "../api/classMaterials.api";
-import { coursesApi } from "../../courses/api/courses.api";
 
 const BRAND = "#6b1d3e";
 
@@ -26,15 +25,17 @@ const ClassMaterials = () => {
   const [filteredSections, setFilteredSections] = useState([]);
   const [filteredSemesters, setFilteredSemesters] = useState([]);
 
-  // Relationship maps built from sections data
-  const [relationshipMap, setRelationshipMap] = useState({});
+  // Relationship maps: semester -> courses, course -> sections
+  const [semesterCourseMap, setSemesterCourseMap] = useState({});
+  const [courseSectionMap, setCourseSectionMap] = useState({});
 
   // Fetch all courses on mount
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await coursesApi.list({ limit: 200 });
-        const coursesList = response.data?.data || [];
+        const response = await classMaterialsApi.getCourses();
+        const coursesList = response.data?.data || response.data?.courses || [];
+        console.log("Courses fetched:", coursesList);
         setCourses(coursesList);
         setFilteredCourses(coursesList);
       } catch (err) {
@@ -48,39 +49,58 @@ const ClassMaterials = () => {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const [sectionsRes, semestersRes] = await Promise.all([
+        const [cRes, sRes, smRes] = await Promise.all([
+          classMaterialsApi.getCourses(),
           classMaterialsApi.getSections(),
           classMaterialsApi.getSemesters(),
         ]);
 
-        const sectionsData = Array.isArray(sectionsRes.data)
-          ? sectionsRes.data
-          : sectionsRes || [];
-        const semestersData = Array.isArray(semestersRes.data)
-          ? semestersRes.data
-          : semestersRes || [];
+        const coursesList = cRes.data?.data || cRes.data?.courses || [];
+        const sectionsData = Array.isArray(sRes.data) ? sRes.data : sRes || [];
+        const semestersData = Array.isArray(smRes.data)
+          ? smRes.data
+          : smRes || [];
 
+        console.log("Courses data:", coursesList);
+        console.log("Sections data:", sectionsData);
+        console.log("Semesters data:", semestersData);
+
+        setCourses(coursesList);
         setSections(sectionsData);
         setSemesters(semestersData);
+        setFilteredCourses(coursesList);
         setFilteredSections(sectionsData);
         setFilteredSemesters(semestersData);
 
-        // Build relationship map from sections
-        const map = {};
-        sectionsData.forEach((section) => {
-          const courseId = section.courseId;
-          const semesterId = section.semesterId;
-          const sectionId = section.id;
-
-          if (!map[courseId]) map[courseId] = { sections: [], semesters: [] };
-          if (!map[courseId].sections.includes(sectionId)) {
-            map[courseId].sections.push(sectionId);
-          }
-          if (semesterId && !map[courseId].semesters.includes(semesterId)) {
-            map[courseId].semesters.push(semesterId);
+        // Build semester -> courses map (from courses table)
+        const semCxMap = {};
+        coursesList.forEach((course) => {
+          const semId = course.semesterId;
+          if (semId) {
+            if (!semCxMap[semId]) semCxMap[semId] = [];
+            if (!semCxMap[semId].includes(course.id)) {
+              semCxMap[semId].push(course.id);
+            }
           }
         });
-        setRelationshipMap(map);
+
+        // Build course -> sections map (from sections table)
+        const cxSecMap = {};
+        sectionsData.forEach((section) => {
+          const courseId = section.courseId;
+          if (courseId) {
+            if (!cxSecMap[courseId]) cxSecMap[courseId] = [];
+            if (!cxSecMap[courseId].includes(section.id)) {
+              cxSecMap[courseId].push(section.id);
+            }
+          }
+        });
+
+        console.log("Semester course map:", semCxMap);
+        console.log("Course section map:", cxSecMap);
+
+        setSemesterCourseMap(semCxMap);
+        setCourseSectionMap(cxSecMap);
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
       }
@@ -88,28 +108,65 @@ const ClassMaterials = () => {
     fetchDropdownData();
   }, []);
 
-  // Filter dropdowns based on current selections using relationship map
+  // Filter courses based on selected semester
   useEffect(() => {
-    let newFilteredCourses = courses;
-    let newFilteredSections = sections;
-    let newFilteredSemesters = semesters;
-
-    if (selectedCourse && relationshipMap[selectedCourse]) {
-      // If course selected, show only its sections and semesters
-      const relatedSectionIds = relationshipMap[selectedCourse].sections;
-      const relatedSemesterIds = relationshipMap[selectedCourse].semesters;
-      newFilteredSections = sections.filter((s) =>
-        relatedSectionIds.includes(s.id),
-      );
-      newFilteredSemesters = semesters.filter((s) =>
-        relatedSemesterIds.includes(s.id),
-      );
+    if (selectedSemester) {
+      // Semester is selected
+      if (semesterCourseMap[selectedSemester]) {
+        // Semester exists in map - show its courses
+        const courseIds = semesterCourseMap[selectedSemester];
+        console.log(
+          "Filtering courses for semester:",
+          selectedSemester,
+          courseIds,
+        );
+        setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
+      } else {
+        // Semester selected but has no courses - show empty
+        console.log("Semester selected but has no courses");
+        setFilteredCourses([]);
+      }
+    } else {
+      // No semester selected - show all courses
+      console.log("No semester selected - showing all courses");
+      setFilteredCourses(courses);
     }
+    // Reset course and section when semester changes
+    setSelectedCourse("");
+    setSelectedSection("");
+  }, [selectedSemester, semesterCourseMap, courses]);
 
-    setFilteredCourses(newFilteredCourses);
-    setFilteredSections(newFilteredSections);
-    setFilteredSemesters(newFilteredSemesters);
-  }, [selectedCourse, relationshipMap, courses, sections, semesters]);
+  // Filter sections based on selected course
+  useEffect(() => {
+    if (selectedCourse) {
+      // Course is selected
+      if (courseSectionMap[selectedCourse]) {
+        // Course exists in map - show its sections
+        const sectionIds = courseSectionMap[selectedCourse];
+        console.log(
+          "Filtering sections for course:",
+          selectedCourse,
+          sectionIds,
+        );
+        setFilteredSections(sections.filter((s) => sectionIds.includes(s.id)));
+      } else {
+        // Course selected but has no sections - show empty
+        console.log("Course selected but has no sections");
+        setFilteredSections([]);
+      }
+    } else {
+      // No course selected - show all sections
+      console.log("No course selected - showing all sections");
+      setFilteredSections(sections);
+    }
+    // Reset section when course changes
+    setSelectedSection("");
+  }, [selectedCourse, courseSectionMap, sections]);
+
+  // Ensure all semesters are always available (semester is the parent/first selector)
+  useEffect(() => {
+    setFilteredSemesters(semesters);
+  }, [semesters]);
 
   // When filters change, update materials
   useEffect(() => {
@@ -222,7 +279,6 @@ const ClassMaterials = () => {
           style={{ background: "linear-gradient(to right, #6b1d3e, #5a1630)" }}
         >
           <div className="flex flex-col gap-3 sm:gap-4">
-
             {/* Search Input div*/}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5" />
@@ -237,9 +293,26 @@ const ClassMaterials = () => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <select
+                value={selectedSemester}
+                onChange={(e) => handleSemesterChange(e.target.value)}
+                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
+                style={{ "--tw-ring-color": "#6b1d3e" }}
+              >
+                <option value="">
+                  All Semesters ({filteredSemesters.length})
+                </option>
+                {filteredSemesters.map((semester) => (
+                  <option key={semester?.id} value={semester?.id}>
+                    {semester?.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
                 value={selectedCourse}
                 onChange={(e) => handleCourseChange(e.target.value)}
-                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
+                disabled={!selectedSemester}
+                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ "--tw-ring-color": "#6b1d3e" }}
               >
                 <option value="">All Courses ({filteredCourses.length})</option>
@@ -253,7 +326,8 @@ const ClassMaterials = () => {
               <select
                 value={selectedSection}
                 onChange={(e) => handleSectionChange(e.target.value)}
-                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
+                disabled={!selectedCourse}
+                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ "--tw-ring-color": "#6b1d3e" }}
               >
                 <option value="">
@@ -262,22 +336,6 @@ const ClassMaterials = () => {
                 {filteredSections.map((section) => (
                   <option key={section?.id} value={section?.id}>
                     {section?.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={selectedSemester}
-                onChange={(e) => handleSemesterChange(e.target.value)}
-                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
-                style={{ "--tw-ring-color": "#6b1d3e" }}
-              >
-                <option value="">
-                  All Semesters ({filteredSemesters.length})
-                </option>
-                {filteredSemesters.map((semester) => (
-                  <option key={semester?.id} value={semester?.id}>
-                    {semester?.name}
                   </option>
                 ))}
               </select>

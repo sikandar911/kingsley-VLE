@@ -253,7 +253,7 @@ export const createClassRecord = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateClassRecord = async (req, res) => {
-  const { title, description, url, sectionId, semesterId } = req.body;
+  const { title, description, url, courseId, sectionId, semesterId } = req.body;
 
   try {
     const existing = await prisma.classRecord.findUnique({
@@ -277,6 +277,7 @@ export const updateClassRecord = async (req, res) => {
           ? { description: description || null }
           : {}),
         ...(url?.trim() ? { url: url.trim() } : {}),
+        ...(courseId !== undefined ? { courseId: courseId || null } : {}),
         ...(sectionId !== undefined ? { sectionId: sectionId || null } : {}),
         ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
       },

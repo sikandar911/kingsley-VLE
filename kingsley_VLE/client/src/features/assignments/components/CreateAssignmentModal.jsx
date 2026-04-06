@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { assignmentsApi } from "../api/assignments.api";
 import { coursesApi } from "../../courses/api/courses.api";
 import { adminApi } from "../../../Dashboard/Admin/api/admin.api";
+import { enrollmentsApi } from "../../enrollments/api/enrollments.api";
+import api from "../../../lib/api";
 import { useAuth } from "../../../context/AuthContext";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
+
+const BRAND = "#6b1142";
 
 const INITIAL = {
   teacherId: "",
@@ -59,55 +64,243 @@ export default function CreateAssignmentModal({
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [sections, setSections] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [filteredSections, setFilteredSections] = useState([]);
+  const [filteredSemesters, setFilteredSemesters] = useState([]);
+  const [filteredTeachers, setFilteredTeachers] = useState([]);
+  const [semesterCourseMap, setSemesterCourseMap] = useState({});
+  const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [metaLoading, setMetaLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Fetch all data on component mount
   useEffect(() => {
-    // Build fetch promises based on user role
-    const promises = [coursesApi.list({ limit: 200 })];
-    
-    // Only admins can assign teachers, so only fetch for admins
-    if (isAdmin) {
-      promises.push(adminApi.listUsers('teacher'));
-    }
-    
-    Promise.all(promises)
-      .then((responses) => {
+    const fetchAllData = async () => {
+      try {
+        const promises = [
+          coursesApi.list({ limit: 200 }),
+          api.get("/semesters"),
+        ];
+
+        // Add teacher enrollments for teachers
+        if (!isAdmin && user?.teacherProfile?.id) {
+          promises.push(enrollmentsApi.teachers.list());
+        }
+
+        const responses = await Promise.all(promises);
+
         const coursesRes = responses[0];
-        const courseList = coursesRes.data?.data || [];
-        setCourses(courseList);
-        
-        // Set teachers only if admin and response provided
-        if (isAdmin && responses[1]) {
-          setTeachers(responses[1].data || []);
+        let fullCourseList = coursesRes.data?.data || [];
+
+        const semestersRes = responses[1];
+        const semestersList = Array.isArray(semestersRes.data)
+          ? semestersRes.data
+          : semestersRes.data?.data || [];
+
+        console.log("All courses fetched:", fullCourseList);
+        console.log("All semesters fetched:", semestersList);
+
+        // Track teacher's assigned course IDs and semesters for filtering
+        let teacherAssignedCourseIds = [];
+        let teacherAssignedSemesterIds = new Set();
+
+        // For teachers, determine which courses and semesters they have access to
+        if (!isAdmin && user?.teacherProfile?.id && responses[2]) {
+          const teacherId = user.teacherProfile.id;
+          const allEnrollments =
+            responses[2].data?.data || responses[2].data || [];
+          console.log("All enrollments fetched:", allEnrollments);
+
+          const teacherEnrollments = allEnrollments.filter(
+            (enrollment) => enrollment.teacher?.id === teacherId,
+          );
+
+          console.log("Teacher enrollments:", teacherEnrollments);
+
+          teacherAssignedCourseIds = teacherEnrollments.map((e) => e.courseId);
+          console.log("Teacher assigned course IDs:", teacherAssignedCourseIds);
+
+          // Build set of semesters that have teacher's courses
+          fullCourseList.forEach((course) => {
+            if (teacherAssignedCourseIds.includes(course.id)) {
+              teacherAssignedSemesterIds.add(course.semesterId);
+            }
+          });
+          console.log(
+            "Teacher assigned semester IDs:",
+            Array.from(teacherAssignedSemesterIds),
+          );
         }
-        
-        if (form.courseId) {
-          const c = courseList.find((c) => c.id === form.courseId);
-          setSections(c?.sections || []);
-          // if editing with a courseId, also reflect the auto semesterId
+
+        // Build semester -> courses map from ALL courses
+        const semCxMap = {};
+        fullCourseList.forEach((course) => {
+          const semId = course.semesterId;
+          if (semId) {
+            if (!semCxMap[semId]) semCxMap[semId] = [];
+            if (!semCxMap[semId].includes(course.id)) {
+              semCxMap[semId].push(course.id);
+            }
+          }
+        });
+
+        // Build course -> sections map from ALL courses
+        const cxSecMap = {};
+        fullCourseList.forEach((course) => {
+          if (course.sections && Array.isArray(course.sections)) {
+            cxSecMap[course.id] = course.sections.map((s) => s.id);
+          }
+        });
+
+        console.log("Full semester course map:", semCxMap);
+        console.log("Full course section map:", cxSecMap);
+
+        // For filtering, determine which courses to show
+        let displayCourseList = fullCourseList;
+        if (!isAdmin && teacherAssignedCourseIds.length > 0) {
+          displayCourseList = fullCourseList.filter((course) =>
+            teacherAssignedCourseIds.includes(course.id),
+          );
+          console.log("Courses for teacher display:", displayCourseList);
         }
-      })
-      .catch(() =>
-        setError("Failed to load form data. Make sure the server is running."),
-      )
-      .finally(() => setMetaLoading(false));
-  }, [isAdmin]);
+
+        // For filtering, determine which semesters to show
+        let displaySemestersList = semestersList;
+        if (!isAdmin && teacherAssignedSemesterIds.size > 0) {
+          displaySemestersList = semestersList.filter((sem) =>
+            teacherAssignedSemesterIds.has(sem.id),
+          );
+          console.log("Semesters for teacher display:", displaySemestersList);
+        }
+
+        setCourses(displayCourseList);
+        setSemesters(displaySemestersList);
+        setFilteredCourses(displayCourseList);
+        setFilteredSections([]);
+        setFilteredSemesters(displaySemestersList);
+
+        setSemesterCourseMap(semCxMap);
+        setCourseSectionMap(cxSecMap);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load form data. Make sure the server is running.");
+      } finally {
+        setMetaLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, [isAdmin, user?.teacherProfile?.id]);
+
+  // This effect is no longer needed - removed teacher enrollment fetch
+  // since it's now combined in the main useEffect above
+
+  // Filter courses based on selected semester
+  useEffect(() => {
+    console.log("Semester filter effect triggered:");
+    console.log("- form.semesterId:", form.semesterId);
+    console.log("- semesterCourseMap:", semesterCourseMap);
+    console.log("- courses:", courses);
+
+    if (form.semesterId) {
+      if (semesterCourseMap[form.semesterId]) {
+        const courseIds = semesterCourseMap[form.semesterId];
+        console.log("- Found courseIds for semester:", courseIds);
+        const filtered = courses.filter((c) => courseIds.includes(c.id));
+        console.log("- Filtered courses:", filtered);
+        setFilteredCourses(filtered);
+      } else {
+        console.log("- Semester not found in map, showing empty");
+        setFilteredCourses([]);
+      }
+    } else {
+      console.log("- No semester selected, showing all courses");
+      setFilteredCourses(courses);
+    }
+    // Reset course and section when semester changes
+    setForm((prev) => ({
+      ...prev,
+      courseId: "",
+      sectionId: "",
+    }));
+  }, [form.semesterId, semesterCourseMap, courses]);
+
+  // Filter sections based on selected course
+  useEffect(() => {
+    if (form.courseId) {
+      if (courseSectionMap[form.courseId]) {
+        const sectionIds = courseSectionMap[form.courseId];
+        const courseObj = courses.find((c) => c.id === form.courseId);
+        const sectionsList = courseObj?.sections || [];
+        setFilteredSections(
+          sectionsList.filter((s) => sectionIds.includes(s.id)),
+        );
+      } else {
+        setFilteredSections([]);
+      }
+    } else {
+      setFilteredSections([]);
+    }
+    // Reset section when course changes
+    setForm((prev) => ({
+      ...prev,
+      sectionId: "",
+    }));
+  }, [form.courseId, courseSectionMap, courses]);
+
+  // Fetch and filter teachers based on selected course (for admin only)
+  // For teachers, automatically set their ID
+  useEffect(() => {
+    if (isAdmin && form.courseId) {
+      console.log("Fetching teachers for courseId:", form.courseId);
+      enrollmentsApi.teachers
+        .list({ courseId: form.courseId })
+        .then((res) => {
+          console.log("Teachers API response:", res);
+          console.log("Teachers data:", res.data);
+          const teachersList = res.data?.data || res.data || [];
+          console.log("Teachers list:", teachersList);
+
+          // Debug: Log first teacher object to see structure
+          if (teachersList.length > 0) {
+            console.log("First teacher object:", teachersList[0]);
+            console.log("Teacher object keys:", Object.keys(teachersList[0]));
+          }
+
+          setFilteredTeachers(teachersList);
+        })
+        .catch((err) => {
+          console.error("Error fetching teachers:", err);
+          console.error("Error response:", err.response?.data);
+          setFilteredTeachers([]);
+        });
+    } else {
+      setFilteredTeachers([]);
+    }
+    // Reset teacher selection when course changes
+    if (isAdmin) {
+      setForm((prev) => ({
+        ...prev,
+        teacherId: "",
+      }));
+    } else if (!isAdmin && user?.teacherProfile?.id) {
+      // For teachers, automatically set their teacherId
+      setForm((prev) => ({
+        ...prev,
+        teacherId: user.teacherProfile.id,
+      }));
+    }
+  }, [form.courseId, isAdmin, user?.teacherProfile?.id]);
+
+  // Ensure all semesters are always available (semester is the parent/first selector)
+  useEffect(() => {
+    setFilteredSemesters(semesters);
+  }, [semesters]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (name === "courseId") {
-      const course = courses.find((c) => c.id === value);
-      setSections(course?.sections || []);
-      setForm((prev) => ({
-        ...prev,
-        courseId: value,
-        sectionId: "",
-        semesterId: course?.semesterId || "",
-      }));
-      return;
-    }
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -117,7 +310,7 @@ export default function CreateAssignmentModal({
   const validate = () => {
     if (!form.title.trim()) return "Assignment title is required";
     if (!form.courseId) return "Please select a course";
-    if (isAdmin && !form.teacherId) return "Please select a teacher";
+    if (!form.teacherId) return "Teacher information is missing";
     const total = Number(form.totalMarks);
     if (!total || total <= 0) return "Total marks must be a positive number";
     if (form.passingMarks !== "" && Number(form.passingMarks) > total)
@@ -243,91 +436,104 @@ export default function CreateAssignmentModal({
               </div>
             )}
 
-            {/* Top row: Teacher (admin), Course, Section, Semester */}
+            {/* Top row: Semester, Course, Section, Assigning Teacher (cascading dropdowns) */}
             <div className="bg-gray-50 rounded-lg p-4 md:p-6">
               <div
                 className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}
               >
+                {/* Semester - First selector (always enabled) */}
+                <div>
+                  <CustomDropdown
+                    options={filteredSemesters.map((s) => ({
+                      id: s.id,
+                      name: `${s.name} ${s.year ? `(${s.year})` : ""}`,
+                    }))}
+                    value={form.semesterId}
+                    onChange={(val) =>
+                      handleChange({
+                        target: { name: "semesterId", value: val },
+                      })
+                    }
+                    placeholder={metaLoading ? "Loading…" : "Select semester…"}
+                    label="Semester"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={metaLoading}
+                  />
+                </div>
+
+                {/* Course - Second selector (disabled until semester selected) */}
+                <div>
+                  <CustomDropdown
+                    options={filteredCourses.map((c) => ({
+                      id: c.id,
+                      name: c.title,
+                    }))}
+                    value={form.courseId}
+                    onChange={(val) =>
+                      handleChange({ target: { name: "courseId", value: val } })
+                    }
+                    placeholder={
+                      !form.semesterId
+                        ? "Select semester first"
+                        : "Select course…"
+                    }
+                    label="Select Course *"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={!form.semesterId || metaLoading}
+                  />
+                </div>
+
+                {/* Section - Third selector (disabled until course selected) */}
+                <div>
+                  <CustomDropdown
+                    options={filteredSections.map((s) => ({
+                      id: s.id,
+                      name: s.name,
+                    }))}
+                    value={form.sectionId}
+                    onChange={(val) =>
+                      handleChange({
+                        target: { name: "sectionId", value: val },
+                      })
+                    }
+                    placeholder={
+                      !form.courseId ? "Select course first" : "Select section"
+                    }
+                    label="Select Section"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={!form.courseId || metaLoading}
+                  />
+                </div>
+
+                {/* Assigning Teacher - Fourth selector (admin only, depends on course) */}
                 {isAdmin && (
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Assigning Teacher *
-                    </label>
-                    <select
-                      name="teacherId"
+                    <CustomDropdown
+                      options={filteredTeachers.map((enrollment) => ({
+                        id: enrollment.teacher.id,
+                        name: enrollment.teacher.fullName,
+                      }))}
                       value={form.teacherId}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white"
-                    >
-                      <option value="">Select teacher…</option>
-                      {teachers.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.teacherProfile?.fullName} ({t.teacherProfile?.teacherId})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) =>
+                        handleChange({
+                          target: { name: "teacherId", value: val },
+                        })
+                      }
+                      placeholder={
+                        !form.courseId
+                          ? "Select course first"
+                          : "Select teacher…"
+                      }
+                      label="Assigning Teacher *"
+                      isSmallScreen={false}
+                      BRAND={BRAND}
+                      disabled={!form.courseId || metaLoading}
+                    />
                   </div>
                 )}
-
-                <div className="">
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Select Course *
-                  </label>
-                  <select
-                    name="courseId"
-                    value={form.courseId}
-                    onChange={handleChange}
-                    disabled={metaLoading}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white disabled:bg-gray-100"
-                  >
-                    <option value="">
-                      {metaLoading ? "Loading…" : "Select course…"}
-                    </option>
-                    {courses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Semester
-                  </label>
-                  <div className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600 min-h-[42px]">
-                    {form.semesterId
-                      ? (() => {
-                          const c = courses.find((c) => c.id === form.courseId);
-                          return c?.semester
-                            ? `${c.semester.name}${c.semester.year ? ` (${c.semester.year})` : ""}`
-                            : "Auto-set from course";
-                        })()
-                      : form.courseId
-                        ? "Course has no semester"
-                        : "Select a course first"}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Select Section
-                  </label>
-                  <select
-                    name="sectionId"
-                    value={form.sectionId}
-                    onChange={handleChange}
-                    disabled={!form.courseId}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] bg-white disabled:bg-gray-100"
-                  >
-                    <option value="">All students in course</option>
-                    {sections.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
 
