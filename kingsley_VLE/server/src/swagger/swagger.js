@@ -165,7 +165,6 @@ const options = {
             name: { type: 'string', example: 'Section A' },
             courseId: { type: 'string' },
             semesterId: { type: 'string', nullable: true },
-            assignedTeacherId: { type: 'string', nullable: true },
             description: { type: 'string', nullable: true },
             totalStudentCount: { type: 'integer' },
             createdAt: { type: 'string', format: 'date-time' },

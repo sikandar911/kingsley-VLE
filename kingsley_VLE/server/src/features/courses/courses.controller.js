@@ -57,7 +57,7 @@ export const listCourses = async (req, res) => {
         include: {
           semester: { select: { id: true, name: true, year: true } },
           sections: {
-            select: { id: true, name: true, totalStudentCount: true, assignedTeacherId: true },
+            select: { id: true, name: true, totalStudentCount: true },
           },
           teacherAssignments: {
             include: {

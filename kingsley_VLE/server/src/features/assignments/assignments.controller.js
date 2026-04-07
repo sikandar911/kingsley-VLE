@@ -85,7 +85,7 @@ const ensureTeacherCanManageCourse = async (teacherProfileId, courseId, sectionI
     sectionId
       ? prisma.section.findUnique({
           where: { id: sectionId },
-          select: { id: true, courseId: true, assignedTeacherId: true },
+          select: { id: true, courseId: true },
         })
       : Promise.resolve(null),
   ])
@@ -94,9 +94,9 @@ const ensureTeacherCanManageCourse = async (teacherProfileId, courseId, sectionI
     return { ok: false, error: 'Section does not belong to the selected course' }
   }
 
-  const canManage = Boolean(teacherCourse) || Boolean(section?.assignedTeacherId === teacherProfileId)
+  const canManage = Boolean(teacherCourse)
   if (!canManage) {
-    return { ok: false, error: 'Teacher is not assigned to the selected course or section' }
+    return { ok: false, error: 'Teacher is not assigned to the selected course' }
   }
 
   return { ok: true }
