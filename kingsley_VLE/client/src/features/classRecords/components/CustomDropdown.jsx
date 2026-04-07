@@ -54,6 +54,7 @@ const CustomDropdown = ({
       {/* Dropdown Button */}
       <div className="relative w-full">
         <button
+          type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className="relative w-full px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-left focus:outline-none focus:ring-2 transition flex items-center justify-between disabled:cursor-not-allowed border border-gray-300"
@@ -88,6 +89,7 @@ const CustomDropdown = ({
             <div className="max-h-60 overflow-y-auto">
               {/* Empty option */}
               <button
+                type="button"
                 onClick={() => {
                   onChange("");
                   setIsOpen(false);
@@ -102,6 +104,7 @@ const CustomDropdown = ({
                 options.map((option) => (
                   <button
                     key={option.id}
+                    type="button"
                     onClick={() => {
                       onChange(option.id);
                       setIsOpen(false);

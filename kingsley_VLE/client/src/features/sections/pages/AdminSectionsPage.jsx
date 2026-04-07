@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { sectionsApi } from "../api/sections.api";
 import { coursesApi } from "../../courses/api/courses.api";
 import SectionFormModal from "../components/SectionFormModal";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
+
+const BRAND = "#6b1142";
 
 export default function AdminSectionsPage() {
   const [sections, setSections] = useState([]);
@@ -74,23 +77,25 @@ export default function AdminSectionsPage() {
       </div>
 
       {/* Table panel */}
-      <div className="panel">
-        <div className="panel-header">
+      <div className="panel overflow-visible">
+        <div className="panel-header overflow-visible">
           {/* Filter by course */}
-          <select
-            value={filterCourseId}
-            onChange={(e) => setFilterCourseId(e.target.value)}
-            className="form-input w-full sm:w-auto sm:min-w-[300px] text-xs sm:text-sm"
-          >
-            <option value="">All Courses</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title.length > 40
-                  ? c.title.substring(0, 37) + "..."
-                  : c.title}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-auto sm:min-w-[280px] relative z-50">
+            <CustomDropdown
+              options={[
+                { id: "", name: "All Courses" },
+                ...courses.map((c) => ({
+                  id: c.id,
+                  name: c.title,
+                })),
+              ]}
+              value={filterCourseId}
+              onChange={(val) => setFilterCourseId(val)}
+              placeholder="Select course…"
+              isSmallScreen={false}
+              BRAND={BRAND}
+            />
+          </div>
           <span className="text-sm text-gray-500">
             {sections.length} section{sections.length !== 1 ? "s" : ""}
           </span>
@@ -112,7 +117,6 @@ export default function AdminSectionsPage() {
                   <th className="whitespace-nowrap">Section Name</th>
                   <th className="whitespace-nowrap">Course</th>
                   <th className="whitespace-nowrap">Semester</th>
-                  <th className="whitespace-nowrap">Assigned Teacher</th>
                   <th className="whitespace-nowrap">Students</th>
                   <th className="whitespace-nowrap">Actions</th>
                   <th></th>
@@ -132,15 +136,6 @@ export default function AdminSectionsPage() {
                     <td className="text-gray-500 whitespace-nowrap">
                       {section.semester ? (
                         `${section.semester.name}${section.semester.year ? ` (${section.semester.year})` : ""}`
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {section.assignedTeacher ? (
-                        <span className="text-gray-700">
-                          {section.assignedTeacher.fullName}
-                        </span>
                       ) : (
                         <span className="text-gray-300">—</span>
                       )}
