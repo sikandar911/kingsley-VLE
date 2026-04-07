@@ -47,7 +47,6 @@ export const listSections = async (req, res) => {
       include: {
         course: { select: { id: true, title: true } },
         semester: { select: { id: true, name: true, year: true } },
-        assignedTeacher: { select: { id: true, fullName: true, teacherId: true } },
         _count: { select: { enrollments: true, assignments: true } },
       },
     })
@@ -92,7 +91,6 @@ export const getSection = async (req, res) => {
       include: {
         course: { select: { id: true, title: true } },
         semester: { select: { id: true, name: true, year: true } },
-        assignedTeacher: { select: { id: true, fullName: true, teacherId: true } },
         enrollments: {
           include: {
             student: { select: { id: true, fullName: true, studentId: true } },
@@ -131,9 +129,6 @@ export const getSection = async (req, res) => {
  *                 type: string
  *               semesterId:
  *                 type: string
- *               assignedTeacherId:
- *                 type: string
- *                 description: TeacherProfile.id
  *               description:
  *                 type: string
  *     responses:
@@ -157,7 +152,7 @@ export const getSection = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createSection = async (req, res) => {
-  const { name, courseId, semesterId, assignedTeacherId, description } = req.body
+  const { name, courseId, semesterId, description } = req.body
   if (!name?.trim()) return res.status(400).json({ error: 'Section name is required' })
   if (!courseId) return res.status(400).json({ error: 'courseId is required — a section must belong to a course' })
 
@@ -170,23 +165,16 @@ export const createSection = async (req, res) => {
       if (!sem) return res.status(404).json({ error: 'Semester not found' })
     }
 
-    if (assignedTeacherId) {
-      const teacher = await prisma.teacherProfile.findUnique({ where: { id: assignedTeacherId } })
-      if (!teacher) return res.status(404).json({ error: 'Teacher profile not found' })
-    }
-
     const section = await prisma.section.create({
       data: {
         name: name.trim(),
         courseId,
         semesterId: semesterId || null,
-        assignedTeacherId: assignedTeacherId || null,
         description: description || null,
       },
       include: {
         course: { select: { id: true, title: true } },
         semester: { select: { id: true, name: true } },
-        assignedTeacher: { select: { id: true, fullName: true, teacherId: true } },
       },
     })
 
@@ -227,8 +215,6 @@ export const createSection = async (req, res) => {
  *                 type: string
  *               semesterId:
  *                 type: string
- *               assignedTeacherId:
- *                 type: string
  *               description:
  *                 type: string
  *     responses:
@@ -246,7 +232,7 @@ export const createSection = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSection = async (req, res) => {
-  const { name, semesterId, assignedTeacherId, description } = req.body
+  const { name, semesterId, description } = req.body
   try {
     const existing = await prisma.section.findUnique({ where: { id: req.params.id } })
     if (!existing) return res.status(404).json({ error: 'Section not found' })
@@ -256,23 +242,16 @@ export const updateSection = async (req, res) => {
       if (!sem) return res.status(404).json({ error: 'Semester not found' })
     }
 
-    if (assignedTeacherId) {
-      const teacher = await prisma.teacherProfile.findUnique({ where: { id: assignedTeacherId } })
-      if (!teacher) return res.status(404).json({ error: 'Teacher profile not found' })
-    }
-
     const section = await prisma.section.update({
       where: { id: req.params.id },
       data: {
         ...(name?.trim() ? { name: name.trim() } : {}),
         ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
-        ...(assignedTeacherId !== undefined ? { assignedTeacherId: assignedTeacherId || null } : {}),
         ...(description !== undefined ? { description: description || null } : {}),
       },
       include: {
         course: { select: { id: true, title: true } },
         semester: { select: { id: true, name: true } },
-        assignedTeacher: { select: { id: true, fullName: true, teacherId: true } },
       },
     })
     return res.json(section)

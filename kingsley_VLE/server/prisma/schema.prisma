@@ -157,7 +157,6 @@ model TeacherProfile {
 
   // Relations
   assignedCourses TeacherCourse[]
-  assignedSections Section[] @relation("AssignedSectionTeacher")
   ownedAssignments Assignment[]
   gradedSubmissions AssignmentSubmission[]
 
@@ -253,9 +252,6 @@ model Section {
 
   semesterId String?
   semester Semester? @relation(fields: [semesterId], references: [id])
-
-  assignedTeacherId String? @map("assigned_teacher_id")
-  assignedTeacher TeacherProfile? @relation("AssignedSectionTeacher", fields: [assignedTeacherId], references: [id], onDelete: SetNull)
 
   description String?
 

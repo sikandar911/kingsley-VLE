@@ -96,27 +96,9 @@ const menuByRole = {
       icon: "dashboard",
     },
     {
-      label: "Courses & Learning",
-      icon: "learning",
-      submenu: [
-        { label: "My Courses", path: "/student/courses", icon: "courses" },
-        {
-          label: "Assignments",
-          path: "/student/assignments",
-          icon: "assignments",
-        },
-        { label: "Results", path: "/student/results", icon: "result" },
-        {
-          label: "Class Recordings",
-          path: "/student/class-records",
-          icon: "records",
-        },
-        {
-          label: "Events Calendar",
-          path: "/student/events",
-          icon: "events",
-        },
-      ],
+      label: "My Courses",
+      path: "/student/courses",
+      icon: "courses",
     },
     {
       label: "Profile",

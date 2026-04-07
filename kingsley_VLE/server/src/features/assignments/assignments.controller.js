@@ -454,17 +454,49 @@ export const listAssignments = async (req, res) => {
       }
 
       const { courseIds, sectionIds, semesterIds } = await getStudentEnrollmentScope(studentProfile.id)
+      console.log('[listAssignments] Student courseIds from enrollments:', courseIds)
+      console.log('[listAssignments] Requested courseId filter:', filters.courseId)
       if (!courseIds.length) {
         return res.json([])
       }
 
+      // If specific course/section filters provided, scope to those if student is enrolled
+      // Otherwise fall back to all enrolled courses
+      let filteredCourseIds = courseIds
+      let filteredSectionIds = sectionIds
+      let filteredSemesterIds = semesterIds
+
+      if (filters.courseId) {
+        // If student requested a specific course, check if they're enrolled
+        const isEnrolled = courseIds.includes(filters.courseId)
+        console.log('[listAssignments] Is student enrolled in requested course?', isEnrolled)
+        if (isEnrolled) {
+          filteredCourseIds = [filters.courseId]
+        } else {
+          // If not in enrollment list, still allow fetching but restrict to empty result
+          // This prevents "not found" errors for legitimate requests
+          console.log('[listAssignments] Student NOT enrolled in course, returning empty array')
+          return res.json([])
+        }
+      }
+
+      if (filters.sectionId) {
+        if (sectionIds.includes(filters.sectionId)) {
+          filteredSectionIds = [filters.sectionId]
+        } else {
+          return res.json([])
+        }
+      }
+
       where = buildStudentAssignmentWhere({
-        courseIds,
-        sectionIds,
-        semesterIds,
+        courseIds: filteredCourseIds,
+        sectionIds: filteredSectionIds,
+        semesterIds: filteredSemesterIds,
       })
+      console.log('[listAssignments] Built where filter for student:', JSON.stringify(where, null, 2))
     }
 
+    console.log('[listAssignments] Final where filter:', JSON.stringify(where, null, 2))
     const assignments = await prisma.assignment.findMany({
       where,
       include: {
@@ -491,6 +523,7 @@ export const listAssignments = async (req, res) => {
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     })
 
+    console.log('[listAssignments] Found assignments from DB:', assignments.length)
     return res.json(assignments)
   } catch (err) {
     console.error('List assignments error:', err)
