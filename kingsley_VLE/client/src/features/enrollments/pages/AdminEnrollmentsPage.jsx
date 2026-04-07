@@ -159,7 +159,7 @@ export default function AdminEnrollmentsPage() {
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 ">
             <select
               value={filterCourseId}
               onChange={(e) => setFilterCourseId(e.target.value)}

@@ -1,8 +1,9 @@
 ﻿import React, { useState, useEffect } from "react";
 import { X, Upload, Link } from "lucide-react";
 import { classMaterialsApi } from "../api/classMaterials.api";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
-const BRAND = "#6b1d3e";
+const BRAND = "#6b1142";
 const BRAND_DARK = "#5a1630";
 
 const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
@@ -24,8 +25,10 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredSemesters, setFilteredSemesters] = useState([]);
-  const [relationshipMap, setRelationshipMap] = useState({});
+  const [semesterCourseMap, setSemesterCourseMap] = useState({});
+  const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
   useEffect(() => {
@@ -37,41 +40,57 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
           classMaterialsApi.getSections(),
           classMaterialsApi.getSemesters(),
         ]);
-        const coursesList = coursesRes.data?.courses || [];
+        const coursesList =
+          coursesRes.data?.data ||
+          coursesRes.data?.courses ||
+          coursesRes.data ||
+          [];
         const sectionsData = Array.isArray(sectionsRes.data)
           ? sectionsRes.data
-          : sectionsRes || [];
+          : sectionsRes.data?.data || sectionsRes.data || [];
         const semestersData = Array.isArray(semestersRes.data)
           ? semestersRes.data
-          : semestersRes || [];
+          : semestersRes.data?.data || semestersRes.data || [];
 
         setCourses(coursesList);
         setSections(sectionsData);
         setSemesters(semestersData);
-        setFilteredSections(sectionsData);
+        setFilteredCourses(coursesList);
+        setFilteredSections([]);
         setFilteredSemesters(semestersData);
 
-        // Build relationship map from sections
-        const map = {};
-        sectionsData.forEach((section) => {
-          const courseId = section.courseId;
-          const semesterId = section.semesterId;
-          const sectionId = section.id;
-
-          if (!map[courseId]) map[courseId] = { sections: [], semesters: [] };
-          if (!map[courseId].sections.includes(sectionId)) {
-            map[courseId].sections.push(sectionId);
-          }
-          if (semesterId && !map[courseId].semesters.includes(semesterId)) {
-            map[courseId].semesters.push(semesterId);
+        // Build semester -> courses map
+        const semCourseMap = {};
+        coursesList.forEach((course) => {
+          const semId = course.semesterId;
+          if (semId) {
+            if (!semCourseMap[semId]) semCourseMap[semId] = [];
+            if (!semCourseMap[semId].includes(course.id)) {
+              semCourseMap[semId].push(course.id);
+            }
           }
         });
-        setRelationshipMap(map);
+
+        // Build course -> sections map
+        const courseSectionMap = {};
+        sectionsData.forEach((section) => {
+          const cId = section.courseId;
+          if (cId) {
+            if (!courseSectionMap[cId]) courseSectionMap[cId] = [];
+            if (!courseSectionMap[cId].includes(section.id)) {
+              courseSectionMap[cId].push(section.id);
+            }
+          }
+        });
+
+        setSemesterCourseMap(semCourseMap);
+        setCourseSectionMap(courseSectionMap);
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
         setCourses([]);
         setSections([]);
         setSemesters([]);
+        setFilteredCourses([]);
         setFilteredSections([]);
         setFilteredSemesters([]);
       } finally {
@@ -81,28 +100,50 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
     if (isOpen) fetchDropdownData();
   }, [isOpen]);
 
-  // Filter sections and semesters based on selected course + reset selections
+  // Filter courses based on selected semester
   useEffect(() => {
-    if (formData.courseId && relationshipMap[formData.courseId]) {
-      const relatedSectionIds = relationshipMap[formData.courseId].sections;
-      const relatedSemesterIds = relationshipMap[formData.courseId].semesters;
-      setFilteredSections(
-        sections.filter((s) => relatedSectionIds.includes(s.id)),
-      );
-      setFilteredSemesters(
-        semesters.filter((s) => relatedSemesterIds.includes(s.id)),
-      );
+    if (formData.semesterId) {
+      // If semester is selected, filter courses for that semester
+      if (semesterCourseMap[formData.semesterId]) {
+        const courseIds = semesterCourseMap[formData.semesterId];
+        const filtered = courses.filter((c) => courseIds.includes(c.id));
+        setFilteredCourses(filtered);
+      } else {
+        // Semester selected but has no courses
+        setFilteredCourses([]);
+      }
     } else {
-      setFilteredSections(sections);
-      setFilteredSemesters(semesters);
+      // No semester selected, show all courses
+      setFilteredCourses(courses);
     }
-    // Reset section and semester when course changes
+    // Reset course and section when semester changes
+    setFormData((prev) => ({
+      ...prev,
+      courseId: "",
+      sectionId: "",
+    }));
+  }, [formData.semesterId, semesterCourseMap, courses]);
+
+  // Filter sections based on selected course
+  useEffect(() => {
+    if (formData.courseId && courseSectionMap[formData.courseId]) {
+      const sectionIds = courseSectionMap[formData.courseId];
+      const filtered = sections.filter((s) => sectionIds.includes(s.id));
+      setFilteredSections(filtered);
+    } else {
+      setFilteredSections([]);
+    }
+    // Reset section when course changes
     setFormData((prev) => ({
       ...prev,
       sectionId: "",
-      semesterId: "",
     }));
-  }, [formData.courseId, relationshipMap, sections, semesters]);
+  }, [formData.courseId, courseSectionMap, sections]);
+
+  // Ensure all semesters are always available
+  useEffect(() => {
+    setFilteredSemesters(semesters);
+  }, [semesters]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -411,73 +452,83 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
 
           {/* Dropdowns */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {/* Semester - First selector */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                Course <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="courseId"
-                value={formData.courseId}
-                onChange={handleChange}
-                disabled={loadingDropdowns}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">Select Course({courses.length})</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                Section <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="sectionId"
-                value={formData.sectionId}
-                onChange={handleChange}
-                disabled={loadingDropdowns || !formData.courseId}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">
-                  {formData.courseId
-                    ? `All Sections (${filteredSections.length})`
-                    : "Select Course First"}
-                </option>
-                {filteredSections.map((s) => (
-                  <option key={s?.id} value={s?.id}>
-                    {s?.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-                Semester <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="semesterId"
+              <CustomDropdown
+                options={[
+                  { id: "", name: "Select semester…" },
+                  ...filteredSemesters.map((s) => ({
+                    id: s.id,
+                    name: `${s.name} ${s.year ? `(${s.year})` : ""}`,
+                  })),
+                ]}
                 value={formData.semesterId}
-                onChange={handleChange}
-                disabled={loadingDropdowns || !formData.courseId}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">
-                  {formData.courseId
-                    ? `All Semesters (${filteredSemesters.length})`
-                    : "Select Course First"}
-                </option>
-                {filteredSemesters.map((s) => (
-                  <option key={s?.id} value={s?.id}>
-                    {s?.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, semesterId: val }))
+                }
+                placeholder={loadingDropdowns ? "Loading…" : "Select semester…"}
+                isSmallScreen={false}
+                BRAND={BRAND}
+                disabled={loadingDropdowns}
+              />
+            </div>
+
+            {/* Course - Second selector (depends on semester) */}
+            <div>
+              <CustomDropdown
+                options={[
+                  {
+                    id: "",
+                    name: !formData.semesterId
+                      ? "Select semester first"
+                      : "Select course…",
+                  },
+                  ...filteredCourses.map((c) => ({
+                    id: c.id,
+                    name: c.title,
+                  })),
+                ]}
+                value={formData.courseId}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, courseId: val }))
+                }
+                placeholder={
+                  !formData.semesterId
+                    ? "Select semester first"
+                    : "Select course…"
+                }
+                isSmallScreen={false}
+                BRAND={BRAND}
+                disabled={!formData.semesterId || loadingDropdowns}
+              />
+            </div>
+
+            {/* Section - Third selector (depends on course) */}
+            <div>
+              <CustomDropdown
+                options={[
+                  {
+                    id: "",
+                    name: !formData.courseId
+                      ? "Select course first"
+                      : "Select section…",
+                  },
+                  ...filteredSections.map((s) => ({
+                    id: s?.id,
+                    name: s?.name,
+                  })),
+                ]}
+                value={formData.sectionId}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, sectionId: val }))
+                }
+                placeholder={
+                  !formData.courseId ? "Select course first" : "Select section…"
+                }
+                isSmallScreen={false}
+                BRAND={BRAND}
+                disabled={!formData.courseId || loadingDropdowns}
+              />
             </div>
           </div>
         </form>

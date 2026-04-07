@@ -219,13 +219,13 @@ export default function CreateAssignmentModal({
       console.log("- No semester selected, showing all courses");
       setFilteredCourses(courses);
     }
-    // Reset course and section when semester changes
+    // Reset course and section when semester changes (but not if editing and course was pre-set)
     setForm((prev) => ({
       ...prev,
-      courseId: "",
-      sectionId: "",
+      courseId: isEdit && editAssignment.courseId ? prev.courseId : "",
+      sectionId: isEdit && editAssignment.sectionId ? prev.sectionId : "",
     }));
-  }, [form.semesterId, semesterCourseMap, courses]);
+  }, [form.semesterId, semesterCourseMap, courses, isEdit, editAssignment]);
 
   // Filter sections based on selected course
   useEffect(() => {
@@ -243,12 +243,12 @@ export default function CreateAssignmentModal({
     } else {
       setFilteredSections([]);
     }
-    // Reset section when course changes
+    // Reset section when course changes (but not if editing and section was pre-set)
     setForm((prev) => ({
       ...prev,
-      sectionId: "",
+      sectionId: isEdit && editAssignment.sectionId ? prev.sectionId : "",
     }));
-  }, [form.courseId, courseSectionMap, courses]);
+  }, [form.courseId, courseSectionMap, courses, isEdit, editAssignment]);
 
   // Fetch and filter teachers based on selected course (for admin only)
   // For teachers, automatically set their ID
@@ -279,11 +279,11 @@ export default function CreateAssignmentModal({
     } else {
       setFilteredTeachers([]);
     }
-    // Reset teacher selection when course changes
+    // Reset teacher selection when course changes (but not if editing and teacher was pre-set)
     if (isAdmin) {
       setForm((prev) => ({
         ...prev,
-        teacherId: "",
+        teacherId: isEdit && editAssignment.teacher?.id ? prev.teacherId : "",
       }));
     } else if (!isAdmin && user?.teacherProfile?.id) {
       // For teachers, automatically set their teacherId
@@ -292,12 +292,63 @@ export default function CreateAssignmentModal({
         teacherId: user.teacherProfile.id,
       }));
     }
-  }, [form.courseId, isAdmin, user?.teacherProfile?.id]);
+  }, [
+    form.courseId,
+    isAdmin,
+    user?.teacherProfile?.id,
+    isEdit,
+    editAssignment,
+  ]);
 
   // Ensure all semesters are always available (semester is the parent/first selector)
   useEffect(() => {
     setFilteredSemesters(semesters);
   }, [semesters]);
+
+  // For edit mode: Ensure filtered lists include the previously selected values
+  useEffect(() => {
+    if (isEdit && !metaLoading) {
+      // Populate filtered courses if we have a selected semester
+      if (form.semesterId && semesterCourseMap[form.semesterId]) {
+        const courseIds = semesterCourseMap[form.semesterId];
+        const filtered = courses.filter((c) => courseIds.includes(c.id));
+        setFilteredCourses(filtered);
+      }
+
+      // Populate filtered sections if we have a selected course
+      if (form.courseId && courseSectionMap[form.courseId]) {
+        const sectionIds = courseSectionMap[form.courseId];
+        const courseObj = courses.find((c) => c.id === form.courseId);
+        const sectionsList = courseObj?.sections || [];
+        setFilteredSections(
+          sectionsList.filter((s) => sectionIds.includes(s.id)),
+        );
+      }
+
+      // Populate filtered teachers if admin and we have a selected course
+      if (isAdmin && form.courseId) {
+        enrollmentsApi.teachers
+          .list({ courseId: form.courseId })
+          .then((res) => {
+            const teachersList = res.data?.data || res.data || [];
+            setFilteredTeachers(teachersList);
+          })
+          .catch((err) => {
+            console.error("Error fetching teachers:", err);
+            setFilteredTeachers([]);
+          });
+      }
+    }
+  }, [
+    isEdit,
+    metaLoading,
+    form.semesterId,
+    form.courseId,
+    courses,
+    courseSectionMap,
+    semesterCourseMap,
+    isAdmin,
+  ]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -365,26 +416,6 @@ export default function CreateAssignmentModal({
             {isEdit ? "Edit Assignment" : "Create New Assignment"}
           </h2>
 
-          {/* Action Buttons - Desktop Only */}
-          <div className="hidden md:flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => submit("draft")}
-              disabled={loading || metaLoading}
-              className="px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition disabled:opacity-50"
-            >
-              Save as Draft
-            </button>
-            <button
-              type="button"
-              onClick={() => submit("published")}
-              disabled={loading || metaLoading}
-              className="px-5 py-2.5 bg-[#6b1142] text-white rounded-lg font-medium hover:bg-[#5a0d38] transition disabled:opacity-50"
-            >
-              {loading ? "Saving…" : "Publish"}
-            </button>
-          </div>
-
           {/* Close Button */}
           <button
             onClick={onClose}
@@ -407,26 +438,6 @@ export default function CreateAssignmentModal({
           </button>
         </div>
 
-        {/* Mobile Action Buttons - Below Header */}
-        <div className="md:hidden flex gap-3 px-6 py-4 border-b border-gray-200 flex-wrap">
-          <button
-            type="button"
-            onClick={() => submit("draft")}
-            disabled={loading || metaLoading}
-            className="flex-1 min-w-[120px] px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition disabled:opacity-50"
-          >
-            Save as Draft
-          </button>
-          <button
-            type="button"
-            onClick={() => submit("published")}
-            disabled={loading || metaLoading}
-            className="flex-1 min-w-[120px] px-4 py-2 bg-[#6b1142] text-white rounded-lg font-medium text-sm hover:bg-[#5a0d38] transition disabled:opacity-50"
-          >
-            {loading ? "Saving…" : "Publish"}
-          </button>
-        </div>
-
         {/* Body */}
         <div className="overflow-y-auto flex-1">
           <div className="p-4 md:p-8 space-y-4 md:space-y-6">
@@ -438,6 +449,19 @@ export default function CreateAssignmentModal({
 
             {/* Top row: Semester, Course, Section, Assigning Teacher (cascading dropdowns) */}
             <div className="bg-gray-50 rounded-lg p-4 md:p-6">
+              {/* Loading Indicator */}
+              {metaLoading && (
+                <div className="flex items-center justify-center gap-2 p-4 mb-4">
+                  <div
+                    className="w-5 h-5 border-2 border-gray-200 rounded-full animate-spin"
+                    style={{ borderTopColor: BRAND }}
+                  />
+                  <p className="text-sm text-gray-600 font-medium">
+                    Loading data...
+                  </p>
+                </div>
+              )}
+
               <div
                 className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}
               >
@@ -660,6 +684,7 @@ export default function CreateAssignmentModal({
 
                 {isEdit && (
                   <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
+                    {/* status selection part*/}
                     <h3 className="text-sm font-semibold text-gray-900 mb-3">
                       Status
                     </h3>
@@ -691,14 +716,56 @@ export default function CreateAssignmentModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-8 py-2 md:py-4 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-1 md:py-1.5 lg:py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg text-[14px] md:text-[18px] font-medium hover:bg-gray-50 transition"
-          >
-            Cancel
-          </button>
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 md:px-8 py-3 md:py-5 flex flex-col gap-2 md:gap-3 md:flex-row md:justify-between md:items-center">
+          {isEdit ? (
+            <div className="flex gap-2 md:gap-3 ml-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm md:text-base font-medium hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => submit()}
+                disabled={loading || metaLoading}
+                className="px-5 py-2.5 bg-[#6b1142] text-white rounded-lg text-sm md:text-base font-medium hover:bg-[#5a0d38] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Updating…" : "Update"}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2 md:gap-3 flex-1 md:flex-none">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm md:text-base font-medium hover:bg-gray-50 transition"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => submit("draft")}
+                  disabled={loading || metaLoading}
+                  className="flex-1 md:flex-none px-3 py-2.5 md:py-2 md:px-3 border-2 border-[#6b1142] text-[#6b1142] rounded-lg text-sm md:text-base font-medium hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save as Draft
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => submit("published")}
+                disabled={loading || metaLoading}
+                className="w-full md:w-auto px-5 py-2.5 bg-[#6b1142] text-white rounded-lg text-sm md:text-base font-medium hover:bg-[#5a0d38] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Saving…" : "Publish"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

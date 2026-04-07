@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, Link, Video } from "lucide-react";
 import { classRecordsApi } from "../api/classRecords.api";
+import CustomDropdown from "./CustomDropdown";
 
 const BRAND = "#6b1d3e";
 const BRAND_DARK = "#5a1630";
 
 const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const isEdit = Boolean(record);
+  const prevSemesterIdRef = useRef("");
+  const prevCourseIdRef = useRef("");
   const [inputMode, setInputMode] = useState("url"); // "url" | "file"
   const [formData, setFormData] = useState({
     title: "",
@@ -104,12 +107,19 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     } else {
       setFilteredCourses([]);
     }
-    // Reset course and section when semester changes
-    setFormData((prev) => ({
-      ...prev,
-      courseId: "",
-      sectionId: "",
-    }));
+
+    // Only reset course and section if semester actually changed (not on initial load)
+    if (
+      prevSemesterIdRef.current !== "" &&
+      prevSemesterIdRef.current !== formData.semesterId
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        courseId: "",
+        sectionId: "",
+      }));
+    }
+    prevSemesterIdRef.current = formData.semesterId;
   }, [formData.semesterId, semesterCourseMap, courses]);
 
   // Filter sections based on selected course
@@ -120,11 +130,18 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     } else {
       setFilteredSections([]);
     }
-    // Reset section when course changes
-    setFormData((prev) => ({
-      ...prev,
-      sectionId: "",
-    }));
+
+    // Only reset section if course actually changed (not on initial load)
+    if (
+      prevCourseIdRef.current !== "" &&
+      prevCourseIdRef.current !== formData.courseId
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        sectionId: "",
+      }));
+    }
+    prevCourseIdRef.current = formData.courseId;
   }, [formData.courseId, courseSectionMap, sections]);
 
   const handleChange = (e) => {
@@ -220,6 +237,8 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     setUrlError("");
     setUploadedFileName("");
     setInputMode("url");
+    prevSemesterIdRef.current = "";
+    prevCourseIdRef.current = "";
     onClose();
   };
 
@@ -416,21 +435,20 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
               <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
                 Semester <span className="text-red-500">*</span>
               </label>
-              <select
-                name="semesterId"
+              <CustomDropdown
+                options={[
+                  { id: "", name: "Select Semester" },
+                  ...semesters.map((s) => ({ id: s.id, name: s.name })),
+                ]}
                 value={formData.semesterId}
-                onChange={handleChange}
+                onChange={(val) =>
+                  handleChange({ target: { name: "semesterId", value: val } })
+                }
+                placeholder="Select Semester"
+                isSmallScreen={false}
+                BRAND={BRAND}
                 disabled={loadingDropdowns}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">Select Semester</option>
-                {semesters.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Course */}
@@ -438,25 +456,25 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
               <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
                 Course <span className="text-red-500">*</span>
               </label>
-              <select
-                name="courseId"
+              <CustomDropdown
+                options={[
+                  {
+                    id: "",
+                    name: formData.semesterId
+                      ? `Select Course (${filteredCourses.length})`
+                      : "Select Semester First",
+                  },
+                  ...filteredCourses.map((c) => ({ id: c.id, name: c.title })),
+                ]}
                 value={formData.courseId}
-                onChange={handleChange}
+                onChange={(val) =>
+                  handleChange({ target: { name: "courseId", value: val } })
+                }
+                placeholder="Select Course"
+                isSmallScreen={false}
+                BRAND={BRAND}
                 disabled={loadingDropdowns || !formData.semesterId}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">
-                  {formData.semesterId
-                    ? `Select Course (${filteredCourses.length})`
-                    : "Select Semester First"}
-                </option>
-                {filteredCourses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Section */}
@@ -464,25 +482,25 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
               <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
                 Section
               </label>
-              <select
-                name="sectionId"
+              <CustomDropdown
+                options={[
+                  {
+                    id: "",
+                    name: formData.courseId
+                      ? `Select Section (${filteredSections.length})`
+                      : "Select Course First",
+                  },
+                  ...filteredSections.map((s) => ({ id: s.id, name: s.name })),
+                ]}
                 value={formData.sectionId}
-                onChange={handleChange}
+                onChange={(val) =>
+                  handleChange({ target: { name: "sectionId", value: val } })
+                }
+                placeholder="Select Section"
+                isSmallScreen={false}
+                BRAND={BRAND}
                 disabled={loadingDropdowns || !formData.courseId}
-                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 cursor-pointer bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": BRAND }}
-              >
-                <option value="">
-                  {formData.courseId
-                    ? `Select Section (${filteredSections.length})`
-                    : "Select Course First"}
-                </option>
-                {filteredSections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
         </form>

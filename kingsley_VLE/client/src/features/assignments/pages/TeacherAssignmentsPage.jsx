@@ -35,6 +35,7 @@ export default function TeacherAssignmentsPage() {
   const [editAssignment, setEditAssignment] = useState(null);
   const [preview, setPreview] = useState(null);
   const [viewSubmissions, setViewSubmissions] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -90,11 +91,14 @@ export default function TeacherAssignmentsPage() {
   };
 
   const handleStatusChange = async (assignment, newStatus) => {
+    setUpdatingId(assignment.id);
     try {
       await assignmentsApi.updateStatus(assignment.id, newStatus);
       load();
     } catch (e) {
       alert(e.response?.data?.error || "Failed to update status");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -314,10 +318,15 @@ export default function TeacherAssignmentsPage() {
                                 onClick={() =>
                                   handleStatusChange(a, "published")
                                 }
-                                className="p-1.5 hover:bg-green-50 rounded transition text-base"
+                                disabled={updatingId === a.id}
+                                className={`p-1.5 rounded transition text-base ${
+                                  updatingId === a.id
+                                    ? "animate-spin"
+                                    : "hover:bg-green-50"
+                                }`}
                                 title="Publish"
                               >
-                                🟢
+                                {updatingId === a.id ? "🟡" : "🟢"}
                               </button>
                             )}
 
@@ -325,10 +334,15 @@ export default function TeacherAssignmentsPage() {
                             {a.status === "published" && (
                               <button
                                 onClick={() => handleStatusChange(a, "closed")}
-                                className="p-1.5 hover:bg-red-50 rounded transition text-base"
+                                disabled={updatingId === a.id}
+                                className={`p-1.5 rounded transition text-base ${
+                                  updatingId === a.id
+                                    ? "animate-spin"
+                                    : "hover:bg-red-50"
+                                }`}
                                 title="Close Assignment"
                               >
-                                🔴
+                                {updatingId === a.id ? "🟡" : "🔴"}
                               </button>
                             )}
                           </div>

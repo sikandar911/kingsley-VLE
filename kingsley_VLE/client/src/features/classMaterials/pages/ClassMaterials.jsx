@@ -2,8 +2,9 @@
 import { Search, Plus, Eye, Trash2, FileText, Link } from "lucide-react";
 import ClassMaterialsModal from "../components/ClassMaterialsModal";
 import { classMaterialsApi } from "../api/classMaterials.api";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
-const BRAND = "#6b1d3e";
+const BRAND = "#6b1142";
 
 const ClassMaterials = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -292,53 +293,59 @@ const ClassMaterials = () => {
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <select
+              <CustomDropdown
+                options={[
+                  {
+                    id: "",
+                    name: `All Semesters (${filteredSemesters.length})`,
+                  },
+                  ...filteredSemesters.map((semester) => ({
+                    id: semester?.id,
+                    name: semester?.name,
+                  })),
+                ]}
                 value={selectedSemester}
-                onChange={(e) => handleSemesterChange(e.target.value)}
-                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer"
-                style={{ "--tw-ring-color": "#6b1d3e" }}
-              >
-                <option value="">
-                  All Semesters ({filteredSemesters.length})
-                </option>
-                {filteredSemesters.map((semester) => (
-                  <option key={semester?.id} value={semester?.id}>
-                    {semester?.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleSemesterChange(val)}
+                placeholder="Select semester…"
+                isSmallScreen={false}
+                BRAND={BRAND}
+              />
 
-              <select
+              <CustomDropdown
+                options={[
+                  { id: "", name: `All Courses (${filteredCourses.length})` },
+                  ...filteredCourses.map((course) => ({
+                    id: course.id,
+                    name: course.title,
+                  })),
+                ]}
                 value={selectedCourse}
-                onChange={(e) => handleCourseChange(e.target.value)}
+                onChange={(val) => handleCourseChange(val)}
+                placeholder={
+                  !selectedSemester ? "Select semester first" : "Select course…"
+                }
+                isSmallScreen={false}
+                BRAND={BRAND}
                 disabled={!selectedSemester}
-                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": "#6b1d3e" }}
-              >
-                <option value="">All Courses ({filteredCourses.length})</option>
-                {filteredCourses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.title}
-                  </option>
-                ))}
-              </select>
+              />
 
-              <select
+              <CustomDropdown
+                options={[
+                  { id: "", name: `All Sections (${filteredSections.length})` },
+                  ...filteredSections.map((section) => ({
+                    id: section?.id,
+                    name: section?.name,
+                  })),
+                ]}
                 value={selectedSection}
-                onChange={(e) => handleSectionChange(e.target.value)}
+                onChange={(val) => handleSectionChange(val)}
+                placeholder={
+                  !selectedCourse ? "Select course first" : "Select section…"
+                }
+                isSmallScreen={false}
+                BRAND={BRAND}
                 disabled={!selectedCourse}
-                className="px-4 py-2.5 sm:py-3 bg-white rounded-lg text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ "--tw-ring-color": "#6b1d3e" }}
-              >
-                <option value="">
-                  All Sections ({filteredSections.length})
-                </option>
-                {filteredSections.map((section) => (
-                  <option key={section?.id} value={section?.id}>
-                    {section?.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
         </div>

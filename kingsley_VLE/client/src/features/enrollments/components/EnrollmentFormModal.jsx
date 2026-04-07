@@ -4,7 +4,9 @@ import { coursesApi } from "../../courses/api/courses.api";
 import { academicApi } from "../../academic/api/academic.api";
 import { adminApi } from "../../../Dashboard/Admin/api/admin.api";
 import api from "../../../lib/api";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
+const BRAND = "#6b1142";
 const INITIAL = { studentId: "", courseId: "", sectionId: "", semesterId: "" };
 
 export default function EnrollmentFormModal({ onClose, onSaved }) {
@@ -183,87 +185,100 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
           )}
 
           <div className="form-group">
-            <label className="form-label">Student *</label>
-            <select
-              name="studentId"
+            <CustomDropdown
+              options={[
+                { id: "", name: "Select student…" },
+                ...students.map((s) => ({
+                  id: s.studentProfile?.id,
+                  name: `${s.studentProfile?.fullName || s.email} — ${s.studentProfile?.studentId || ""}`,
+                })),
+              ]}
               value={form.studentId}
-              onChange={handleChange}
-              className="form-input"
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, studentId: val }))
+              }
+              placeholder={metaLoading ? "Loading…" : "Select student…"}
+              isSmallScreen={false}
+              BRAND={BRAND}
               disabled={metaLoading}
-            >
-              <option value="">
-                {metaLoading ? "Loading…" : "Select student…"}
-              </option>
-              {students.map((s) => (
-                <option key={s.studentProfile?.id} value={s.studentProfile?.id}>
-                  {s.studentProfile?.fullName || s.email} —{" "}
-                  {s.studentProfile?.studentId || ""}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Semester - First selector */}
           <div className="form-group">
-            <label className="form-label">Semester *</label>
-            <select
-              name="semesterId"
+            <CustomDropdown
+              options={[
+                { id: "", name: "Select semester…" },
+                ...filteredSemesters.map((s) => ({
+                  id: s.id,
+                  name: `${s.name} ${s.year ? `(${s.year})` : ""}`,
+                })),
+              ]}
               value={form.semesterId}
-              onChange={handleChange}
-              className="form-input"
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, semesterId: val }))
+              }
+              placeholder={metaLoading ? "Loading…" : "Select semester…"}
+              isSmallScreen={false}
+              BRAND={BRAND}
               disabled={metaLoading}
-            >
-              <option value="">
-                {metaLoading ? "Loading…" : "Select semester…"}
-              </option>
-              {filteredSemesters.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} {s.year ? `(${s.year})` : ""}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Course - Second selector (depends on semester) */}
           <div className="form-group">
-            <label className="form-label">Course *</label>
-            <select
-              name="courseId"
+            <CustomDropdown
+              options={[
+                {
+                  id: "",
+                  name: !form.semesterId
+                    ? "Select semester first"
+                    : "Select course…",
+                },
+                ...filteredCourses.map((c) => ({
+                  id: c.id,
+                  name: c.title,
+                })),
+              ]}
               value={form.courseId}
-              onChange={handleChange}
-              className="form-input"
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, courseId: val }))
+              }
+              placeholder={
+                !form.semesterId ? "Select semester first" : "Select course…"
+              }
+              isSmallScreen={false}
+              BRAND={BRAND}
               disabled={!form.semesterId || metaLoading}
-            >
-              <option value="">
-                {!form.semesterId ? "Select semester first" : "Select course…"}
-              </option>
-              {filteredCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Section - Third selector (depends on course) */}
           <div className="form-group">
-            <label className="form-label">Section *</label>
-            <select
-              name="sectionId"
+            <CustomDropdown
+              options={[
+                {
+                  id: "",
+                  name: !form.courseId
+                    ? "Select course first"
+                    : "Select section…",
+                },
+                ...filteredSections.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                })),
+              ]}
               value={form.sectionId}
-              onChange={handleChange}
-              className="form-input"
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, sectionId: val }))
+              }
+              placeholder={
+                !form.courseId ? "Select course first" : "Select section…"
+              }
+              isSmallScreen={false}
+              BRAND={BRAND}
               disabled={!form.courseId || metaLoading}
-            >
-              <option value="">
-                {!form.courseId ? "Select course first" : "Select section…"}
-              </option>
-              {filteredSections.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
