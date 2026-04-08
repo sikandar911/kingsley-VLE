@@ -55,6 +55,10 @@ export default function CourseProfilePage() {
 
   const courseTitle = course?.title || 'Course'
   const sectionName = enrollment?.section?.name || ''
+  const semester = enrollment?.semester
+  const semesterDisplay = semester
+    ? `${semester.year || new Date().getFullYear()}-${semester.name || ''}`
+    : ''
   const avatarLetter = courseTitle.charAt(0).toUpperCase()
   const sectionId = enrollment?.sectionId || enrollment?.section?.id || null
 
@@ -126,9 +130,14 @@ export default function CourseProfilePage() {
             <h1 className="text-sm sm:text-base font-bold text-gray-900 truncate leading-tight">
               {courseTitle}
             </h1>
-            {sectionName && (
-              <p className="text-xs text-gray-500 leading-tight">Section {sectionName}</p>
-            )}
+            <div className="flex flex-col gap-0.5">
+              {sectionName && (
+                <p className="text-xs text-gray-500 leading-tight">Section {sectionName}</p>
+              )}
+              {semesterDisplay && (
+                <p className="text-xs text-gray-400 leading-tight">{semesterDisplay}</p>
+              )}
+            </div>
           </div>
 
           {/* Right icons */}
