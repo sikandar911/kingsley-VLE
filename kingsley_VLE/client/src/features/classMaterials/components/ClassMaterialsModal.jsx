@@ -470,6 +470,8 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={loadingDropdowns}
+                dropdownDirection="up"
+                dropdownAlign="right"
               />
             </div>
 
@@ -500,6 +502,8 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={!formData.semesterId || loadingDropdowns}
+                dropdownDirection="up"
+                dropdownAlign="right"
               />
             </div>
 
@@ -528,6 +532,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={!formData.courseId || loadingDropdowns}
+                dropdownDirection="up"
               />
             </div>
           </div>

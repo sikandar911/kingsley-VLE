@@ -450,7 +450,7 @@ const Attendance = () => {
             <CustomDropdown
               options={filteredSemesters.map((semester) => ({
                 id: semester.id,
-                name: semester.name || `Semester ${semester.semesterNumber}`,
+                name: `${semester.name || `Semester ${semester.semesterNumber}`} ${semester.year ? `(${semester.year})` : ""}`,
               }))}
               value={selectedSemester}
               onChange={handleSemesterChange}

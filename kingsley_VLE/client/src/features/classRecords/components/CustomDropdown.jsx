@@ -11,6 +11,8 @@ const CustomDropdown = ({
   BRAND = "#6b1d3e",
   countText = "",
   disabled = false,
+  dropdownDirection = "down",
+  dropdownAlign = "left",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
@@ -80,10 +82,14 @@ const CustomDropdown = ({
         {/* Dropdown Menu */}
         {isOpen && !disabled && (
           <div
-            className="absolute z-50 w-full bg-white rounded-lg shadow-lg border border-gray-200 top-full mt-1"
+            className={`absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 ${
+              dropdownDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"
+            } ${dropdownAlign === "right" ? "w-full" : ""}`}
             style={{
               minWidth: "220px",
               maxWidth: "calc(100vw - 20px)",
+              left: dropdownAlign === "right" ? "0" : "auto",
+              right: dropdownAlign === "right" ? "auto" : "0",
             }}
           >
             <div className="max-h-60 overflow-y-auto">

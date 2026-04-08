@@ -1,78 +1,82 @@
-import { useState, useEffect } from 'react'
-import { academicApi } from '../api/academic.api'
+import { useState, useEffect } from "react";
+import { academicApi } from "../api/academic.api";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
-const INITIAL = { name: '', sessionId: '', year: '', monthsIncluded: '' }
+const INITIAL = { name: "", sessionId: "", year: "", monthsIncluded: "" };
 
 export default function SemesterFormModal({ onClose, onSaved, editSemester }) {
-  const isEdit = Boolean(editSemester)
+  const isEdit = Boolean(editSemester);
   const [form, setForm] = useState(
     isEdit
       ? {
-          name: editSemester.name || '',
-          sessionId: editSemester.sessionId || '',
-          year: editSemester.year?.toString() || '',
-          monthsIncluded: editSemester.monthsIncluded || '',
+          name: editSemester.name || "",
+          sessionId: editSemester.sessionId || "",
+          year: editSemester.year?.toString() || "",
+          monthsIncluded: editSemester.monthsIncluded || "",
         }
       : INITIAL,
-  )
-  const [sessions, setSessions] = useState([])
-  const [metaLoading, setMetaLoading] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  );
+  const [sessions, setSessions] = useState([]);
+  const [metaLoading, setMetaLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     academicApi.sessions
       .list()
       .then((res) => setSessions(res.data || []))
-      .catch(() => setError('Failed to load sessions'))
-      .finally(() => setMetaLoading(false))
-  }, [])
+      .catch(() => setError("Failed to load sessions"))
+      .finally(() => setMetaLoading(false));
+  }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   const submit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!form.name.trim()) {
-      setError('Semester name is required')
-      return
+      setError("Semester name is required");
+      return;
     }
     if (!form.sessionId) {
-      setError('Please select a session')
-      return
+      setError("Please select a session");
+      return;
     }
-    setError('')
-    setLoading(true)
+    setError("");
+    setLoading(true);
     try {
       const payload = {
         name: form.name.trim(),
         sessionId: form.sessionId,
         year: form.year ? Number(form.year) : null,
         monthsIncluded: form.monthsIncluded.trim() || null,
-      }
+      };
       if (isEdit) {
-        await academicApi.semesters.update(editSemester.id, payload)
+        await academicApi.semesters.update(editSemester.id, payload);
       } else {
-        await academicApi.semesters.create(payload)
+        await academicApi.semesters.create(payload);
       }
-      onSaved()
+      onSaved();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save semester')
+      setError(err.response?.data?.error || "Failed to save semester");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal">
+    <div className="modal-overlay ">
+      <div className="modal overflow-visible">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">
-            {isEdit ? 'Edit Semester' : 'Create Semester'}
+            {isEdit ? "Edit Semester" : "Create Semester"}
           </h2>
-          <button onClick={onClose} className="btn-icon text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="btn-icon text-gray-400 hover:text-gray-600"
+          >
             ✕
           </button>
         </div>
@@ -98,20 +102,24 @@ export default function SemesterFormModal({ onClose, onSaved, editSemester }) {
 
           <div className="form-group">
             <label className="form-label">Session *</label>
-            <select
-              name="sessionId"
+            <CustomDropdown
+              options={[
+                { id: "", name: metaLoading ? "Loading…" : "Select session…" },
+                ...sessions.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                })),
+              ]}
               value={form.sessionId}
-              onChange={handleChange}
-              className="form-input"
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, sessionId: val }))
+              }
+              placeholder={metaLoading ? "Loading…" : "Select session…"}
+              isSmallScreen={false}
+              BRAND="#6b1142"
               disabled={metaLoading}
-            >
-              <option value="">{metaLoading ? 'Loading…' : 'Select session…'}</option>
-              {sessions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              dropdownDirection="up"
+            />
           </div>
 
           <div className="md:form-row">
@@ -144,12 +152,20 @@ export default function SemesterFormModal({ onClose, onSaved, editSemester }) {
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" disabled={loading || metaLoading} className="text-[13px] btn-primary">
-              {loading ? 'Saving…' : isEdit ? 'Update Semester' : 'Create Semester'}
+            <button
+              type="submit"
+              disabled={loading || metaLoading}
+              className="text-[13px] btn-primary"
+            >
+              {loading
+                ? "Saving…"
+                : isEdit
+                  ? "Update Semester"
+                  : "Create Semester"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

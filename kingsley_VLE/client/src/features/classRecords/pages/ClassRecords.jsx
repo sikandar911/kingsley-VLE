@@ -41,6 +41,7 @@ const ClassRecords = () => {
   const [editingRecord, setEditingRecord] = useState(null);
   const [viewMode, setViewMode] = useState("grid");
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
+  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
   // Handle screen resize for responsive styling
   useEffect(() => {
@@ -72,6 +73,7 @@ const ClassRecords = () => {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
+        setLoadingDropdowns(true);
         const [cRes, sRes, smRes] = await Promise.all([
           classRecordsApi.getCourses(),
           classRecordsApi.getSections(),
@@ -124,8 +126,15 @@ const ClassRecords = () => {
 
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
+
+        // Auto-select the latest semester (first one in the list)
+        if (semestersData.length > 0) {
+          setSelectedSemester(semestersData[0].id);
+        }
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
+      } finally {
+        setLoadingDropdowns(false);
       }
     };
     fetchDropdownData();
@@ -349,17 +358,28 @@ const ClassRecords = () => {
           {/* Semester Dropdown (First) */}
           <div className="flex flex-col">
             <CustomDropdown
-              options={filteredSemesters.map((semester) => ({
-                id: semester.id,
-                name: semester.name || "Untitled Semester",
-              }))}
+              options={[
+                {
+                  id: "",
+                  name: loadingDropdowns
+                    ? "Loading..."
+                    : `All Semesters (${filteredSemesters.length})`,
+                },
+                ...filteredSemesters.map((semester) => ({
+                  id: semester.id,
+                  name: `${semester.name || "Untitled Semester"} ${semester.year ? `(${semester.year})` : ""}`,
+                })),
+              ]}
               value={selectedSemester}
               onChange={setSelectedSemester}
-              placeholder="All Semesters"
+              placeholder={loadingDropdowns ? "Loading..." : "All Semesters"}
               label="Semester"
-              countText={`(${filteredSemesters.length})`}
+              countText={
+                loadingDropdowns ? "" : `(${filteredSemesters.length})`
+              }
               isSmallScreen={isSmallScreen}
               BRAND={BRAND}
+              disabled={loadingDropdowns}
             />
           </div>
 

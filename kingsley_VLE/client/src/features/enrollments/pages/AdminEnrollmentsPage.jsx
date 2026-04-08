@@ -4,6 +4,7 @@ import { coursesApi } from "../../courses/api/courses.api";
 import { academicApi } from "../../academic/api/academic.api";
 import EnrollmentFormModal from "../components/EnrollmentFormModal";
 import TeacherCourseModal from "../components/TeacherCourseModal";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 export default function AdminEnrollmentsPage() {
   const [tab, setTab] = useState("students");
@@ -141,8 +142,8 @@ export default function AdminEnrollmentsPage() {
       </div>
 
       {/* Panel */}
-      <div className="panel">
-        <div className="panel-header flex-wrap gap-3">
+      <div className="panel overflow-visible">
+        <div className="panel-header flex-wrap gap-3 ">
           <div className="tab-group">
             <button
               className={`tab-btn ${tab === "students" ? "tab-btn--active" : ""}`}
@@ -159,35 +160,45 @@ export default function AdminEnrollmentsPage() {
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-2 ">
-            <select
-              value={filterCourseId}
-              onChange={(e) => setFilterCourseId(e.target.value)}
-              className="form-input w-full md:w-fit lg:w-auto lg:min-w-[160px] text-xs lg:text-sm py-1.5"
-            >
-              <option value="">All Courses</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title.length > 35
-                    ? c.title.substring(0, 39) + "..."
-                    : c.title}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="w-full md:w-fit lg:w-auto lg:min-w-[160px]">
+              <CustomDropdown
+                options={[
+                  { id: "", name: "All Courses" },
+                  ...courses.map((c) => ({
+                    id: c.id,
+                    name:
+                      c.title.length > 35
+                        ? c.title.substring(0, 39) + "..."
+                        : c.title,
+                  })),
+                ]}
+                value={filterCourseId}
+                onChange={setFilterCourseId}
+                placeholder="All Courses"
+                isSmallScreen={false}
+                BRAND="#6b1142"
+              />
+            </div>
 
             {tab === "students" && (
-              <select
-                value={filterSemesterId}
-                onChange={(e) => setFilterSemesterId(e.target.value)}
-                className="form-input w-full md:w-fit lg:w-auto min-w-[160px] text-xs lg:text-sm py-1.5"
-              >
-                <option value="">All Semesters</option>
-                {semesters.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} {s.year ? `(${s.year})` : ""}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full md:w-fit lg:w-auto min-w-[160px]">
+                <CustomDropdown
+                  options={[
+                    { id: "", name: "All Semesters" },
+                    ...semesters.map((s) => ({
+                      id: s.id,
+                      name: `${s.name} ${s.year ? `(${s.year})` : ""}`,
+                    })),
+                  ]}
+                  value={filterSemesterId}
+                  onChange={setFilterSemesterId}
+                  placeholder="All Semesters"
+                  isSmallScreen={false}
+                  BRAND="#6b1142"
+                  dropdownAlign="left"
+                />
+              </div>
             )}
           </div>
         </div>

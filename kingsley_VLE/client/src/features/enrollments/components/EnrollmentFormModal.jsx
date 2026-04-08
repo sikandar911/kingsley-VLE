@@ -166,7 +166,7 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal">
+      <div className="modal overflow-visible">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">Enroll Student</h2>
           <button
@@ -185,6 +185,7 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
           )}
 
           <div className="form-group">
+            <label className="form-label">Student *</label>
             <CustomDropdown
               options={[
                 { id: "", name: "Select student…" },
@@ -206,6 +207,7 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
 
           {/* Semester - First selector */}
           <div className="form-group">
+            <label className="form-label">Semester *</label>
             <CustomDropdown
               options={[
                 { id: "", name: "Select semester…" },
@@ -227,6 +229,7 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
 
           {/* Course - Second selector (depends on semester) */}
           <div className="form-group">
+            <label className="form-label">Course *</label>
             <CustomDropdown
               options={[
                 {
@@ -254,7 +257,8 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
           </div>
 
           {/* Section - Third selector (depends on course) */}
-          <div className="form-group">
+          <div className="form-group ">
+              <label className="form-label">Section *</label>
             <CustomDropdown
               options={[
                 {
