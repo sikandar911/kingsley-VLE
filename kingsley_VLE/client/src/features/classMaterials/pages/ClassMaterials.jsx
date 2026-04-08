@@ -29,6 +29,7 @@ const ClassMaterials = () => {
   // Relationship maps: semester -> courses, course -> sections
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
+  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
   // Fetch all courses on mount
   useEffect(() => {
@@ -50,6 +51,7 @@ const ClassMaterials = () => {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
+        setLoadingDropdowns(true);
         const [cRes, sRes, smRes] = await Promise.all([
           classMaterialsApi.getCourses(),
           classMaterialsApi.getSections(),
@@ -102,8 +104,15 @@ const ClassMaterials = () => {
 
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
+
+        // Auto-select the latest semester (first one in the list)
+        if (semestersData.length > 0) {
+          setSelectedSemester(semestersData[0].id);
+        }
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
+      } finally {
+        setLoadingDropdowns(false);
       }
     };
     fetchDropdownData();
@@ -233,19 +242,32 @@ const ClassMaterials = () => {
     }
   };
 
-  const getCourseName = (id) => {
-    const course = courses.find((c) => c.id === id);
-    return course ? course.title : id;
+  const getCourseName = (material) => {
+    // Check nested object first (from API response)
+    if (material.course?.title) return material.course.title;
+    // Fallback to searching local state
+    const course = courses.find((c) => c.id === material.courseId);
+    return course ? course.title : material.courseId;
   };
 
-  const getSectionName = (id) => {
-    const section = sections.find((s) => s && s.id === id);
-    return section ? section.name : id;
+  const getSectionName = (material) => {
+    // Check nested object first (from API response)
+    if (material.section?.name) return material.section.name;
+    // Fallback to searching local state
+    const section = sections.find((s) => s && s.id === material.sectionId);
+    return section ? section.name : material.sectionId;
   };
 
-  const getSemesterName = (id) => {
-    const semester = semesters.find((s) => s && s.id === id);
-    return semester ? semester.name : id;
+  const getSemesterName = (material) => {
+    // Check nested object first (from API response)
+    if (material.semester?.name) {
+      return material.semester.year
+        ? `${material.semester.name} (${material.semester.year})`
+        : material.semester.name;
+    }
+    // Fallback to searching local state
+    const semester = semesters.find((s) => s && s.id === material.semesterId);
+    return semester ? semester.name : material.semesterId;
   };
 
   const getMaterialUrl = (material) =>
@@ -297,18 +319,23 @@ const ClassMaterials = () => {
                 options={[
                   {
                     id: "",
-                    name: `All Semesters (${filteredSemesters.length})`,
+                    name: loadingDropdowns
+                      ? "Loading..."
+                      : `All Semesters (${filteredSemesters.length})`,
                   },
                   ...filteredSemesters.map((semester) => ({
                     id: semester?.id,
-                    name: semester?.name,
+                    name: `${semester?.name || "Untitled Semester"} ${semester?.year ? `(${semester.year})` : ""}`,
                   })),
                 ]}
                 value={selectedSemester}
                 onChange={(val) => handleSemesterChange(val)}
-                placeholder="Select semester…"
+                placeholder={
+                  loadingDropdowns ? "Loading..." : "Select semester…"
+                }
                 isSmallScreen={false}
                 BRAND={BRAND}
+                disabled={loadingDropdowns}
               />
 
               <CustomDropdown
@@ -414,13 +441,13 @@ const ClassMaterials = () => {
                           )}
                         </td>
                         <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
-                          {getCourseName(material.courseId)}
+                          {getCourseName(material)}
                         </td>
                         <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
-                          {getSectionName(material.sectionId)}
+                          {getSectionName(material)}
                         </td>
                         <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
-                          {getSemesterName(material.semesterId)}
+                          {getSemesterName(material)}
                         </td>
                         <td className="px-4 py-4 text-xs sm:text-sm">
                           {url ? (
@@ -488,8 +515,8 @@ const ClassMaterials = () => {
             </table>
           </div>
 
-          {/* Mobile */}
-          <div className="md:hidden">
+          {/* Mobile - Scrollable Table */}
+          <div className="md:hidden overflow-x-auto">
             {loading ? (
               <div className="p-8 text-center text-gray-500 text-sm">
                 Loading materials...
@@ -499,89 +526,107 @@ const ClassMaterials = () => {
                 {error}
               </div>
             ) : materials.length > 0 ? (
-              <div className="divide-y">
-                {materials.map((material) => {
-                  const url = getMaterialUrl(material);
-                  return (
-                    <div key={material.id} className="p-4 space-y-3 border-b">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {material.title}
-                        </p>
-                        {material.description && (
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {material.description}
+              <table className="w-full min-w-max">
+                <thead>
+                  <tr
+                    className="text-white text-xs"
+                    style={{ backgroundColor: BRAND }}
+                  >
+                    <th className="px-3 py-3 text-left font-semibold">TITLE</th>
+                    <th className="px-3 py-3 text-left font-semibold">
+                      COURSE
+                    </th>
+                    <th className="px-3 py-3 text-left font-semibold">
+                      SECTION
+                    </th>
+                    <th className="px-3 py-3 text-left font-semibold">
+                      SEMESTER
+                    </th>
+                    <th className="px-3 py-3 text-left font-semibold">
+                      SOURCE
+                    </th>
+                    <th className="px-3 py-3 text-center font-semibold">
+                      ACTIONS
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {materials.map((material, index) => {
+                    const url = getMaterialUrl(material);
+                    return (
+                      <tr
+                        key={material.id}
+                        className={`border-b text-xs ${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-pink-50 transition`}
+                      >
+                        <td className="px-3 py-3 text-gray-900 font-medium">
+                          <p className="max-w-[150px] truncate">
+                            {material.title}
                           </p>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase">
-                            Course
-                          </p>
-                          <p className="text-xs text-gray-700 mt-1">
-                            {getCourseName(material.courseId)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase">
-                            Section
-                          </p>
-                          <p className="text-xs text-gray-700 mt-1">
-                            {getSectionName(material.sectionId)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase">
-                            Semester
-                          </p>
-                          <p className="text-xs text-gray-700 mt-1">
-                            {getSemesterName(material.semesterId)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        {url && (
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition"
-                            style={{ backgroundColor: BRAND }}
+                          {material.description && (
+                            <p className="text-xs text-gray-500 max-w-[150px] truncate">
+                              {material.description}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                          {getCourseName(material)}
+                        </td>
+                        <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                          {getSectionName(material)}
+                        </td>
+                        <td className="px-3 py-3 text-gray-700 whitespace-nowrap">
+                          {getSemesterName(material)}
+                        </td>
+                        <td className="px-3 py-3">
+                          {url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 hover:underline transition"
+                              style={{ color: BRAND }}
+                              title={
+                                material.fileUrl ? "Open URL" : "View File"
+                              }
+                            >
+                              {material.fileUrl ? (
+                                <Link className="w-3 h-3" />
+                              ) : (
+                                <FileText className="w-3 h-3" />
+                              )}
+                            </a>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <button
+                            onClick={() => handleDelete(material.id)}
+                            className="inline-flex items-center justify-center p-1.5 rounded transition hover:bg-red-50"
+                            style={{ color: BRAND }}
+                            title="Delete"
                           >
-                            {material.fileUrl ? (
-                              <Link className="w-4 h-4" />
-                            ) : (
-                              <Eye className="w-4 h-4" />
-                            )}
-                            {material.fileUrl ? "Open URL" : "View File"}
-                          </a>
-                        )}
-                        <button
-                          onClick={() => handleDelete(material.id)}
-                          className="flex-1 flex items-center justify-center gap-1.5 bg-red-50 text-red-600 py-2.5 rounded-lg hover:bg-red-100 transition text-xs font-medium"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             ) : (
               <div className="p-8 text-center text-gray-500 text-sm">
                 No materials found

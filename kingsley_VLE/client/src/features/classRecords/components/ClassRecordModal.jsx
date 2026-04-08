@@ -438,7 +438,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
               <CustomDropdown
                 options={[
                   { id: "", name: "Select Semester" },
-                  ...semesters.map((s) => ({ id: s.id, name: s.name })),
+                  ...semesters.map((s) => ({ id: s.id, name: `${s.name || "Untitled Semester"} ${s.year ? `(${s.year})` : ""}` })),
                 ]}
                 value={formData.semesterId}
                 onChange={(val) =>
@@ -448,6 +448,8 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={loadingDropdowns}
+                dropdownAlign="right"
+                dropdownDirection="up"
               />
             </div>
 
@@ -474,6 +476,8 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={loadingDropdowns || !formData.semesterId}
+                dropdownAlign="right"
+                dropdownDirection="up"
               />
             </div>
 
@@ -500,13 +504,14 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={loadingDropdowns || !formData.courseId}
+                dropdownDirection="up"
               />
             </div>
           </div>
         </form>
 
         {/* Footer */}
-        <div className="sticky bottom-0 flex gap-3 sm:gap-4 justify-end p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
+        <div className="sticky bottom-0 flex gap-3 sm:gap-4 justify-end p-4 sm:p-3 border-t border-gray-200 bg-gray-50">
           <button
             type="button"
             onClick={handleClose}

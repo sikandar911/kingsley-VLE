@@ -1,73 +1,81 @@
-import { useState, useEffect } from 'react'
-import { coursesApi } from '../api/courses.api'
-import { academicApi } from '../../academic/api/academic.api'
+import { useState, useEffect } from "react";
+import { coursesApi } from "../api/courses.api";
+import { academicApi } from "../../academic/api/academic.api";
+import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
-const INITIAL = { title: '', description: '', semesterId: '' }
+const INITIAL = { title: "", description: "", semesterId: "" };
 
 export default function CourseFormModal({ onClose, onSaved, editCourse }) {
-  const isEdit = Boolean(editCourse)
+  const isEdit = Boolean(editCourse);
   const [form, setForm] = useState(
     isEdit
-      ? { title: editCourse.title || '', description: editCourse.description || '', semesterId: editCourse.semesterId || '' }
+      ? {
+          title: editCourse.title || "",
+          description: editCourse.description || "",
+          semesterId: editCourse.semesterId || "",
+        }
       : INITIAL,
-  )
-  const [semesters, setSemesters] = useState([])
-  const [metaLoading, setMetaLoading] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  );
+  const [semesters, setSemesters] = useState([]);
+  const [metaLoading, setMetaLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     academicApi.semesters
       .list()
       .then((res) => setSemesters(res.data || []))
-      .catch(() => setError('Failed to load semesters'))
-      .finally(() => setMetaLoading(false))
-  }, [])
+      .catch(() => setError("Failed to load semesters"))
+      .finally(() => setMetaLoading(false));
+  }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   const submit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!form.title.trim()) {
-      setError('Course title is required')
-      return
+      setError("Course title is required");
+      return;
     }
     if (!form.semesterId) {
-      setError('Please select a semester')
-      return
+      setError("Please select a semester");
+      return;
     }
-    setError('')
-    setLoading(true)
+    setError("");
+    setLoading(true);
     try {
       const payload = {
         title: form.title.trim(),
         description: form.description.trim() || null,
         semesterId: form.semesterId,
-      }
+      };
       if (isEdit) {
-        await coursesApi.update(editCourse.id, payload)
+        await coursesApi.update(editCourse.id, payload);
       } else {
-        await coursesApi.create(payload)
+        await coursesApi.create(payload);
       }
-      onSaved()
+      onSaved();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save course')
+      setError(err.response?.data?.error || "Failed to save course");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="modal-overlay">
-      <div className="modal">
+      <div className="modal overflow-visible">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">
-            {isEdit ? 'Edit Course' : 'Create Course'}
+            {isEdit ? "Edit Course" : "Create Course"}
           </h2>
-          <button onClick={onClose} className="btn-icon text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="btn-icon text-gray-400 hover:text-gray-600"
+          >
             ✕
           </button>
         </div>
@@ -93,20 +101,24 @@ export default function CourseFormModal({ onClose, onSaved, editCourse }) {
 
           <div className="form-group">
             <label className="form-label">Semester *</label>
-            <select
-              name="semesterId"
+            <CustomDropdown
+              options={[
+                { id: "", name: metaLoading ? "Loading…" : "Select semester…" },
+                ...semesters.map((s) => ({
+                  id: s.id,
+                  name: `${s.name}${s.year ? ` (${s.year})` : ""}`,
+                })),
+              ]}
               value={form.semesterId}
-              onChange={handleChange}
-              className="form-input"
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, semesterId: val }))
+              }
+              placeholder={metaLoading ? "Loading…" : "Select semester…"}
+              isSmallScreen={false}
+              BRAND="#6b1142"
               disabled={metaLoading}
-            >
-              <option value="">{metaLoading ? 'Loading…' : 'Select semester…'}</option>
-              {semesters.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}{s.year ? ` (${s.year})` : ''}
-                </option>
-              ))}
-            </select>
+              dropdownDirection="up"
+            />
           </div>
 
           <div className="form-group">
@@ -125,12 +137,16 @@ export default function CourseFormModal({ onClose, onSaved, editCourse }) {
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" disabled={loading || metaLoading} className="btn-primary">
-              {loading ? 'Saving…' : isEdit ? 'Update Course' : 'Create Course'}
+            <button
+              type="submit"
+              disabled={loading || metaLoading}
+              className="btn-primary"
+            >
+              {loading ? "Saving…" : isEdit ? "Update Course" : "Create Course"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

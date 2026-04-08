@@ -86,8 +86,8 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal">
+    <div className="modal-overlay ">
+      <div className="modal overflow-visible">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">
             {isEdit ? "Edit Section" : "Create Section"}
@@ -119,7 +119,8 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group ">
+            <label className="form-label">Course *</label>
             <CustomDropdown
               options={[
                 { id: "", name: metaLoading ? "Loading…" : "Select course…" },
@@ -141,10 +142,12 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={metaLoading}
+              dropdownDirection="up"
             />
           </div>
 
           <div className="form-group">
+            <label className="form-label">Semester</label>
             <CustomDropdown
               options={[
                 { id: "", name: "No semester selected" },
@@ -161,6 +164,7 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={metaLoading}
+              dropdownDirection="up"
             />
           </div>
 

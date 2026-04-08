@@ -60,7 +60,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal">
+      <div className="modal overflow-visible">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">
             Assign Teacher to Course
@@ -81,6 +81,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
           )}
 
           <div className="form-group">
+            <label className="form-label">Teacher *</label>
             <CustomDropdown
               options={[
                 { id: "", name: metaLoading ? "Loading…" : "Select teacher…" },
@@ -97,10 +98,12 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={metaLoading}
+              dropdownDirection="up"
             />
           </div>
 
           <div className="form-group">
+            <label className="form-label">Course *</label>
             <CustomDropdown
               options={[
                 { id: "", name: "Select course…" },
@@ -117,6 +120,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={metaLoading}
+              dropdownDirection="up"
             />
           </div>
 
