@@ -5,6 +5,7 @@ import {
   createClassMaterial,
   updateClassMaterial,
   deleteClassMaterial,
+  downloadClassMaterial,
 } from './classMaterials.controller.js'
 import { authenticate, authorize } from '../../middleware/auth.middleware.js'
 
@@ -15,6 +16,7 @@ router.use(authenticate)
 // All authenticated users can list/get
 router.get('/', listClassMaterials)
 router.get('/:id', getClassMaterial)
+router.get('/:id/download', downloadClassMaterial)
 
 // Only admin/teacher can create, update, delete
 router.post('/', authorize('admin', 'teacher'), createClassMaterial)

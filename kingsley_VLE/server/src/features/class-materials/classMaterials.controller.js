@@ -374,3 +374,39 @@ export const deleteClassMaterial = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+/**
+ * @swagger
+ * /api/class-materials/{id}/download:
+ *   get:
+ *     summary: Download a class material file (proxied through server for auth)
+ *     tags: [ClassMaterials]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: File redirected to download
+ *       404:
+ *         description: Not found
+ */
+export const downloadClassMaterial = async (req, res) => {
+  try {
+    const material = await prisma.classMaterial.findUnique({
+      where: { id: req.params.id },
+      include: { file: true },
+    });
+    if (!material || !material.file)
+      return res.status(404).json({ error: "Class material not found" });
+
+    // Redirect to the Azure URL - the server can access it, client will download via redirect
+    return res.redirect(material.file.fileUrl);
+  } catch (err) {
+    console.error("downloadClassMaterial error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};

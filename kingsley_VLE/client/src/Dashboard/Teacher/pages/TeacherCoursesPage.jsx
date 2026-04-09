@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { authApi } from "../../../Auth/api/auth.api";
 import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.api";
 
 export default function TeacherCoursesPage() {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,8 +21,14 @@ export default function TeacherCoursesPage() {
         const teacherData = meResponse.data;
         setTeacher(teacherData);
 
-        // Fetch enrolled courses for this teacher
-        const enrollmentsResponse = await enrollmentsApi.teachers.list();
+        // Fetch courses only for this logged-in teacher
+        const teacherProfileId = teacherData?.teacherProfile?.id;
+        if (!teacherProfileId) {
+          setError("Teacher profile not found.");
+          return;
+        }
+
+        const enrollmentsResponse = await enrollmentsApi.teachers.list({ teacherId: teacherProfileId });
         const enrollments = enrollmentsResponse.data;
 
         // Extract course data from enrollments
@@ -31,6 +39,8 @@ export default function TeacherCoursesPage() {
             assignedAt: enrollment.assignedAt,
             teacherName: enrollment.teacher?.fullName,
             specialization: enrollment.teacher?.specialization,
+            sectionId: enrollment.section?.id || null,
+            sectionName: enrollment.section?.name || null,
           }));
           setCourses(coursesData);
         }
@@ -137,14 +147,18 @@ export default function TeacherCoursesPage() {
                 <div
                   key={course.id}
                   className="bg-white rounded-lg shadow-sm border-t-2 border-b-2 border-[#6b1d3e] hover:shadow-md transition-shadow duration-300 overflow-hidden p-5 sm:p-6 flex flex-col h-full min-h-65"
-                >
-                  {/* Course Header */}
+                >                  {/* Course Header */}
                   <div className="mb-4 sm:mb-5">
                     <div className="flex items-start justify-between mb-2 sm:mb-3">
                       <div className="flex-1">
                         <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-1 leading-snug">
                           {course.title}
                         </h3>
+                        {course.sectionName && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            {course.sectionName}
+                          </span>
+                        )}
                       </div>
                       {/* <div className="ml-2 flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
                         <svg
@@ -184,6 +198,26 @@ export default function TeacherCoursesPage() {
                         {course.specialization || "General"}
                       </span>
                     </div>
+                    {course.sectionName && (
+                      <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                        <svg
+                          className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                          />
+                        </svg>
+                        <span>
+                          Section: <span className="font-medium">{course.sectionName}</span>
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center text-xs sm:text-sm text-gray-600">
                       <svg
                         className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
@@ -208,6 +242,11 @@ export default function TeacherCoursesPage() {
                   {/* Action Button */}
                   <div className="pt-4 sm:pt-5 ">
                     <button
+                      onClick={() =>
+                        navigate(
+                          `/teacher/courses/${course.id}${course.sectionId ? `?sectionId=${course.sectionId}` : ""}`
+                        )
+                      }
                       style={{ backgroundColor: "#6b1d3e" }}
                       className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white rounded-lg hover:shadow-md transition-all duration-300 hover:opacity-90"
                     >

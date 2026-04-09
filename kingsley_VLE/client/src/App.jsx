@@ -13,6 +13,7 @@ import StudentResultsPage from "./Dashboard/Student/pages/StudentResultsPage";
 import StudentProfilePage from "./Profile/student/pages/StudentProfilePage";
 import TeacherDashboard from "./Dashboard/Teacher/pages/TeacherDashboard";
 import TeacherCoursesPage from "./Dashboard/Teacher/pages/TeacherCoursesPage";
+import TeacherCourseProfilePage from "./Dashboard/Teacher/profile/TeacherCourseProfilePage";
 import TeacherAssignmentsPage from "./Dashboard/Teacher/pages/TeacherAssignmentsPage";
 import TeacherStudentsPage from "./Dashboard/Teacher/pages/TeacherStudentsPage";
 import TeacherClassRecords from "./Dashboard/Teacher/pages/TeacherClassRecords";
@@ -88,6 +89,7 @@ export default function App() {
             <Route element={<DashboardLayout />}>
               <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
               <Route path="/teacher/courses" element={<TeacherCoursesPage />} />
+              <Route path="/teacher/courses/:courseId" element={<TeacherCourseProfilePage />} />
               <Route
                 path="/teacher/assignments"
                 element={<TeacherAssignmentsPage />}
