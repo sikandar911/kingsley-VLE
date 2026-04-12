@@ -1,5 +1,5 @@
 import prisma from "../../config/prisma.js";
-import { deleteFromAzure } from "../../config/azure.storage.js";
+import { deleteFromAzure, generateSecureSASUrl } from "../../config/azure.storage.js";
 
 /**
  * @swagger
@@ -403,8 +403,11 @@ export const downloadClassMaterial = async (req, res) => {
     if (!material || !material.file)
       return res.status(404).json({ error: "Class material not found" });
 
-    // Redirect to the Azure URL - the server can access it, client will download via redirect
-    return res.redirect(material.file.fileUrl);
+    const secureUrl = await generateSecureSASUrl(material.file.slug);
+    if (!secureUrl)
+      return res.status(500).json({ error: "Failed to generate secure download URL" });
+
+    return res.redirect(secureUrl);
   } catch (err) {
     console.error("downloadClassMaterial error:", err);
     return res.status(500).json({ error: "Server error" });
