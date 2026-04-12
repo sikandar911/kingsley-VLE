@@ -141,7 +141,7 @@ export default function CourseProfilePage() {
           </div>
 
           {/* Right icons */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          {/* <div className="flex items-center gap-1 flex-shrink-0">
             <button className="p-1.5 rounded-lg hover:bg-gray-100 transition text-gray-500">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -152,7 +152,7 @@ export default function CourseProfilePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
               </svg>
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Tab Navigation */}

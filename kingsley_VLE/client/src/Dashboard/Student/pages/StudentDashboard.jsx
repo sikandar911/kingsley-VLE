@@ -128,10 +128,10 @@ export default function StudentDashboard() {
   }, [user])
 
   const DashboardSection = ({ title, icon, items, viewAllLink, emptyMessage = 'No items yet' }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-2xl">{icon}</span>
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+    <div className=" rounded-xl shadow-sm border bg-slate-200 border-gray-100 p-5">
+      <div className="flex items-center border-[#ffffff] border-b-2 gap-2 mb-4">
+        <span className="text-2xl mb-2">{icon}</span>
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">{title}</h2>
       </div>
 
       {loading ? (
@@ -142,8 +142,8 @@ export default function StudentDashboard() {
         <>
           <div className="space-y-3 mb-4">
             {items.slice(0, 3).map((item, idx) => (
-              <div key={idx} className="flex items-start justify-between gap-3 p-2 hover:bg-gray-50 rounded transition">
-                <div className="flex-1 min-w-0">
+              <div key={idx} className="flex items-start bg-[#f3f4f6]  justify-between gap-3 p-2 hover:bg-white rounded transition">
+                <div className="flex-1  min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {item.title}
                   </p>
@@ -161,7 +161,7 @@ export default function StudentDashboard() {
           </div>
           <Link
             to={viewAllLink}
-            className="text-brand-700 text-sm font-medium hover:text-brand-800 transition"
+            className="text-black text-sm border p-3 rounded-md font-medium hover:bg-white hover:text-brand-800 transition"
           >
             View all →
           </Link>
