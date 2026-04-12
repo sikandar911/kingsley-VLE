@@ -1,4 +1,4 @@
-import { BlobServiceClient } from '@azure/storage-blob'
+import { BlobServiceClient, BlobSASPermissions } from '@azure/storage-blob'
 import { randomUUID } from 'crypto'
 
 const getContainerClient = () => {
@@ -42,5 +42,30 @@ export const deleteFromAzure = async (blobName) => {
     await blockBlobClient.deleteIfExists()
   } catch (err) {
     console.error('Azure delete error:', err.message)
+  }
+}
+
+/**
+ * Generate a SAS URL for an existing blob by its name (slug).
+ * @param {string} blobName - The blob name/slug stored on the File record
+ * @returns {string} SAS-signed URL valid for 7 days (short-lived for security)
+ */
+export const generateSecureSASUrl = async (blobName) => {
+  if (!blobName) return null
+  try {
+    const containerClient = getContainerClient()
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName)
+
+    const sasUrl = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse('r'),
+      startsOn: new Date(),
+      expiresOn: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      protocol: 'https',
+    })
+
+    return sasUrl
+  } catch (err) {
+    console.error('Error generating SAS URL for blob:', err.message)
+    return null
   }
 }

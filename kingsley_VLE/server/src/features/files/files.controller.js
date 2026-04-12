@@ -1,5 +1,5 @@
 import prisma from '../../config/prisma.js'
-import { uploadToAzure, deleteFromAzure } from '../../config/azure.storage.js'
+import { uploadToAzure, deleteFromAzure, generateSecureSASUrl } from '../../config/azure.storage.js'
 
 /**
  * @swagger
@@ -214,6 +214,54 @@ export const deleteFile = async (req, res) => {
     return res.json({ message: 'File deleted successfully' })
   } catch (err) {
     console.error('deleteFile error:', err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+}
+
+/**
+ * @swagger
+ * /api/files/{id}/secure-url:
+ *   get:
+ *     summary: Get a secure SAS-signed URL for a file (for viewing/downloading)
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: File ID
+ *     responses:
+ *       200:
+ *         description: Secure SAS-signed URL (valid for 7 days)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   description: SAS-signed Azure Blob URL
+ *       404:
+ *         description: File not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+export const getSecureFileUrl = async (req, res) => {
+  try {
+    const file = await prisma.file.findUnique({ where: { id: req.params.id } })
+    if (!file) return res.status(404).json({ error: 'File not found' })
+
+    // Generate a fresh SAS URL (valid for 7 days)
+    const sasUrl = await generateSecureSASUrl(file.slug)
+    if (!sasUrl) return res.status(500).json({ error: 'Failed to generate secure URL' })
+
+    return res.json({ url: sasUrl })
+  } catch (err) {
+    console.error('getSecureFileUrl error:', err)
     return res.status(500).json({ error: 'Server error' })
   }
 }

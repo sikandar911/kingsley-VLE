@@ -289,6 +289,7 @@ export default function AdminEnrollmentsPage() {
                     <th className="whitespace-nowrap">Teacher</th>
                     <th className="whitespace-nowrap">Teacher ID</th>
                     <th className="whitespace-nowrap">Course</th>
+                    <th className="whitespace-nowrap">Section</th>
                     <th className="whitespace-nowrap">Assigned On</th>
                     <th className="whitespace-nowrap">Actions</th>
                     <th></th>
@@ -307,6 +308,9 @@ export default function AdminEnrollmentsPage() {
                       </td>
                       <td className="text-gray-700 whitespace-nowrap">
                         {tc.course?.title || "—"}
+                      </td>
+                      <td className="text-gray-500 whitespace-nowrap">
+                        {tc.section?.name || "—"}
                       </td>
                       <td className="text-gray-400 text-xs whitespace-nowrap">
                         {tc.assignedAt

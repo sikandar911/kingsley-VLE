@@ -17,6 +17,7 @@ import classMaterialRoutes from './features/class-materials/classMaterials.route
 import classRecordRoutes from './features/class-records/classRecords.routes.js'
 import eventRoutes from './features/events/events.routes.js'
 import calendarRoutes from './features/calendar/calendar.routes.js'
+import courseChatRoutes from './features/course-chat/courseChat.routes.js'
 import prisma from './config/prisma.js'
 
 const app = express()
@@ -44,6 +45,7 @@ app.use('/api/class-materials', classMaterialRoutes)
 app.use('/api/class-records', classRecordRoutes)
 app.use('/api/events', eventRoutes)
 app.use('/api/calendar', calendarRoutes)
+app.use('/api/course-chat', courseChatRoutes)
 
 // Health check
 app.get('/health', (req, res) => {

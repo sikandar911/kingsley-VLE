@@ -385,10 +385,11 @@ export const deleteEnrollment = async (req, res) => {
  *                 $ref: '#/components/schemas/TeacherCourse'
  */
 export const listTeacherCourses = async (req, res) => {
-  const { courseId, teacherId } = req.query
+  const { courseId, teacherId, sectionId } = req.query
   const where = {}
   if (courseId) where.courseId = courseId
   if (teacherId) where.teacherId = teacherId
+  if (sectionId) where.sectionId = sectionId
 
   try {
     const assignments = await prisma.teacherCourse.findMany({
@@ -405,6 +406,8 @@ export const listTeacherCourses = async (req, res) => {
           },
         },
         course: { select: { id: true, title: true } },
+        section: { select: { id: true, name: true } },
+        semester: { select: { id: true, name: true, year: true } },
       },
     })
     return res.json(assignments)
@@ -450,9 +453,10 @@ export const listTeacherCourses = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createTeacherCourse = async (req, res) => {
-  const { teacherId, courseId } = req.body
-  if (!teacherId) return res.status(400).json({ error: 'teacherId (TeacherProfile.id) is required' })
-  if (!courseId) return res.status(400).json({ error: 'courseId is required' })
+  const { teacherId, courseId, sectionId, semesterId } = req.body
+  if (!teacherId || teacherId === "") return res.status(400).json({ error: 'teacherId (TeacherProfile.id) is required' })
+  if (!courseId || courseId === "") return res.status(400).json({ error: 'courseId is required' })
+  if (!semesterId || semesterId === "") return res.status(400).json({ error: 'semesterId is required' })
 
   try {
     const [teacher, course] = await Promise.all([
@@ -462,16 +466,30 @@ export const createTeacherCourse = async (req, res) => {
     if (!teacher) return res.status(404).json({ error: 'Teacher profile not found' })
     if (!course) return res.status(404).json({ error: 'Course not found' })
 
+    if (sectionId) {
+      const section = await prisma.section.findUnique({ where: { id: sectionId } })
+      if (!section) return res.status(404).json({ error: 'Section not found' })
+      if (section.courseId !== courseId)
+        return res.status(400).json({ error: 'Section does not belong to the selected course' })
+    }
+
+    if (semesterId) {
+      const semester = await prisma.semester.findUnique({ where: { id: semesterId } })
+      if (!semester) return res.status(404).json({ error: 'Semester not found' })
+    }
+
     const existing = await prisma.teacherCourse.findFirst({
-      where: { teacherId, courseId },
+      where: { teacherId, courseId, sectionId: sectionId || null, semesterId: semesterId || null },
     })
-    if (existing) return res.status(409).json({ error: 'Teacher is already assigned to this course' })
+    if (existing) return res.status(409).json({ error: 'Teacher is already assigned to this course/section/semester' })
 
     const assignment = await prisma.teacherCourse.create({
-      data: { teacherId, courseId },
+      data: { teacherId, courseId, sectionId: sectionId || null, semesterId: semesterId || null },
       include: {
         teacher: { select: { id: true, fullName: true, teacherId: true } },
         course: { select: { id: true, title: true } },
+        section: { select: { id: true, name: true } },
+        semester: { select: { id: true, name: true, year: true } },
       },
     })
     return res.status(201).json(assignment)

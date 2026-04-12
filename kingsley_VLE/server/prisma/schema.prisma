@@ -58,6 +58,14 @@ enum ReminderType {
   event
 }
 
+enum ChatReactionType {
+  like
+  unlike
+  love
+  ok
+  done
+}
+
 // ============================================================================
 // AUTHENTICATION & IDENTITY LAYER
 // ============================================================================
@@ -90,6 +98,8 @@ model User {
   uploadedMaterials ClassMaterial[]
   createdEvents Event[]
   calendarReminders CalendarReminder[]
+  courseMessages CourseMessage[]
+  chatReactions CourseMessageReaction[]
 
   @@map("users")
 }
@@ -194,6 +204,7 @@ model Course {
   classRecords ClassRecord[]
   events Event[]
   calendarReminders CalendarReminder[]
+  courseMessages CourseMessage[]
 
   @@map("courses")
 }
@@ -238,6 +249,7 @@ model Semester {
   performanceRecords StudentPerformance[]
   courses Course[]
   calendarReminders CalendarReminder[]
+  teacherCourses TeacherCourse[]
 
   @@map("semesters")
 }
@@ -262,12 +274,14 @@ model Section {
 
   // Relations
   enrollments Enrollment[]
+  teacherAssignments TeacherCourse[]
   assignments Assignment[]
   attendance Attendance[]
   classMaterials ClassMaterial[]
   classRecords ClassRecord[]
   events Event[]
   calendarReminders CalendarReminder[]
+  courseMessages CourseMessage[]
 
   @@map("sections")
 }
@@ -304,6 +318,12 @@ model TeacherCourse {
 
   courseId String
   course Course @relation(fields: [courseId], references: [id])
+
+  sectionId String?
+  section Section? @relation(fields: [sectionId], references: [id])
+
+  semesterId String?
+  semester Semester? @relation(fields: [semesterId], references: [id])
 
   assignedAt DateTime @default(now()) @map("assigned_at")
 
@@ -515,6 +535,9 @@ model ClassMaterial {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Back-relation to chat message
+  chatMessage CourseMessage?
+
   @@map("class_materials")
 }
 
@@ -647,4 +670,52 @@ model StudentPerformance {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("student_performance")
+}
+
+// ============================================================================
+// COURSE CHAT
+// ============================================================================
+
+model CourseMessage {
+  id String @id @default(uuid())
+
+  content String? @db.Text
+
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  sectionId String? @map("section_id")
+  section Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  userId String @map("user_id")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Optional file attachment (stored as class material for teacher uploads)
+  classMaterialId String? @unique @map("class_material_id")
+  classMaterial ClassMaterial? @relation(fields: [classMaterialId], references: [id], onDelete: SetNull)
+
+  reactions CourseMessageReaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([courseId, sectionId, createdAt])
+  @@map("course_messages")
+}
+
+model CourseMessageReaction {
+  id String @id @default(uuid())
+
+  messageId String @map("message_id")
+  message CourseMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type ChatReactionType
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId, userId])
+  @@map("course_message_reactions")
 }
