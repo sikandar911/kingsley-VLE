@@ -1,1 +1,51 @@
+/* Forest Theme Dashboard Cards */
+@layer components {
+  /* Dashboard Cards */
+  .dashboard-card {
+    @apply relative overflow-hidden rounded-xl sm:rounded-2xl p-6 sm:p-8 cursor-pointer
+           transition-all duration-300 transform hover:scale-105 active:scale-95
+           bg-white border-2 border-gray-100 shadow-md hover:shadow-xl;
+  }
+
+  .dashboard-card-icon {
+    @apply text-4xl sm:text-5xl mb-3 sm:mb-4 inline-block p-3 sm:p-4 rounded-lg sm:rounded-xl
+           transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3;
+  }
+
+  .dashboard-card-title {
+    @apply text-sm sm:text-base font-semibold text-gray-700 mb-1 sm:mb-2;
+  }
+
+  .dashboard-card-count {
+    @apply text-2xl sm:text-4xl font-bold text-gray-900;
+  }
+
+  .dashboard-card-gradient {
+    @apply absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10
+           transition-opacity duration-300;
+  }
+
+  .dashboard-card-arrow {
+    @apply absolute bottom-4 sm:bottom-6 right-4 sm:right-6 text-2xl opacity-0 
+           group-hover:opacity-100 transform group-hover:translate-x-1 
+           transition-all duration-300;
+  }
+
+  .dashboard-card-decor {
+    @apply absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 opacity-5 
+           rounded-full -mr-10 -mt-10 group-hover:opacity-10 
+           transition-opacity duration-300;
+  }
+
+  /* Responsive Dashboard Grid */
+  .dashboard-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6;
+  }
+
+  /* Loading Skeleton */
+  .skeleton-loader {
+    @apply inline-block bg-gray-300 rounded-lg animate-pulse;
+  }
+}
+
 /* Component-specific overrides if needed */
