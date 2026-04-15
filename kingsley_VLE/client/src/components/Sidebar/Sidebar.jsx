@@ -118,7 +118,11 @@ const menuByRole = {
       path: "/teacher/assignments",
       icon: "assignments",
     },
-
+    {
+      label: "Class Materials",
+      path: "/teacher/class-materials",
+      icon: "materials",
+    },
     {
       label: "Class Recordings",
       path: "/teacher/class-records",

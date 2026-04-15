@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
+import TiptapEditor from './TiptapEditor'
 
 const ALLOWED_MIME = [
   'image/png', 'image/jpeg', 'image/gif', 'image/webp',
@@ -9,12 +10,12 @@ const ALLOWED_MIME = [
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]
 
-export default function ChatInput({ onSend, onSendFile, canUpload, disabled }) {
-  const [text, setText] = useState('')
+export default function ChatInput({ onSend, onSendFile, canUpload, disabled, members = [] }) {
   const [file, setFile] = useState(null)
   const [sending, setSending] = useState(false)
   const [fileError, setFileError] = useState(null)
   const fileRef = useRef(null)
+  const editorRef = useRef(null)
 
   const handleFileChange = (e) => {
     const selected = e.target.files?.[0]
@@ -26,6 +27,7 @@ export default function ChatInput({ onSend, onSendFile, canUpload, disabled }) {
     }
     setFileError(null)
     setFile(selected)
+    editorRef.current?.focus()
   }
 
   const removeFile = () => {
@@ -36,30 +38,27 @@ export default function ChatInput({ onSend, onSendFile, canUpload, disabled }) {
 
   const handleSend = async () => {
     if (sending) return
-    if (!text.trim() && !file) return
+
+    const html = editorRef.current?.getHTML() ?? ''
+    const empty = editorRef.current?.isEmpty() ?? true
+
+    if (empty && !file) return
 
     setSending(true)
     try {
       if (file) {
         const fd = new FormData()
         fd.append('file', file)
-        if (text.trim()) fd.append('content', text.trim())
+        if (!empty) fd.append('content', html)
         await onSendFile(fd)
       } else {
-        await onSend(text.trim())
+        await onSend(html)
       }
-      setText('')
+      editorRef.current?.clear()
       setFile(null)
       if (fileRef.current) fileRef.current.value = ''
     } finally {
       setSending(false)
-    }
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
     }
   }
 
@@ -78,53 +77,52 @@ export default function ChatInput({ onSend, onSendFile, canUpload, disabled }) {
           </button>
         </div>
       )}
-      {fileError && (
-        <p className="text-xs text-red-600 mb-2 px-2">{fileError}</p>
-      )}
+      {fileError && <p className="text-xs text-red-600 mb-2 px-2">{fileError}</p>}
 
       <div className="flex items-end gap-2">
-        {/* Text input */}
-        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            rows={file ? 1 : 2}
+        {/* Editor box */}
+        <div
+          className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5"
+          onClick={() => editorRef.current?.focus()}
+        >
+          <TiptapEditor
+            ref={editorRef}
+            onSend={handleSend}
+            members={members}
+            showToolbar={canUpload}
+            placeholder="Type a message… Use @ to mention someone"
             disabled={disabled || sending}
-            className="w-full bg-transparent text-sm text-gray-800 placeholder-gray-400 resize-none outline-none"
-            style={{ minHeight: '28px', maxHeight: '120px' }}
           />
-          <div className="flex items-center gap-2 mt-1">
-            {/* File attach (teacher only) */}
-            {canUpload && (
-              <>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.ppt,.pptx"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="text-gray-400 hover:text-[#6b1d3e] transition"
-                  title="Attach file"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                </button>
-              </>
-            )}
-          </div>
+
+          {/* File attach button (teachers only) */}
+          {canUpload && (
+            <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-gray-100">
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.ppt,.pptx"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="text-gray-400 hover:text-[#6b1d3e] transition ml-auto"
+                title="Attach file"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Send button */}
         <button
           onClick={handleSend}
-          disabled={(!text.trim() && !file) || disabled || sending}
+          disabled={disabled || sending}
           style={{ backgroundColor: '#6b1d3e' }}
           className="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0 transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -141,6 +139,16 @@ export default function ChatInput({ onSend, onSendFile, canUpload, disabled }) {
           )}
         </button>
       </div>
+
+      {/* Keyboard hint */}
+      <p className="text-xs text-gray-400 mt-1.5 px-1">
+        <kbd className="bg-gray-100 px-1 rounded text-gray-500">Enter</kbd> to send
+        &nbsp;·&nbsp;
+        <kbd className="bg-gray-100 px-1 rounded text-gray-500">Shift+Enter</kbd> for new line
+        &nbsp;·&nbsp;
+        <kbd className="bg-gray-100 px-1 rounded text-gray-500">@</kbd> to mention
+      </p>
     </div>
   )
 }
+

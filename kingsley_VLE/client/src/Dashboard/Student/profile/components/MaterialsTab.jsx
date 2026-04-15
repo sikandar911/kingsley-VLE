@@ -1,11 +1,61 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMaterialsByCourse, useRecordingsByCourse } from '../hooks'
 import { fmt } from '../utils/helpers'
+import { courseModulesApi } from '../../../../features/courseModules/api/courseModules.api'
 
 export default function MaterialsTab({ courseId, sectionId }) {
   const [activeSwitch, setActiveSwitch] = useState('materials')
   const [materialsPage, setMaterialsPage] = useState(1)
   const [recordsPage, setRecordsPage] = useState(1)
+  const [modules, setModules] = useState([])
+  const [selectedModuleId, setSelectedModuleId] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [loadingModules, setLoadingModules] = useState(false)
+
+  // Fetch course modules when courseId or sectionId changes - this runs on mount and on prop changes
+  useEffect(() => {
+    // Only fetch if both courseId and sectionId are provided
+    if (!courseId || !sectionId) {
+      console.log('Missing courseId or sectionId', { courseId, sectionId })
+      setModules([])
+      setSelectedModuleId('')
+      return
+    }
+
+    const fetchModules = async () => {
+      try {
+        setLoadingModules(true)
+        setModules([]) // Clear previous modules
+        console.log('Fetching modules for course:', courseId, 'section:', sectionId)
+        
+        const res = await courseModulesApi.list({ courseId, sectionId })
+        console.log('Modules API response:', res.data?.modules)
+        
+        const modulesList = res.data?.modules || []
+        setModules(modulesList)
+        
+        if (modulesList.length === 0) {
+          console.warn('No modules returned for this course/section')
+        }
+      } catch (err) {
+        console.error('Error fetching modules:', err)
+        setModules([])
+      } finally {
+        setLoadingModules(false)
+      }
+    }
+
+    fetchModules()
+  }, [courseId, sectionId])
+
+  // Filter materials/records based on selected module and search term
+  const filteredList = (list) => {
+    return list.filter((item) => {
+      const matchesModule = !selectedModuleId || item.courseModuleId === selectedModuleId
+      const matchesSearch = !searchTerm || item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      return matchesModule && matchesSearch
+    })
+  }
 
   const {
     materials,
@@ -26,7 +76,8 @@ export default function MaterialsTab({ courseId, sectionId }) {
   const loading = matLoading || recLoading
   const error = matError || recError
 
-  const list = activeSwitch === 'materials' ? materials : records
+  const allList = activeSwitch === 'materials' ? materials : records
+  const filteredData = filteredList(allList)
   const totalPages = activeSwitch === 'materials' ? matTotalPages : recTotalPages
   const totalCount = activeSwitch === 'materials' ? matTotalCount : recTotalCount
   const currentPage = activeSwitch === 'materials' ? materialsPage : recordsPage
@@ -79,23 +130,63 @@ export default function MaterialsTab({ courseId, sectionId }) {
         </button>
       </div>
 
+      {/* Filters and Search */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex gap-3 items-center flex-wrap">
+          {/* Module Filter */}
+          <select
+            value={selectedModuleId}
+            onChange={(e) => setSelectedModuleId(e.target.value)}
+            disabled={loadingModules}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">{loadingModules ? 'Loading modules...' : 'All Modules'}</option>
+            {modules.map((module) => (
+              <option key={module.id} value={module.id}>
+                {module.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder={`Search ${activeSwitch === 'materials' ? 'materials' : 'recordings'}...`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full sm:w-64 px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
+          <svg
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+
       {/* Empty state */}
-      {list.length === 0 && (
+      {filteredData.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm p-10 text-center">
           <div className="text-4xl mb-3">
             {activeSwitch === 'materials' ? '📁' : '🎬'}
           </div>
           <p className="text-gray-500 text-sm">
-            No {activeSwitch === 'materials' ? 'class materials' : 'class recordings'} for this
-            course yet.
+            {searchTerm || selectedModuleId
+              ? `No ${activeSwitch === 'materials' ? 'materials' : 'recordings'} match your filters.`
+              : `No ${activeSwitch === 'materials' ? 'class materials' : 'class recordings'} for this course yet.`}
           </p>
         </div>
       )}
 
       {/* Material cards */}
-      {activeSwitch === 'materials' && materials.length > 0 && (
+      {activeSwitch === 'materials' && filteredData.length > 0 && (
         <div className="space-y-3">
-          {materials.map((m) => (
+          {filteredData.map((m) => (
             <div
               key={m.id}
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-start gap-4"
@@ -133,9 +224,9 @@ export default function MaterialsTab({ courseId, sectionId }) {
       )}
 
       {/* Recordings cards */}
-      {activeSwitch === 'records' && records.length > 0 && (
+      {activeSwitch === 'records' && filteredData.length > 0 && (
         <div className="space-y-3">
-          {records.map((r) => (
+          {filteredData.map((r) => (
             <div
               key={r.id}
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-start gap-4"
@@ -175,11 +266,11 @@ export default function MaterialsTab({ courseId, sectionId }) {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {filteredData.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            Showing {(currentPage - 1) * 15 + 1} to {Math.min(currentPage * 15, totalCount)} of{' '}
-            {totalCount} {activeSwitch === 'materials' ? 'materials' : 'recordings'}
+            Showing {(currentPage - 1) * 15 + 1} to {Math.min(currentPage * 15, filteredData.length)} of{' '}
+            {filteredData.length} {activeSwitch === 'materials' ? 'materials' : 'recordings'}
           </p>
           <div className="flex gap-2">
             <button

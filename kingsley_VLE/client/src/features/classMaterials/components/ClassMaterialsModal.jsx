@@ -1,22 +1,62 @@
 ﻿import React, { useState, useEffect } from "react";
 import { X, Upload, Link } from "lucide-react";
 import { classMaterialsApi } from "../api/classMaterials.api";
+import { courseModulesApi } from "../../courseModules/api/courseModules.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1142";
 const BRAND_DARK = "#5a1630";
 
-const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
+const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
+  const isEdit = Boolean(editMaterial);
   const [inputMode, setInputMode] = useState("file"); // "file" | "url"
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    fileId: "",
-    fileUrl: "",
-    courseId: "",
-    sectionId: "",
-    semesterId: "",
-  });
+  const [formData, setFormData] = useState(() =>
+    isEdit
+      ? {
+          title: editMaterial.title || "",
+          description: editMaterial.description || "",
+          fileId: editMaterial.fileId || "",
+          fileUrl: editMaterial.fileUrl || "",
+          courseId: editMaterial.courseId || "",
+          sectionId: editMaterial.sectionId || "",
+          semesterId: editMaterial.semesterId || "",
+          courseModuleId: editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
+        }
+      : {
+          title: "",
+          description: "",
+          fileId: "",
+          fileUrl: "",
+          courseId: "",
+          sectionId: "",
+          semesterId: "",
+          courseModuleId: "",
+        }
+  );
+
+  // Update form data when editMaterial changes (on modal open during edit)
+  useEffect(() => {
+    if (isEdit && editMaterial) {
+      setFormData({
+        title: editMaterial.title || "",
+        description: editMaterial.description || "",
+        fileId: editMaterial.fileId || "",
+        fileUrl: editMaterial.fileUrl || "",
+        courseId: editMaterial.courseId || "",
+        sectionId: editMaterial.sectionId || "",
+        semesterId: editMaterial.semesterId || "",
+        courseModuleId: editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
+      });
+      
+      // Set initial input mode
+      if (editMaterial.fileUrl) {
+        setInputMode("url");
+      } else if (editMaterial.fileId) {
+        setInputMode("file");
+      }
+    }
+  }, [editMaterial, isOpen]);
+
   const [loading, setLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -24,6 +64,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [courseModules, setCourseModules] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredSemesters, setFilteredSemesters] = useState([]);
@@ -116,13 +157,15 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
       // No semester selected, show all courses
       setFilteredCourses(courses);
     }
-    // Reset course and section when semester changes
-    setFormData((prev) => ({
-      ...prev,
-      courseId: "",
-      sectionId: "",
-    }));
-  }, [formData.semesterId, semesterCourseMap, courses]);
+    // Only reset course and section when creating new material
+    if (!isEdit) {
+      setFormData((prev) => ({
+        ...prev,
+        courseId: "",
+        sectionId: "",
+      }));
+    }
+  }, [formData.semesterId, semesterCourseMap, courses, isEdit]);
 
   // Filter sections based on selected course
   useEffect(() => {
@@ -133,17 +176,32 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
     } else {
       setFilteredSections([]);
     }
-    // Reset section when course changes
-    setFormData((prev) => ({
-      ...prev,
-      sectionId: "",
-    }));
-  }, [formData.courseId, courseSectionMap, sections]);
+    // Only reset section when creating new material
+    if (!isEdit) {
+      setFormData((prev) => ({
+        ...prev,
+        sectionId: "",
+      }));
+    }
+  }, [formData.courseId, courseSectionMap, sections, isEdit]);
 
   // Ensure all semesters are always available
   useEffect(() => {
     setFilteredSemesters(semesters);
   }, [semesters]);
+
+  // Fetch active course modules when courseId or sectionId changes
+  useEffect(() => {
+    if (formData.courseId) {
+      courseModulesApi
+        .list({ courseId: formData.courseId, ...(formData.sectionId ? { sectionId: formData.sectionId } : {}), status: 'active' })
+        .then((res) => setCourseModules(res.data?.modules || []))
+        .catch(() => setCourseModules([]))
+    } else {
+      setCourseModules([])
+    }
+    setFormData((prev) => ({ ...prev, courseModuleId: '' }))
+  }, [formData.courseId, formData.sectionId]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -211,16 +269,33 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
       return;
     }
 
-    if (inputMode === "file" && !formData.fileId) {
-      alert("Please upload a file");
-      return;
-    }
-
-    if (inputMode === "url") {
-      const err = validateUrl(formData.fileUrl);
-      if (err) {
-        setUrlError(err);
+    // For new materials, require a file or URL
+    if (!isEdit) {
+      if (inputMode === "file" && !formData.fileId) {
+        alert("Please upload a file");
         return;
+      }
+
+      if (inputMode === "url") {
+        const err = validateUrl(formData.fileUrl);
+        if (err) {
+          setUrlError(err);
+          return;
+        }
+      }
+    } else {
+      // For edits, only validate if changing to a different mode
+      if (inputMode === "file" && !formData.fileId) {
+        alert("Please upload a file or use the URL mode");
+        return;
+      }
+
+      if (inputMode === "url") {
+        const err = validateUrl(formData.fileUrl);
+        if (err) {
+          setUrlError(err);
+          return;
+        }
       }
     }
 
@@ -232,31 +307,53 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
         courseId: formData.courseId,
         sectionId: formData.sectionId,
         semesterId: formData.semesterId,
+        courseModuleId: formData.courseModuleId || null,
       };
       if (inputMode === "file") {
         payload.fileId = formData.fileId;
       } else {
         payload.fileUrl = formData.fileUrl.trim();
       }
-      await onSubmit(payload);
+      
+      if (isEdit) {
+        await classMaterialsApi.update(editMaterial.id, payload);
+      } else {
+        await onSubmit(payload);
+      }
+      
       handleClose();
     } catch (err) {
       console.error("Error submitting form:", err);
+      alert(err.response?.data?.error || "Failed to save material");
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setFormData({
-      title: "",
-      description: "",
-      fileId: "",
-      fileUrl: "",
-      courseId: "",
-      sectionId: "",
-      semesterId: "",
-    });
+    setFormData(
+      isEdit
+        ? {
+            title: editMaterial.title || "",
+            description: editMaterial.description || "",
+            fileId: editMaterial.fileId || "",
+            fileUrl: editMaterial.fileUrl || "",
+            courseId: editMaterial.courseId || "",
+            sectionId: editMaterial.sectionId || "",
+            semesterId: editMaterial.semesterId || "",
+            courseModuleId: editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
+          }
+        : {
+            title: "",
+            description: "",
+            fileId: "",
+            fileUrl: "",
+            courseId: "",
+            sectionId: "",
+            semesterId: "",
+            courseModuleId: "",
+          }
+    );
     setUploadedFile(null);
     setUrlError("");
     setInputMode("file");
@@ -271,7 +368,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-            Add New Class Material
+            {isEdit ? "Edit Class Material" : "Add New Class Material"}
           </h2>
           <button
             onClick={handleClose}
@@ -451,7 +548,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
 
           {/* Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Semester - First selector */}
             <div>
               <CustomDropdown
@@ -532,6 +629,25 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={!formData.courseId || loadingDropdowns}
+                dropdownDirection="up"
+              />
+            </div>
+
+            {/* Course Module - Fourth selector (optional, depends on course) */}
+            <div>
+              <CustomDropdown
+                options={[
+                  { id: "", name: courseModules.length === 0 ? (!formData.courseId ? "Select course first" : "No modules available") : "Select module (optional)…" },
+                  ...courseModules.map((m) => ({ id: m.id, name: m.name })),
+                ]}
+                value={formData.courseModuleId}
+                onChange={(val) =>
+                  setFormData((prev) => ({ ...prev, courseModuleId: val }))
+                }
+                placeholder={!formData.courseId ? "Select course first" : "Select module (optional)…"}
+                isSmallScreen={false}
+                BRAND={BRAND}
+                disabled={!formData.courseId || courseModules.length === 0}
                 dropdownDirection="up"
               />
             </div>

@@ -6,11 +6,15 @@ import {
   sendMessage,
   toggleReaction,
   deleteMessage,
+  getCourseMembers,
 } from './courseChat.controller.js'
 
 const router = Router({ mergeParams: true })
 
 router.use(authenticate)
+
+// GET  /api/course-chat/:courseId/sections/:sectionId/members
+router.get('/:courseId/sections/:sectionId/members', getCourseMembers)
 
 // GET  /api/course-chat/:courseId/sections/:sectionId/messages
 router.get('/:courseId/sections/:sectionId/messages', listMessages)

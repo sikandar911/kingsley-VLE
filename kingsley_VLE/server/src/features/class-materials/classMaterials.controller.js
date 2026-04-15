@@ -13,6 +13,7 @@ const materialInclude = {
   course: { select: { id: true, title: true } },
   section: { select: { id: true, name: true } },
   semester: { select: { id: true, name: true, year: true } },
+  courseModule: { select: { id: true, name: true, status: true } },
   uploadedByUser: { select: { id: true, email: true, role: true } },
 };
 
@@ -185,6 +186,7 @@ export const createClassMaterial = async (req, res) => {
     courseId,
     sectionId,
     semesterId,
+    courseModuleId,
   } = req.body;
 
   if (!title?.trim())
@@ -238,6 +240,7 @@ export const createClassMaterial = async (req, res) => {
         courseId,
         sectionId: sectionId || null,
         semesterId: semesterId || null,
+        courseModuleId: courseModuleId || null,
         uploadedBy: req.user.id,
       },
       include: materialInclude,
@@ -291,7 +294,7 @@ export const createClassMaterial = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateClassMaterial = async (req, res) => {
-  const { title, description, sectionId, semesterId } = req.body;
+  const { title, description, courseId, sectionId, semesterId, courseModuleId } = req.body;
 
   try {
     const existing = await prisma.classMaterial.findUnique({
@@ -300,22 +303,27 @@ export const updateClassMaterial = async (req, res) => {
     if (!existing)
       return res.status(404).json({ error: "Class material not found" });
 
+    const updateData = {};
+    
+    if (title?.trim()) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description || null;
+    if (courseId !== undefined) updateData.courseId = courseId;
+    if (sectionId !== undefined) updateData.sectionId = sectionId || null;
+    if (semesterId !== undefined) updateData.semesterId = semesterId || null;
+    if (courseModuleId !== undefined) {
+      // Handle courseModuleId: empty string or falsy values become null
+      updateData.courseModuleId = courseModuleId ? String(courseModuleId).trim() || null : null;
+    }
+
     const material = await prisma.classMaterial.update({
       where: { id: req.params.id },
-      data: {
-        ...(title?.trim() ? { title: title.trim() } : {}),
-        ...(description !== undefined
-          ? { description: description || null }
-          : {}),
-        ...(sectionId !== undefined ? { sectionId: sectionId || null } : {}),
-        ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
-      },
+      data: updateData,
       include: materialInclude,
     });
     return res.json(material);
   } catch (err) {
     console.error("updateClassMaterial error:", err);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error", details: err.message });
   }
 };
 

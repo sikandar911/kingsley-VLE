@@ -11,6 +11,7 @@ const recordInclude = {
   course: { select: { id: true, title: true } },
   section: { select: { id: true, name: true } },
   semester: { select: { id: true, name: true, year: true } },
+  courseModule: { select: { id: true, name: true, status: true } },
 };
 
 /**
@@ -175,7 +176,7 @@ export const getClassRecord = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createClassRecord = async (req, res) => {
-  const { title, description, url, courseId, sectionId, semesterId } = req.body;
+  const { title, description, url, courseId, sectionId, semesterId, courseModuleId } = req.body;
 
   if (!title?.trim())
     return res.status(400).json({ error: "title is required" });
@@ -198,6 +199,7 @@ export const createClassRecord = async (req, res) => {
         courseId,
         sectionId: sectionId || null,
         semesterId: semesterId || null,
+        courseModuleId: courseModuleId || null,
       },
       include: recordInclude,
     });
@@ -253,7 +255,7 @@ export const createClassRecord = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateClassRecord = async (req, res) => {
-  const { title, description, url, courseId, sectionId, semesterId } = req.body;
+  const { title, description, url, courseId, sectionId, semesterId, courseModuleId } = req.body;
 
   try {
     const existing = await prisma.classRecord.findUnique({
@@ -280,6 +282,7 @@ export const updateClassRecord = async (req, res) => {
         ...(courseId !== undefined ? { courseId: courseId || null } : {}),
         ...(sectionId !== undefined ? { sectionId: sectionId || null } : {}),
         ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
+        ...(courseModuleId !== undefined ? { courseModuleId: courseModuleId || null } : {}),
       },
       include: recordInclude,
     });

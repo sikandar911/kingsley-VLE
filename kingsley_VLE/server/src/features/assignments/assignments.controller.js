@@ -4,6 +4,7 @@ const assignmentBaseInclude = {
   course: true,
   section: true,
   semester: true,
+  courseModule: { select: { id: true, name: true, status: true } },
   teacher: {
     select: {
       id: true,
@@ -119,6 +120,7 @@ const buildAssignmentPayload = ({ body, teacherId, keepStatus = true }) => {
     courseId: body.courseId,
     sectionId: body.sectionId || null,
     semesterId: body.semesterId || null,
+    courseModuleId: body.courseModuleId || null,
   }
 
   if (keepStatus) {

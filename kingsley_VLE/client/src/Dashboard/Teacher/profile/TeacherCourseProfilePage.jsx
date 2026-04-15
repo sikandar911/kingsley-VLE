@@ -5,12 +5,14 @@ import { authApi } from '../../../Auth/api/auth.api'
 import TeacherAssignmentsTab from './components/TeacherAssignmentsTab'
 import TeacherMaterialsTab from './components/TeacherMaterialsTab'
 import CourseChatTab from '../../../features/courseChat/components/CourseChatTab'
+import CourseModulesTab from '../../../features/courseModules/components/CourseModulesTab'
 
 // ── Tab IDs ────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'general', label: 'General' },
   { id: 'assignments', label: 'Assignments' },
   { id: 'materials', label: 'Materials' },
+  { id: 'modules', label: 'Modules' },
 ]
 
 // ── Main TeacherCourseProfilePage ──────────────────────────────────────────
@@ -208,13 +210,19 @@ export default function TeacherCourseProfilePage() {
       {/* ── Tab Content ── */}
       {activeTab === 'general' ? (
         <CourseChatTab courseId={courseId} sectionId={null} />
+      ) : activeTab === 'modules' ? (
+        <CourseModulesTab
+          courseId={courseId}
+          sectionId={sectionId}
+          semesterId={enrollment?.semester?.id || null}
+        />
       ) : (
         <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
           {activeTab === 'assignments' && (
-            <TeacherAssignmentsTab courseId={courseId} sectionId={null} />
+            <TeacherAssignmentsTab courseId={courseId} sectionId={sectionId} />
           )}
           {activeTab === 'materials' && (
-            <TeacherMaterialsTab courseId={courseId} sectionId={null} />
+            <TeacherMaterialsTab courseId={courseId} sectionId={sectionId} />
           )}
         </div>
       )}

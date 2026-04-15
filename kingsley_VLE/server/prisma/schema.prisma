@@ -66,6 +66,11 @@ enum ChatReactionType {
   done
 }
 
+enum CourseModuleStatus {
+  active
+  inactive
+}
+
 // ============================================================================
 // AUTHENTICATION & IDENTITY LAYER
 // ============================================================================
@@ -205,6 +210,7 @@ model Course {
   events Event[]
   calendarReminders CalendarReminder[]
   courseMessages CourseMessage[]
+  courseModules CourseModule[]
 
   @@map("courses")
 }
@@ -250,6 +256,7 @@ model Semester {
   courses Course[]
   calendarReminders CalendarReminder[]
   teacherCourses TeacherCourse[]
+  courseModules CourseModule[]
 
   @@map("semesters")
 }
@@ -282,6 +289,7 @@ model Section {
   events Event[]
   calendarReminders CalendarReminder[]
   courseMessages CourseMessage[]
+  courseModules CourseModule[]
 
   @@map("sections")
 }
@@ -400,6 +408,9 @@ model Assignment {
 
   courseId String
   course Course @relation(fields: [courseId], references: [id])
+
+  courseModuleId String? @map("course_module_id")
+  courseModule CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
 
   // Relations
   assignmentFiles AssignmentFile[]
@@ -529,6 +540,9 @@ model ClassMaterial {
   semesterId String?
   semester Semester? @relation(fields: [semesterId], references: [id])
 
+  courseModuleId String? @map("course_module_id")
+  courseModule CourseModule? @relation("ClassMaterialModule", fields: [courseModuleId], references: [id], onDelete: SetNull)
+
   uploadedBy String
   uploadedByUser User @relation(fields: [uploadedBy], references: [id])
 
@@ -559,10 +573,49 @@ model ClassRecord {
   semesterId String?
   semester Semester? @relation(fields: [semesterId], references: [id])
 
+  courseModuleId String? @map("course_module_id")
+  courseModule CourseModule? @relation("ClassRecordModule", fields: [courseModuleId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("class_records")
+}
+
+// ============================================================================
+// COURSE MODULES
+// ============================================================================
+
+model CourseModule {
+  id String @id @default(uuid())
+
+  name String @db.VarChar(200)
+
+  description String?
+
+  status CourseModuleStatus @default(active)
+
+  courseId String @map("course_id")
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  sectionId String? @map("section_id")
+  section Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  semesterId String? @map("semester_id")
+  semester Semester? @relation(fields: [semesterId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations to academic content
+  assignments Assignment[]
+  classMaterials ClassMaterial[] @relation("ClassMaterialModule")
+  classRecords ClassRecord[] @relation("ClassRecordModule")
+
+  @@index([courseId, status])
+  @@index([courseId, sectionId])
+
+  @@map("course_modules")
 }
 
 // ============================================================================

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import DOMPurify from 'dompurify'
 import api from '../../../lib/api'
 import ReactionPicker from './ReactionPicker'
 import FileViewerModal from './FileViewerModal'
@@ -175,7 +176,23 @@ export default function ChatMessage({ message, currentUserId, onReact, onDelete,
 
           {/* Message text */}
           {message.content && (
-            <p className="text-sm text-gray-800 leading-relaxed">{message.content}</p>
+            <div
+              className="text-sm text-gray-800 leading-relaxed chat-content"
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(message.content, {
+                  ALLOWED_TAGS: [
+                    'p', 'br', 'strong', 'em', 'b', 'i', 's',
+                    'h1', 'h2', 'h3', 'h4',
+                    'ul', 'ol', 'li',
+                    'a', 'span',
+                    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                    'blockquote', 'code', 'pre',
+                  ],
+                  ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-mention', 'data-id', 'data-label'],
+                  FORCE_BODY: true,
+                }),
+              }}
+            />
           )}
 
           {/* File attachment */}

@@ -112,6 +112,45 @@ export const sendMessage = async (req, res) => {
         return res.status(403).json({ error: 'Only teachers can upload files' })
       }
 
+      // Look up the teacher's enrollment to get sectionId and semesterId
+      // This ensures we upload materials to the correct section+semester context
+      let resolvedUploadSectionId = null
+      let resolvedSemesterId = null
+      
+      if (req.user.role === 'teacher') {
+        const teacherProfile = await prisma.teacherProfile.findUnique({
+          where: { userId: req.user.id },
+          select: { id: true },
+        })
+        
+        if (teacherProfile) {
+          // Find the teacher's enrollment for this course
+          // - If uploading from specific section: match that section
+          // - If uploading course-wide (sectionId=null): find ANY section they teach in
+          const teacherCourseWhere = {
+            teacherId: teacherProfile.id,
+            courseId,
+          }
+          
+          // Only filter by sectionId if uploading from a specific section
+          if (resolvedSectionId) {
+            teacherCourseWhere.sectionId = resolvedSectionId
+          }
+          
+          const teacherCourse = await prisma.teacherCourse.findFirst({
+            where: teacherCourseWhere,
+            select: { sectionId: true, semesterId: true, section: { select: { semesterId: true } } },
+          })
+          
+          if (teacherCourse) {
+            resolvedUploadSectionId = teacherCourse.sectionId
+            // Use TeacherCourse's semesterId if available,
+            // otherwise fall back to the Section's semesterId (if sectionId exists)
+            resolvedSemesterId = teacherCourse.semesterId || teacherCourse.section?.semesterId || null
+          }
+        }
+      }
+
       // Upload to Azure
       const { url: fileUrl, blobName } = await uploadToAzure(
         req.file.buffer,
@@ -130,15 +169,21 @@ export const sendMessage = async (req, res) => {
         },
       })
 
-      // Create ClassMaterial record
+      // Create ClassMaterial record with section + semester from teacher's enrollment
+      // Strip HTML tags from content for plain text description
+      const plainTextDescription = content?.trim()
+        ? content.replace(/<[^>]*>/g, '').trim() || `Shared in course chat`
+        : `Shared in course chat`
+      
       const material = await prisma.classMaterial.create({
         data: {
           title: req.file.originalname,
-          description: content?.trim() || `Shared in course chat`,
+          description: plainTextDescription,
           fileId: fileRecord.id,
           fileUrl,
           courseId,
-          sectionId: resolvedSectionId,
+          sectionId: resolvedUploadSectionId,
+          semesterId: resolvedSemesterId,
           uploadedBy: req.user.id,
         },
       })
@@ -148,7 +193,7 @@ export const sendMessage = async (req, res) => {
 
     const message = await prisma.courseMessage.create({
       data: {
-        content: content?.trim() || null,
+        content: content?.trim() ? content.trim() : null,
         courseId,
         sectionId: resolvedSectionId,
         userId: req.user.id,
@@ -159,8 +204,16 @@ export const sendMessage = async (req, res) => {
 
     return res.status(201).json(message)
   } catch (err) {
-    console.error('sendMessage error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error('sendMessage error:', {
+      message: err.message,
+      code: err.code,
+      meta: err.meta,
+      stack: err.stack,
+    })
+    return res.status(500).json({ 
+      error: 'Server error',
+      details: err.message, // For debugging - remove in production
+    })
   }
 }
 
@@ -216,6 +269,66 @@ export const toggleReaction = async (req, res) => {
     return res.json(updated)
   } catch (err) {
     console.error('toggleReaction error:', err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+}
+
+/**
+ * GET /api/course-chat/:courseId/sections/:sectionId/members
+ * Returns enrolled students + assigned teachers for @mention dropdown
+ */
+export const getCourseMembers = async (req, res) => {
+  const { courseId, sectionId } = req.params
+  const resolvedSectionId = sectionId === 'null' ? null : (sectionId || null)
+
+  try {
+    const [enrollments, teacherCourses] = await Promise.all([
+      prisma.enrollment.findMany({
+        where: {
+          courseId,
+          ...(resolvedSectionId ? { sectionId: resolvedSectionId } : {}),
+        },
+        include: {
+          student: {
+            include: { user: { select: { id: true } } },
+          },
+        },
+      }),
+      prisma.teacherCourse.findMany({
+        where: {
+          courseId,
+          ...(resolvedSectionId ? { sectionId: resolvedSectionId } : {}),
+        },
+        include: {
+          teacher: {
+            include: { user: { select: { id: true } } },
+          },
+        },
+      }),
+    ])
+
+    const seen = new Set()
+    const members = []
+
+    for (const e of enrollments) {
+      const uid = e.student.user.id
+      if (!seen.has(uid)) {
+        seen.add(uid)
+        members.push({ id: uid, name: e.student.fullName, role: 'student' })
+      }
+    }
+
+    for (const tc of teacherCourses) {
+      const uid = tc.teacher.user.id
+      if (!seen.has(uid)) {
+        seen.add(uid)
+        members.push({ id: uid, name: tc.teacher.fullName, role: 'teacher' })
+      }
+    }
+
+    return res.json(members)
+  } catch (err) {
+    console.error('getCourseMembers error:', err)
     return res.status(500).json({ error: 'Server error' })
   }
 }

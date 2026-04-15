@@ -3,7 +3,7 @@ import { classMaterialsApi } from '../../../../features/classMaterials/api/class
 
 const ITEMS_PER_PAGE = 15
 
-export const useTeacherMaterialsByCourse = (courseId, sectionId, currentPage = 1) => {
+export const useTeacherMaterialsByCourse = (courseId, sectionId, currentPage = 1, refetchTrigger = 0) => {
   const [materials, setMaterials] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -54,7 +54,7 @@ export const useTeacherMaterialsByCourse = (courseId, sectionId, currentPage = 1
     }
 
     load()
-  }, [courseId, sectionId, currentPage])
+  }, [courseId, sectionId, currentPage, refetchTrigger])
 
   return {
     materials,

@@ -11,6 +11,7 @@ export default function CourseChatTab({ courseId, sectionId }) {
   const canUpload = user?.role === 'teacher' || user?.role === 'admin'
 
   const [messages, setMessages] = useState([])
+  const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -37,15 +38,26 @@ export default function CourseChatTab({ courseId, sectionId }) {
         const fetched = Array.isArray(res.data) ? res.data : []
 
         setMessages((prev) => {
+          // Separate optimistic messages (temp-*) from server messages
+          // Keep optimistic messages until they're replaced by real ones from server
+          const optimisticMsgs = prev.filter((m) => m.id.startsWith('temp-'))
+          
           // Find genuinely new messages (after background poll)
-          const prevIds = new Set(prev.map((m) => m.id))
+          const prevIds = new Set(
+            prev.filter((m) => !m.id.startsWith('temp-')).map((m) => m.id)
+          )
           const incoming = fetched.filter((m) => !prevIds.has(m.id))
           if (incoming.length > 0) {
             const incoming50ms = new Set(incoming.map((m) => m.id))
             setNewIds(incoming50ms)
             setTimeout(() => setNewIds(new Set()), 2000)
           }
-          return fetched
+
+          // Merge: server messages + optimistic messages (optimistic at end)
+          // When an optimistic message gets its real ID from API response,
+          // the server version (in fetched) will have that real ID, and the
+          // old temp message will be filtered out by handleSend
+          return [...fetched, ...optimisticMsgs]
         })
 
         setHasOlder(fetched.length === 50)
@@ -86,6 +98,13 @@ export default function CourseChatTab({ courseId, sectionId }) {
   useEffect(() => {
     fetchMessages({ scrollToBottom: true })
 
+    // Fetch members for @mention once on mount
+    if (courseId) {
+      courseChatApi.getMembers(courseId, sectionId)
+        .then((res) => setMembers(Array.isArray(res.data) ? res.data : []))
+        .catch(() => setMembers([]))
+    }
+
     pollerRef.current = setInterval(() => {
       fetchMessages({ silent: true })
     }, POLL_INTERVAL_MS)
@@ -103,28 +122,80 @@ export default function CourseChatTab({ courseId, sectionId }) {
   // ── Send message ─────────────────────────────────────────────────────────
   const handleSend = async (content) => {
     if (!content?.trim()) return
+
+    // Optimistic update: show message immediately before API responds
+    const tempId = `temp-${Date.now()}`
+    const optimisticMsg = {
+      id: tempId,
+      content,
+      courseId,
+      sectionId: sectionId === 'null' ? null : (sectionId || null),
+      userId: user?.id,
+      classMaterialId: null,
+      createdAt: new Date().toISOString(),
+      deletedAt: null,
+      user: {
+        id: user?.id,
+        role: user?.role,
+        studentProfile: user?.studentProfile || null,
+        teacherProfile: user?.teacherProfile || null,
+      },
+      classMaterial: null,
+      reactions: [],
+    }
+    setMessages((prev) => [...prev, optimisticMsg])
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
     try {
       const res = await courseChatApi.sendMessage(courseId, sectionId, content)
       const msg = res.data
-      setMessages((prev) => [...prev, msg])
+      // Replace optimistic message with real one from server
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? msg : m)))
       setNewIds(new Set([msg.id]))
       setTimeout(() => setNewIds(new Set()), 2000)
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch (err) {
+      // Remove optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
       console.error('send error:', err)
     }
   }
 
   // ── Send message with file ───────────────────────────────────────────────
   const handleSendFile = async (formData) => {
+    // Optimistic update for file upload
+    const tempId = `temp-${Date.now()}`
+    const content = formData.get('content') || ''
+    const optimisticMsg = {
+      id: tempId,
+      content,
+      courseId,
+      sectionId: sectionId === 'null' ? null : (sectionId || null),
+      userId: user?.id,
+      classMaterialId: null,
+      createdAt: new Date().toISOString(),
+      deletedAt: null,
+      user: {
+        id: user?.id,
+        role: user?.role,
+        studentProfile: user?.studentProfile || null,
+        teacherProfile: user?.teacherProfile || null,
+      },
+      classMaterial: null, // Will be filled in on server response
+      reactions: [],
+    }
+    setMessages((prev) => [...prev, optimisticMsg])
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
     try {
       const res = await courseChatApi.sendMessageWithFile(courseId, sectionId, formData)
       const msg = res.data
-      setMessages((prev) => [...prev, msg])
+      // Replace optimistic message with real one from server
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? msg : m)))
       setNewIds(new Set([msg.id]))
       setTimeout(() => setNewIds(new Set()), 2000)
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch (err) {
+      // Remove optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
       console.error('send file error:', err)
     }
   }
@@ -254,6 +325,7 @@ export default function CourseChatTab({ courseId, sectionId }) {
         onSendFile={handleSendFile}
         canUpload={canUpload}
         disabled={false}
+        members={members}
       />
     </div>
   )

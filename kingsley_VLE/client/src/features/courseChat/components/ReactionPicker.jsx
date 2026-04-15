@@ -10,7 +10,9 @@ const REACTIONS = [
 
 export default function ReactionPicker({ onSelect, currentReaction }) {
   const [open, setOpen] = useState(false)
+  const [alignRight, setAlignRight] = useState(false)
   const ref = useRef(null)
+  const popupRef = useRef(null)
 
   useEffect(() => {
     const handler = (e) => {
@@ -19,6 +21,26 @@ export default function ReactionPicker({ onSelect, currentReaction }) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  // Check popup position and adjust alignment if it goes off-screen left
+  useEffect(() => {
+    if (!open || !popupRef.current) return
+
+    const timer = setTimeout(() => {
+      const popup = popupRef.current
+      if (!popup) return
+
+      const rect = popup.getBoundingClientRect()
+      // If popup goes off-screen to the left, align to the right of the button instead
+      if (rect.left < 0) {
+        setAlignRight(true)
+      } else {
+        setAlignRight(false)
+      }
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [open])
 
   return (
     <div className="relative" ref={ref}>
@@ -34,12 +56,17 @@ export default function ReactionPicker({ onSelect, currentReaction }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex gap-1 z-50">
+        <div
+          ref={popupRef}
+          className={`absolute bottom-full mb-1 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex gap-1 z-50 ${
+            alignRight ? 'left-full ml-1' : 'right-full mr-1'
+          }`}
+        >
           {REACTIONS.map((r) => (
             <button
               key={r.type}
               onClick={() => { onSelect(r.type); setOpen(false) }}
-              className={`text-xl p-1.5 rounded-xl transition hover:bg-gray-100 hover:scale-125 ${
+              className={`text-xl p-1.5 rounded-xl transition hover:bg-gray-100 hover:scale-125 flex-shrink-0 ${
                 currentReaction === r.type ? 'bg-[#6b1d3e]/10 ring-2 ring-[#6b1d3e]' : ''
               }`}
               title={r.label}

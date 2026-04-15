@@ -49,6 +49,12 @@ export const courseChatApi = {
     ),
 
   /**
+   * Get course members for @mention dropdown.
+   */
+  getMembers: (courseId, sectionId) =>
+    api.get(`/course-chat/${courseId}/sections/${sectionId ?? 'null'}/members`),
+
+  /**
    * Delete a message (soft delete, own messages only / admin).
    */
   deleteMessage: (courseId, sectionId, messageId) =>

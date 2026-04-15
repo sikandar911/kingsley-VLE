@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, Link, Video } from "lucide-react";
 import { classRecordsApi } from "../api/classRecords.api";
+import { courseModulesApi } from "../../courseModules/api/courseModules.api";
 import CustomDropdown from "./CustomDropdown";
 
 const BRAND = "#6b1d3e";
@@ -18,6 +19,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     courseId: "",
     sectionId: "",
     semesterId: "",
+    courseModuleId: "",
   });
   const [loading, setLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -26,6 +28,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [courseModules, setCourseModules] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
@@ -43,6 +46,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         courseId: record.courseId || "",
         sectionId: record.sectionId || "",
         semesterId: record.semesterId || "",
+        courseModuleId: record.courseModule?.id || record.courseModuleId || "",
       });
       setInputMode("url");
     }
@@ -144,6 +148,19 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     prevCourseIdRef.current = formData.courseId;
   }, [formData.courseId, courseSectionMap, sections]);
 
+  // Fetch active course modules when courseId or sectionId changes
+  useEffect(() => {
+    if (formData.courseId) {
+      courseModulesApi
+        .list({ courseId: formData.courseId, ...(formData.sectionId ? { sectionId: formData.sectionId } : {}), status: 'active' })
+        .then((res) => setCourseModules(res.data?.modules || []))
+        .catch(() => setCourseModules([]))
+    } else {
+      setCourseModules([])
+    }
+    setFormData((prev) => ({ ...prev, courseModuleId: '' }))
+  }, [formData.courseId, formData.sectionId]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "url") setUrlError("");
@@ -214,6 +231,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         courseId: formData.courseId,
         sectionId: formData.sectionId || undefined,
         semesterId: formData.semesterId || undefined,
+        courseModuleId: formData.courseModuleId || undefined,
       };
       await onSubmit(payload);
       handleClose();
@@ -233,6 +251,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
       courseId: "",
       sectionId: "",
       semesterId: "",
+      courseModuleId: "",
     });
     setUrlError("");
     setUploadedFileName("");
@@ -429,7 +448,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           </div>
 
           {/* Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Semester */}
             <div>
               <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
@@ -504,6 +523,28 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={loadingDropdowns || !formData.courseId}
+                dropdownDirection="up"
+              />
+            </div>
+
+            {/* Course Module */}
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                Course Module <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              <CustomDropdown
+                options={[
+                  { id: "", name: !formData.courseId ? "Select course first" : courseModules.length === 0 ? "No modules available" : "Select module…" },
+                  ...courseModules.map((m) => ({ id: m.id, name: m.name })),
+                ]}
+                value={formData.courseModuleId}
+                onChange={(val) =>
+                  handleChange({ target: { name: "courseModuleId", value: val } })
+                }
+                placeholder="Select module (optional)"
+                isSmallScreen={false}
+                BRAND={BRAND}
+                disabled={!formData.courseId || courseModules.length === 0}
                 dropdownDirection="up"
               />
             </div>

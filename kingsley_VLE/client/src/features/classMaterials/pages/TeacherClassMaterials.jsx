@@ -1,12 +1,14 @@
-﻿import React, { useState, useEffect } from "react";
-import { Search, Plus, Eye, Trash2, FileText, Link, Edit2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Plus, Edit2, Trash2, FileText, Link } from "lucide-react";
 import ClassMaterialsModal from "../components/ClassMaterialsModal";
 import { classMaterialsApi } from "../api/classMaterials.api";
+import { enrollmentsApi } from "../../enrollments/api/enrollments.api";
+import { authApi } from "../../../Auth/api/auth.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1142";
 
-const ClassMaterials = () => {
+const TeacherClassMaterials = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
@@ -17,132 +19,115 @@ const ClassMaterials = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // All dropdown options from API (never change unless new data added)
+  // Teacher's enrollments
+  const [teacherEnrollments, setTeacherEnrollments] = useState([]);
+  const [enrollmentsLoading, setEnrollmentsLoading] = useState(true);
+
+  // Filtered options (only what teacher has access to)
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
-
-  // Filtered dropdown options based on current selection
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [filteredSemesters, setFilteredSemesters] = useState([]);
 
-  // Relationship maps: semester -> courses, course -> sections
+  // Relationship maps
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
-  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
-  // Fetch all courses on mount
+  // Fetch teacher's enrollments and build accessible courses/sections/semesters
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchTeacherData = async () => {
       try {
-        const response = await classMaterialsApi.getCourses();
-        const coursesList = response.data?.data || response.data?.courses || [];
-        console.log("Courses fetched:", coursesList);
-        setCourses(coursesList);
-        setFilteredCourses(coursesList);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-      }
-    };
-    fetchCourses();
-  }, []);
+        setEnrollmentsLoading(true);
 
-  // Fetch all sections and semesters on mount + build relationship map
-  useEffect(() => {
-    const fetchDropdownData = async () => {
-      try {
-        setLoadingDropdowns(true);
-        const [cRes, sRes, smRes] = await Promise.all([
-          classMaterialsApi.getCourses(),
-          classMaterialsApi.getSections(),
-          classMaterialsApi.getSemesters(),
-        ]);
+        // Get logged-in teacher's profile ID
+        const meRes = await authApi.getMe();
+        const teacherProfileId = meRes.data?.teacherProfile?.id;
 
-        const coursesList = cRes.data?.data || cRes.data?.courses || [];
-        const sectionsData = Array.isArray(sRes.data) ? sRes.data : sRes || [];
-        const semestersData = Array.isArray(smRes.data)
-          ? smRes.data
-          : smRes || [];
+        if (!teacherProfileId) {
+          setError("Teacher profile not found.");
+          return;
+        }
 
-        console.log("Courses data:", coursesList);
-        console.log("Sections data:", sectionsData);
-        console.log("Semesters data:", semestersData);
+        // Get teacher's course enrollments
+        const enrollRes = await enrollmentsApi.teachers.list({
+          teacherId: teacherProfileId,
+        });
+        const enrollments = Array.isArray(enrollRes.data) ? enrollRes.data : [];
+        setTeacherEnrollments(enrollments);
 
-        setCourses(coursesList);
-        setSections(sectionsData);
-        setSemesters(semestersData);
-        setFilteredCourses(coursesList);
-        setFilteredSections(sectionsData);
-        setFilteredSemesters(semestersData);
+        // Extract unique courses, sections, and semesters from enrollments
+        const coursesSet = new Set();
+        const sectionsSet = new Set();
+        const semesterCourseMapLocal = {};
+        const courseSectionMapLocal = {};
 
-        // Build semester -> courses map (from courses table)
-        const semCxMap = {};
-        coursesList.forEach((course) => {
-          const semId = course.semesterId;
-          if (semId) {
-            if (!semCxMap[semId]) semCxMap[semId] = [];
-            if (!semCxMap[semId].includes(course.id)) {
-              semCxMap[semId].push(course.id);
+        enrollments.forEach((enroll) => {
+          // Add course
+          if (enroll.course) {
+            coursesSet.add(JSON.stringify(enroll.course));
+            if (!semesterCourseMapLocal[enroll.semesterId]) {
+              semesterCourseMapLocal[enroll.semesterId] = [];
             }
+            semesterCourseMapLocal[enroll.semesterId].push(enroll.course.id);
+          }
+
+          // Add section
+          if (enroll.section) {
+            sectionsSet.add(JSON.stringify(enroll.section));
+            if (!courseSectionMapLocal[enroll.courseId]) {
+              courseSectionMapLocal[enroll.courseId] = [];
+            }
+            courseSectionMapLocal[enroll.courseId].push(enroll.section.id);
           }
         });
 
-        // Build course -> sections map (from sections table)
-        const cxSecMap = {};
-        sectionsData.forEach((section) => {
-          const courseId = section.courseId;
-          if (courseId) {
-            if (!cxSecMap[courseId]) cxSecMap[courseId] = [];
-            if (!cxSecMap[courseId].includes(section.id)) {
-              cxSecMap[courseId].push(section.id);
-            }
-          }
-        });
+        const coursesList = Array.from(coursesSet).map((c) => JSON.parse(c));
+        const sectionsList = Array.from(sectionsSet).map((s) => JSON.parse(s));
 
-        console.log("Semester course map:", semCxMap);
-        console.log("Course section map:", cxSecMap);
+        setCourses(coursesList);
+        setSections(sectionsList);
+        setFilteredCourses(coursesList);
+        setFilteredSections([]);
+        setSemesterCourseMap(semesterCourseMapLocal);
+        setCourseSectionMap(courseSectionMapLocal);
 
-        setSemesterCourseMap(semCxMap);
-        setCourseSectionMap(cxSecMap);
+        // Fetch ALL semesters (not just teacher's)
+        const allSemestersRes = await classMaterialsApi.getSemesters();
+        const allSemestersList = Array.isArray(allSemestersRes.data)
+          ? allSemestersRes.data
+          : allSemestersRes.data?.data || [];
+        setSemesters(allSemestersList);
+        setFilteredSemesters(allSemestersList);
 
-        // Auto-select the latest semester (first one in the list)
-        if (semestersData.length > 0) {
-          setSelectedSemester(semestersData[0].id);
+        // Auto-select first semester
+        if (allSemestersList.length > 0) {
+          setSelectedSemester(allSemestersList[0].id);
         }
       } catch (err) {
-        console.error("Error fetching dropdown data:", err);
+        console.error("Error fetching teacher data:", err);
+        setError("Failed to load your courses. Please try again.");
       } finally {
-        setLoadingDropdowns(false);
+        setEnrollmentsLoading(false);
       }
     };
-    fetchDropdownData();
+
+    fetchTeacherData();
   }, []);
 
   // Filter courses based on selected semester
   useEffect(() => {
     if (selectedSemester) {
-      // Semester is selected
       if (semesterCourseMap[selectedSemester]) {
-        // Semester exists in map - show its courses
         const courseIds = semesterCourseMap[selectedSemester];
-        console.log(
-          "Filtering courses for semester:",
-          selectedSemester,
-          courseIds,
-        );
         setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
       } else {
-        // Semester selected but has no courses - show empty
-        console.log("Semester selected but has no courses");
         setFilteredCourses([]);
       }
     } else {
-      // No semester selected - show all courses
-      console.log("No semester selected - showing all courses");
       setFilteredCourses(courses);
     }
-    // Reset course and section when semester changes
     setSelectedCourse("");
     setSelectedSection("");
   }, [selectedSemester, semesterCourseMap, courses]);
@@ -150,36 +135,24 @@ const ClassMaterials = () => {
   // Filter sections based on selected course
   useEffect(() => {
     if (selectedCourse) {
-      // Course is selected
       if (courseSectionMap[selectedCourse]) {
-        // Course exists in map - show its sections
         const sectionIds = courseSectionMap[selectedCourse];
-        console.log(
-          "Filtering sections for course:",
-          selectedCourse,
-          sectionIds,
-        );
         setFilteredSections(sections.filter((s) => sectionIds.includes(s.id)));
       } else {
-        // Course selected but has no sections - show empty
-        console.log("Course selected but has no sections");
         setFilteredSections([]);
       }
     } else {
-      // No course selected - show all sections
-      console.log("No course selected - showing all sections");
-      setFilteredSections(sections);
+      setFilteredSections([]);
     }
-    // Reset section when course changes
     setSelectedSection("");
   }, [selectedCourse, courseSectionMap, sections]);
 
-  // Ensure all semesters are always available (semester is the parent/first selector)
+  // Ensure all semesters are always available
   useEffect(() => {
     setFilteredSemesters(semesters);
   }, [semesters]);
 
-  // When filters change, update materials
+  // Fetch materials when filters change
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
@@ -208,35 +181,6 @@ const ClassMaterials = () => {
     fetchMaterials();
   }, [selectedCourse, selectedSection, selectedSemester, searchTerm]);
 
-  const handleCourseChange = (courseId) => {
-    setSelectedCourse(courseId);
-  };
-
-  const handleSectionChange = (sectionId) => {
-    setSelectedSection(sectionId);
-  };
-
-  const handleSemesterChange = (semesterId) => {
-    setSelectedSemester(semesterId);
-  };
-
-  const handleEditMaterial = (material) => {
-    setEditingMaterial(material);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this material?")) {
-      try {
-        await classMaterialsApi.delete(id);
-        setMaterials(materials.filter((m) => m.id !== id));
-      } catch (err) {
-        console.error("Error deleting material:", err);
-        alert("Failed to delete material. Please try again.");
-      }
-    }
-  };
-
   const handleAddMaterial = async (formData) => {
     try {
       const response = await classMaterialsApi.create(formData);
@@ -248,30 +192,41 @@ const ClassMaterials = () => {
     }
   };
 
+  const handleEditMaterial = (material) => {
+    setEditingMaterial(material);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteMaterial = async (id, title) => {
+    if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
+      try {
+        await classMaterialsApi.delete(id);
+        setMaterials(materials.filter((m) => m.id !== id));
+      } catch (err) {
+        console.error("Error deleting material:", err);
+        alert("Failed to delete material. Please try again.");
+      }
+    }
+  };
+
   const getCourseName = (material) => {
-    // Check nested object first (from API response)
     if (material.course?.title) return material.course.title;
-    // Fallback to searching local state
     const course = courses.find((c) => c.id === material.courseId);
     return course ? course.title : material.courseId;
   };
 
   const getSectionName = (material) => {
-    // Check nested object first (from API response)
     if (material.section?.name) return material.section.name;
-    // Fallback to searching local state
     const section = sections.find((s) => s && s.id === material.sectionId);
     return section ? section.name : material.sectionId;
   };
 
   const getSemesterName = (material) => {
-    // Check nested object first (from API response)
     if (material.semester?.name) {
       return material.semester.year
         ? `${material.semester.name} (${material.semester.year})`
         : material.semester.name;
     }
-    // Fallback to searching local state
     const semester = semesters.find((s) => s && s.id === material.semesterId);
     return semester ? semester.name : material.semesterId;
   };
@@ -279,9 +234,21 @@ const ClassMaterials = () => {
   const getMaterialUrl = (material) =>
     material.fileUrl || material.file?.fileUrl || null;
 
+  if (enrollmentsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 animate-pulse px-4 py-4 md:px-4 lg:px-8 lg:py-8">
+        <div className="space-y-4">
+          <div className="h-10 bg-gray-200 rounded w-64" />
+          <div className="h-32 bg-gray-200 rounded" />
+          <div className="h-96 bg-gray-200 rounded" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="min-h-screen bg-gray-50 px-4 py-4 md:px-4 lg:px-8  lg:py-8">
+      <div className="min-h-screen bg-gray-50 px-4 py-4 md:px-4 lg:px-8 lg:py-8">
         {/* Header */}
         <div className="mb-4 md:mb-6 lg:mb-8 lg:flex items-center justify-between">
           <div>
@@ -289,7 +256,7 @@ const ClassMaterials = () => {
               Class Materials
             </h1>
             <p className="text-sm sm:text-base text-gray-600">
-              Manage class materials for different courses and sections.
+              Manage class materials for your courses.
             </p>
           </div>
           <button
@@ -301,7 +268,7 @@ const ClassMaterials = () => {
             style={{ backgroundColor: BRAND }}
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className=" sm:inline">Add New Material</span>
+            <span>Add New Material</span>
           </button>
         </div>
 
@@ -311,7 +278,7 @@ const ClassMaterials = () => {
           style={{ background: "linear-gradient(to right, #6b1d3e, #5a1630)" }}
         >
           <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Search Input div*/}
+            {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5" />
               <input
@@ -328,9 +295,7 @@ const ClassMaterials = () => {
                 options={[
                   {
                     id: "",
-                    name: loadingDropdowns
-                      ? "Loading..."
-                      : `All Semesters (${filteredSemesters.length})`,
+                    name: `All Semesters (${filteredSemesters.length})`,
                   },
                   ...filteredSemesters.map((semester) => ({
                     id: semester?.id,
@@ -338,13 +303,10 @@ const ClassMaterials = () => {
                   })),
                 ]}
                 value={selectedSemester}
-                onChange={(val) => handleSemesterChange(val)}
-                placeholder={
-                  loadingDropdowns ? "Loading..." : "Select semester…"
-                }
+                onChange={(val) => setSelectedSemester(val)}
+                placeholder="Select semester…"
                 isSmallScreen={false}
                 BRAND={BRAND}
-                disabled={loadingDropdowns}
               />
 
               <CustomDropdown
@@ -356,7 +318,7 @@ const ClassMaterials = () => {
                   })),
                 ]}
                 value={selectedCourse}
-                onChange={(val) => handleCourseChange(val)}
+                onChange={(val) => setSelectedCourse(val)}
                 placeholder={
                   !selectedSemester ? "Select semester first" : "Select course…"
                 }
@@ -374,7 +336,7 @@ const ClassMaterials = () => {
                   })),
                 ]}
                 value={selectedSection}
-                onChange={(val) => handleSectionChange(val)}
+                onChange={(val) => setSelectedSection(val)}
                 placeholder={
                   !selectedCourse ? "Select course first" : "Select section…"
                 }
@@ -493,25 +455,14 @@ const ClassMaterials = () => {
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(material.id)}
+                              onClick={() =>
+                                handleDeleteMaterial(material.id, material.title)
+                              }
                               className="inline-flex items-center justify-center p-2 rounded-lg transition hover:bg-red-50"
                               style={{ color: BRAND }}
                               title="Delete"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -627,25 +578,14 @@ const ClassMaterials = () => {
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(material.id)}
+                              onClick={() =>
+                                handleDeleteMaterial(material.id, material.title)
+                              }
                               className="inline-flex items-center justify-center p-1.5 rounded transition hover:bg-red-50"
                               style={{ color: BRAND }}
                               title="Delete"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -676,4 +616,4 @@ const ClassMaterials = () => {
   );
 };
 
-export default ClassMaterials;
+export default TeacherClassMaterials;

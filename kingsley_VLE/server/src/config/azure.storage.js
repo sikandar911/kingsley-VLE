@@ -56,10 +56,14 @@ export const generateSecureSASUrl = async (blobName) => {
     const containerClient = getContainerClient()
     const blockBlobClient = containerClient.getBlockBlobClient(blobName)
 
+    // Start 5 minutes in the past to absorb server clock skew
+    const startsOn = new Date(Date.now() - 5 * 60 * 1000)
+    const expiresOn = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
     const sasUrl = await blockBlobClient.generateSasUrl({
       permissions: BlobSASPermissions.parse('r'),
-      startsOn: new Date(),
-      expiresOn: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      startsOn,
+      expiresOn,
       protocol: 'https',
     })
 

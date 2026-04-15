@@ -3,7 +3,7 @@ import { classRecordsApi } from '../../../../features/classRecords/api/classReco
 
 const ITEMS_PER_PAGE = 15
 
-export const useTeacherRecordingsByCourse = (courseId, sectionId, currentPage = 1) => {
+export const useTeacherRecordingsByCourse = (courseId, sectionId, currentPage = 1, refetchTrigger = 0) => {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -54,7 +54,7 @@ export const useTeacherRecordingsByCourse = (courseId, sectionId, currentPage = 
     }
 
     load()
-  }, [courseId, sectionId, currentPage])
+  }, [courseId, sectionId, currentPage, refetchTrigger])
 
   return {
     records,

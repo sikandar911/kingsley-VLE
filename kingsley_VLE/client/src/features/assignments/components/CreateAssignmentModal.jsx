@@ -3,6 +3,7 @@ import { assignmentsApi } from "../api/assignments.api";
 import { coursesApi } from "../../courses/api/courses.api";
 import { adminApi } from "../../../Dashboard/Admin/api/admin.api";
 import { enrollmentsApi } from "../../enrollments/api/enrollments.api";
+import { courseModulesApi } from "../../courseModules/api/courseModules.api";
 import api from "../../../lib/api";
 import { useAuth } from "../../../context/AuthContext";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
@@ -14,6 +15,7 @@ const INITIAL = {
   courseId: "",
   sectionId: "",
   semesterId: "",
+  courseModuleId: "",
   title: "",
   description: "",
   teacherInstruction: "",
@@ -49,6 +51,7 @@ export default function CreateAssignmentModal({
           courseId: editAssignment.courseId || "",
           sectionId: editAssignment.sectionId || "",
           semesterId: editAssignment.semesterId || "",
+          courseModuleId: editAssignment.courseModule?.id || editAssignment.courseModuleId || "",
           title: editAssignment.title || "",
           description: editAssignment.description || "",
           teacherInstruction: editAssignment.teacherInstruction || "",
@@ -65,6 +68,7 @@ export default function CreateAssignmentModal({
   const [teachers, setTeachers] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [courseModules, setCourseModules] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [filteredSemesters, setFilteredSemesters] = useState([]);
@@ -305,6 +309,19 @@ export default function CreateAssignmentModal({
     setFilteredSemesters(semesters);
   }, [semesters]);
 
+  // Fetch course modules when courseId or sectionId changes
+  useEffect(() => {
+    if (form.courseId) {
+      courseModulesApi
+        .list({ courseId: form.courseId, ...(form.sectionId ? { sectionId: form.sectionId } : {}), status: 'active' })
+        .then((res) => setCourseModules(res.data?.modules || []))
+        .catch(() => setCourseModules([]))
+    } else {
+      setCourseModules([])
+    }
+    setForm((prev) => ({ ...prev, courseModuleId: '' }))
+  }, [form.courseId, form.sectionId]);
+
   // For edit mode: Ensure filtered lists include the previously selected values
   useEffect(() => {
     if (isEdit && !metaLoading) {
@@ -385,6 +402,7 @@ export default function CreateAssignmentModal({
         courseId: form.courseId,
         sectionId: form.sectionId || null,
         semesterId: form.semesterId || null,
+        courseModuleId: form.courseModuleId || null,
         dueDate: form.dueDate || null,
         totalMarks: Number(form.totalMarks),
         passingMarks:
@@ -464,8 +482,7 @@ export default function CreateAssignmentModal({
 
               <div
                 className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}
-              >
-                {/* Semester - First selector (always enabled) */}
+              >                {/* Semester - First selector (always enabled) */}
                 <div>
                   <CustomDropdown
                     options={filteredSemesters.map((s) => ({
@@ -529,6 +546,24 @@ export default function CreateAssignmentModal({
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={!form.courseId || metaLoading}
+                  />
+                </div>
+
+                {/* Course Module - optional, depends on course */}
+                <div>
+                  <CustomDropdown
+                    options={courseModules.map((m) => ({ id: m.id, name: m.name }))}
+                    value={form.courseModuleId}
+                    onChange={(val) =>
+                      handleChange({ target: { name: "courseModuleId", value: val } })
+                    }
+                    placeholder={
+                      !form.courseId ? "Select course first" : courseModules.length === 0 ? "No modules" : "Select module (optional)"
+                    }
+                    label="Course Module"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={!form.courseId || courseModules.length === 0}
                   />
                 </div>
 
