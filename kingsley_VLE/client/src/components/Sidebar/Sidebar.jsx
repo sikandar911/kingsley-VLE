@@ -134,7 +134,7 @@ const menuByRole = {
       icon: "attendance",
     },
     {
-      label: "Events Calendar",
+      label: "Events",
       path: "/teacher/events",
       icon: "events",
     },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { eventsApi } from "../api/events.api";
 import { coursesApi } from "../../courses/api/courses.api";
 import { sectionsApi } from "../../sections/api/sections.api";
@@ -12,8 +12,11 @@ export default function CreateEventModal({
   onSuccess,
   editEvent = null,
 }) {
-  const [courses, setCourses] = useState([]);
-  const [sections, setSections] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [allCourses, setAllCourses] = useState([]); // ALL courses for filtering
+  const [courses, setCourses] = useState([]); // Filtered courses for display
+  const [allSections, setAllSections] = useState([]); // ALL sections for filtering
+  const [sections, setSections] = useState([]); // Filtered sections for display
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -22,37 +25,79 @@ export default function CreateEventModal({
     description: "",
     location: "",
     color: "#3B82F6",
+    semesterId: "",
     courseId: "",
     sectionId: "",
-    semesterId: "",
     startTime: "",
     endTime: "",
   });
+
+  // Track if this is the initial load for edit mode
+  const isInitialLoadRef = useRef(true);
+  const prevSemesterRef = useRef("");
+  const prevCourseRef = useRef("");
 
   useEffect(() => {
     if (isOpen) {
       setLoading(false);
       setError("");
-      // Load courses
-      coursesApi
-        .list()
+
+      // Reset refs for new modal open
+      isInitialLoadRef.current = true;
+      prevSemesterRef.current = "";
+      prevCourseRef.current = "";
+      eventsApi
+        .getSemesters()
         .then((res) => {
-          // Backend returns { data: courses, meta: {...} }
-          const courseList = res.data?.data || [];
-          setCourses(Array.isArray(courseList) ? courseList : []);
+          const semesterList = res.data || [];
+          setSemesters(Array.isArray(semesterList) ? semesterList : []);
         })
-        .catch(() => setCourses([]));
+        .catch(() => setSemesters([]));
+
+      // Load ALL courses and sections once on modal open
+      coursesApi
+        .list({ limit: 500 })
+        .then((res) => {
+          const courseList = res.data?.data || res.data || [];
+          console.log(
+            "[Modal] Loaded all courses:",
+            courseList.length,
+            "First course:",
+            courseList[0],
+          );
+          setAllCourses(Array.isArray(courseList) ? courseList : []);
+        })
+        .catch((err) => {
+          console.log("[Modal] Error loading courses:", err);
+          setAllCourses([]);
+        });
+
+      sectionsApi
+        .list({ limit: 500 })
+        .then((res) => {
+          const sectionList = res.data || [];
+          setAllSections(Array.isArray(sectionList) ? sectionList : []);
+        })
+        .catch(() => setAllSections([]));
 
       if (editEvent) {
+        console.log("[Modal] Edit Event data:", {
+          type: editEvent.type,
+          semesterId: editEvent.semesterId,
+          courseId: editEvent.courseId,
+          sectionId: editEvent.sectionId,
+          course: editEvent.course,
+          section: editEvent.section,
+        });
         setFormData({
           type: editEvent.type,
           title: editEvent.title,
           description: editEvent.description || "",
           location: editEvent.location || "",
           color: editEvent.color || "#3B82F6",
+          semesterId: editEvent.semesterId || "",
           courseId: editEvent.courseId || "",
           sectionId: editEvent.sectionId || "",
-          semesterId: editEvent.semesterId || "",
           startTime: editEvent.startTime
             ? new Date(editEvent.startTime).toISOString().slice(0, 16)
             : "",
@@ -60,40 +105,118 @@ export default function CreateEventModal({
             ? new Date(editEvent.endTime).toISOString().slice(0, 16)
             : "",
         });
-
-        // Load sections if course is selected
-        if (editEvent.courseId) {
-          sectionsApi
-            .list({ courseId: editEvent.courseId })
-            .then((res) => {
-              const sectionList = res.data || [];
-              setSections(Array.isArray(sectionList) ? sectionList : []);
-            })
-            .catch(() => setSections([]));
-        }
       } else {
-        setSections([]);
+        // Reset form for create mode
+        setFormData({
+          type: "",
+          title: "",
+          description: "",
+          location: "",
+          color: "#3B82F6",
+          semesterId: "",
+          courseId: "",
+          sectionId: "",
+          startTime: "",
+          endTime: "",
+        });
       }
+    } else {
+      // Reset everything when modal closes
+      setFormData({
+        type: "",
+        title: "",
+        description: "",
+        location: "",
+        color: "#3B82F6",
+        semesterId: "",
+        courseId: "",
+        sectionId: "",
+        startTime: "",
+        endTime: "",
+      });
     }
   }, [isOpen, editEvent]);
 
-  // Load sections when course changes
+  // Filter courses when semester changes
   useEffect(() => {
-    if (formData.courseId && formData.type !== "institution") {
-      setSections([]);
-      setFormData((prev) => ({ ...prev, sectionId: "" }));
+    if (formData.semesterId && formData.type !== "institution") {
+      // Filter allCourses by semester (handle both semesterId and semester.id)
+      const filtered = allCourses.filter((c) => {
+        const coursesSemesterId = c.semesterId || c.semester?.id;
+        return coursesSemesterId === formData.semesterId;
+      });
+      console.log("[FilterCourses] Semester:", formData.semesterId);
+      console.log("[FilterCourses] Looking for courseId:", formData.courseId);
+      console.log(
+        "[FilterCourses] Available courses:",
+        filtered.map((c) => ({ id: c.id, title: c.title })),
+      );
+      console.log(
+        "[FilterCourses] Filtered:",
+        filtered.length,
+        "All:",
+        allCourses.length,
+      );
+      setCourses(filtered);
 
-      sectionsApi
-        .list({ courseId: formData.courseId })
-        .then((res) => {
-          const sectionList = res.data || [];
-          setSections(Array.isArray(sectionList) ? sectionList : []);
-        })
-        .catch(() => setSections([]));
+      // Only clear courseId if user manually changed semester (not initial load)
+      const semesterChanged =
+        prevSemesterRef.current &&
+        prevSemesterRef.current !== formData.semesterId;
+      if (semesterChanged) {
+        console.log("[FilterCourses] User changed semester, clearing courseId");
+        setFormData((prev) => ({ ...prev, courseId: "", sectionId: "" }));
+        setSections([]);
+      } else if (isInitialLoadRef.current) {
+        console.log(
+          "[FilterCourses] Initial load, keeping courseId:",
+          formData.courseId,
+        );
+        isInitialLoadRef.current = false;
+      }
+      prevSemesterRef.current = formData.semesterId;
+    } else if (!formData.semesterId) {
+      setCourses([]);
+      setSections([]);
+      setFormData((prev) => ({ ...prev, courseId: "", sectionId: "" }));
+    }
+  }, [formData.semesterId, formData.type, allCourses]);
+
+  // Filter sections when course changes
+  useEffect(() => {
+    if (formData.courseId) {
+      // Filter allSections by course
+      const filtered = allSections.filter(
+        (s) => s.courseId === formData.courseId,
+      );
+      console.log("[FilterSections] Course:", formData.courseId);
+      console.log(
+        "[FilterSections] Looking for sectionId:",
+        formData.sectionId,
+      );
+      console.log(
+        "[FilterSections] Available sections:",
+        filtered.map((s) => ({ id: s.id, name: s.name })),
+      );
+      setSections(filtered);
+
+      // Only clear sectionId if user manually changed course (not initial load)
+      const courseChanged =
+        prevCourseRef.current && prevCourseRef.current !== formData.courseId;
+      if (courseChanged) {
+        console.log("[FilterSections] Course changed, clearing sectionId");
+        setFormData((prev) => ({ ...prev, sectionId: "" }));
+      } else {
+        console.log(
+          "[FilterSections] Initial load or same course, keeping sectionId:",
+          formData.sectionId,
+        );
+      }
+      prevCourseRef.current = formData.courseId;
     } else {
       setSections([]);
     }
-  }, [formData.courseId, formData.type]);
+  }, [formData.courseId, allSections]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -112,6 +235,30 @@ export default function CreateEventModal({
       return;
     }
 
+    if (formData.type !== "institution" && !formData.courseId) {
+      setError("Course is required for this event type");
+      setLoading(false);
+      return;
+    }
+
+    if (formData.type !== "institution" && !formData.sectionId) {
+      setError("Section is required for this event type");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.startTime) {
+      setError("Start time is required");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.endTime) {
+      setError("End time is required");
+      setLoading(false);
+      return;
+    }
+
     try {
       const payload = {
         type: formData.type,
@@ -126,9 +273,13 @@ export default function CreateEventModal({
         endTime: formData.endTime || undefined,
       };
 
+      console.log("[CreateEventModal] Payload to send:", payload);
+
       if (editEvent) {
+        console.log("[CreateEventModal] Updating event:", editEvent.id);
         await eventsApi.update(editEvent.id, payload);
       } else {
+        console.log("[CreateEventModal] Creating new event");
         await eventsApi.create(payload);
       }
 
@@ -157,7 +308,7 @@ export default function CreateEventModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-lg max-w-md md:max-w-[580px] w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">
             {editEvent ? "Edit Event" : "Create Event"}
@@ -276,30 +427,66 @@ export default function CreateEventModal({
 
           {/* Course (if type is course or section) */}
           {formData.type !== "institution" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Course *
-              </label>
-              <CustomDropdown
-                options={[
-                  { id: "", name: "Select a course" },
-                  ...(Array.isArray(courses)
-                    ? courses.map((c) => ({ id: c.id, name: c.title }))
-                    : []),
-                ]}
-                value={formData.courseId}
-                onChange={(val) =>
-                  setFormData((prev) => ({ ...prev, courseId: val }))
-                }
-                placeholder="Select a course"
-                isSmallScreen={false}
-                BRAND={BRAND}
-              />
-            </div>
+            <>
+              {/* Semester */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Semester *
+                </label>
+                <CustomDropdown
+                  options={[
+                    { id: "", name: "Select a semester" },
+                    ...(Array.isArray(semesters)
+                      ? semesters.map((s) => ({
+                          id: s.id,
+                          name: `${s.year}-${s.name}`,
+                        }))
+                      : []),
+                  ]}
+                  value={formData.semesterId}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, semesterId: val }))
+                  }
+                  placeholder="Select a semester"
+                  isSmallScreen={false}
+                  BRAND={BRAND}
+                  dropdownDirection="up"
+                />
+              </div>
+
+              {/* Course */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Course *
+                </label>
+                <CustomDropdown
+                  options={[
+                    { id: "", name: "Select a course" },
+                    ...(Array.isArray(courses)
+                      ? courses.map((c) => ({ id: c.id, name: c.title }))
+                      : []),
+                  ]}
+                  value={formData.courseId}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, courseId: val }))
+                  }
+                  placeholder="Select a course"
+                  isSmallScreen={false}
+                  BRAND={BRAND}
+                  disabled={!formData.semesterId}
+                  dropdownDirection="up"
+                />
+                {!formData.semesterId && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select a semester first
+                  </p>
+                )}
+              </div>
+            </>
           )}
 
-          {/* Section (only show if course is selected and type is 'section') */}
-          {formData.type === "section" && formData.courseId && (
+          {/* Section (always show for non-institution events) */}
+          {formData.type !== "institution" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Section *
@@ -318,7 +505,14 @@ export default function CreateEventModal({
                 placeholder="Select a section"
                 isSmallScreen={false}
                 BRAND={BRAND}
+                disabled={!formData.courseId}
+                dropdownDirection="up"
               />
+              {!formData.courseId && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Select a course first
+                </p>
+              )}
             </div>
           )}
 
@@ -340,13 +534,14 @@ export default function CreateEventModal({
           {/* End Time */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              End Time
+              End Time *
             </label>
             <input
               type="datetime-local"
               name="endTime"
               value={formData.endTime}
               onChange={handleChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
             />
           </div>

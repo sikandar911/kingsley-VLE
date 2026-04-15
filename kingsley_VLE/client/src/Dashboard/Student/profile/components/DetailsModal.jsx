@@ -32,8 +32,8 @@ export default function DetailsModal({ assignment, onClose }) {
               <p className="text-sm text-gray-800">{fmt(assignment?.dueDate)}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Points</p>
-              <p className="text-sm text-gray-800">{assignment?.totalPoints ?? '—'} pts</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Total Marks</p>
+              <p className="text-sm text-gray-800">{assignment?.totalMarks ?? '—'} marks</p>
             </div>
           </div>
 

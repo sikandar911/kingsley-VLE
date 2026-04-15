@@ -257,6 +257,11 @@ export const getEvent = async (req, res) => {
  *         description: Validation error
  */
 export const createEvent = async (req, res) => {
+  console.log(
+    "[CREATE EVENT] Received request body:",
+    JSON.stringify(req.body, null, 2),
+  );
+
   const {
     type,
     title,
@@ -269,6 +274,19 @@ export const createEvent = async (req, res) => {
     startTime,
     endTime,
   } = req.body;
+
+  console.log("[CREATE EVENT] Parsed fields:", {
+    type,
+    title,
+    description,
+    location,
+    color,
+    semesterId,
+    courseId,
+    sectionId,
+    startTime,
+    endTime,
+  });
 
   if (!type || !title) {
     return res.status(400).json({ error: "type and title are required" });
@@ -370,6 +388,12 @@ export const createEvent = async (req, res) => {
  */
 export const updateEvent = async (req, res) => {
   const { id } = req.params;
+  console.log("[UPDATE EVENT] Event ID:", id);
+  console.log(
+    "[UPDATE EVENT] Received request body:",
+    JSON.stringify(req.body, null, 2),
+  );
+
   const {
     type,
     title,
@@ -382,6 +406,19 @@ export const updateEvent = async (req, res) => {
     startTime,
     endTime,
   } = req.body;
+
+  console.log("[UPDATE EVENT] Parsed fields:", {
+    type,
+    title,
+    description,
+    location,
+    color,
+    semesterId,
+    courseId,
+    sectionId,
+    startTime,
+    endTime,
+  });
 
   try {
     const existing = await prisma.event.findUnique({ where: { id } });

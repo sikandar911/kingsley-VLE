@@ -5,16 +5,49 @@ import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1142";
 
-const fmt = (d) =>
-  d
-    ? new Date(d).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
+// Format datetime keeping UTC date but showing local time
+// This prevents timezone shifts from changing which date the event is on
+const fmt = (d) => {
+  if (!d) return "—";
+
+  // Convert to string if it's a Date object
+  const dateStr = d instanceof Date ? d.toISOString() : String(d);
+
+  // Extract UTC date from ISO string (YYYY-MM-DD part before T)
+  const utcDateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!utcDateMatch) return "—";
+
+  const [, year, month, day] = utcDateMatch;
+  const monthNum = parseInt(month) - 1;
+  const dayNum = parseInt(day);
+
+  // Format time in local timezone
+  const date = new Date(d);
+  const timeStr = date.toLocaleString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  // Get month name
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const monthName = monthNames[monthNum];
+
+  return `${monthName} ${dayNum}, ${year}, ${timeStr}`;
+};
 
 const typeBadge = {
   institution: "bg-purple-100 text-purple-700",
@@ -112,7 +145,7 @@ export default function AdminEventsPage() {
         <div className="lg:flex items-center justify-between">
           <div>
             <h1 className="text-xl md:text-2xl lg:text-2xl font-bold text-gray-900">
-              Events Calendar
+              Events
             </h1>
             <p className="text-sm text-gray-500 mt-1">Events › Management</p>
           </div>

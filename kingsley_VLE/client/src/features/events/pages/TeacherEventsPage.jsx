@@ -1,19 +1,54 @@
 import { useState, useEffect, useCallback } from "react";
 import { eventsApi } from "../api/events.api";
+import { enrollmentsApi } from "../../enrollments/api/enrollments.api";
+import { useAuth } from "../../../context/AuthContext";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1d3e";
 
-const fmt = (d) =>
-  d
-    ? new Date(d).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
+// Format datetime keeping UTC date but showing local time
+// This prevents timezone shifts from changing which date the event is on
+const fmt = (d) => {
+  if (!d) return "—";
+
+  // Convert to string if it's a Date object
+  const dateStr = d instanceof Date ? d.toISOString() : String(d);
+
+  // Extract UTC date from ISO string (YYYY-MM-DD part before T)
+  const utcDateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!utcDateMatch) return "—";
+
+  const [, year, month, day] = utcDateMatch;
+  const monthNum = parseInt(month) - 1;
+  const dayNum = parseInt(day);
+
+  // Format time in local timezone
+  const date = new Date(d);
+  const timeStr = date.toLocaleString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  // Get month name
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const monthName = monthNames[monthNum];
+
+  return `${monthName} ${dayNum}, ${year}, ${timeStr}`;
+};
 
 const typeBadge = {
   institution: "bg-purple-100 text-purple-700",
@@ -28,23 +63,69 @@ const typeLabel = {
 };
 
 export default function TeacherEventsPage() {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
+  const [teacherCourses, setTeacherCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   const load = useCallback(() => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    eventsApi
-      .list(filterType ? { type: filterType } : {})
-      .then((res) => {
-        const data = res.data.data || res.data;
-        setEvents(Array.isArray(data) ? data : []);
+    Promise.all([
+      eventsApi.list(filterType ? { type: filterType } : {}),
+      enrollmentsApi.teachers.list(),
+    ])
+      .then(([eventsRes, enrollmentsRes]) => {
+        const eventData = eventsRes.data.data || eventsRes.data;
+        const enrollmentData = Array.isArray(enrollmentsRes.data)
+          ? enrollmentsRes.data
+          : enrollmentsRes.data?.data || [];
+
+        // Get current teacher's profile ID
+        const currentTeacherId = user?.teacherProfile?.id;
+
+        // Filter enrollments to get current teacher's courses
+        const teacherEnrollments = enrollmentData.filter(
+          (enrollment) => enrollment.teacher?.id === currentTeacherId,
+        );
+        const teacherCourseIds = teacherEnrollments
+          .map((enrollment) => enrollment.course?.id)
+          .filter(Boolean);
+
+        // Filter events based on conditions:
+        // 1. Show all "institution" type events
+        // 2. Show "course" type events only for courses assigned to this teacher
+        const filteredEvents = Array.isArray(eventData)
+          ? eventData.filter((event) => {
+              if (event.type === "institution") return true;
+              if (
+                event.type === "course" &&
+                event.courseId &&
+                teacherCourseIds.includes(event.courseId)
+              )
+                return true;
+              return false;
+            })
+          : [];
+
+        setEvents(filteredEvents);
+        setTeacherCourses(teacherCourseIds);
       })
-      .catch(() => setEvents([]))
+      .catch(() => {
+        setEvents([]);
+        setTeacherCourses([]);
+      })
       .finally(() => setLoading(false));
-  }, [filterType]);
+  }, [filterType, user?.id, user?.teacherProfile?.id]);
+
+  console.log("events", events);
 
   useEffect(() => {
     load();
@@ -93,7 +174,7 @@ export default function TeacherEventsPage() {
       <div className="bg-white border-b border-gray-200 px-4 md:px-8 py-4 lg:py-6">
         <div>
           <h1 className="text-xl md:text-2xl lg:text-2xl font-bold text-gray-900">
-            Events Calendar
+            Events
           </h1>
           <p className="text-sm text-gray-500 mt-1">Events › View</p>
         </div>
