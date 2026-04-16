@@ -29,7 +29,7 @@ import { uploadToAzure, deleteFromAzure, generateSecureSASUrl } from '../../conf
  *                 format: binary
  *               fileType:
  *                 type: string
- *                 enum: [assignment, class_material, class_record]
+ *                 enum: [assignment, class_material, class_record, submission]
  *     responses:
  *       201:
  *         description: File uploaded, returns File record
@@ -49,6 +49,12 @@ export const uploadFile = async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file provided' })
 
     const { fileType } = req.body
+
+    // Students can only upload submission files
+    if (req.user.role === 'student' && fileType && fileType !== 'submission') {
+      return res.status(403).json({ error: 'Students can only upload submission files' })
+    }
+
     const { buffer, originalname, mimetype } = req.file
 
     const { url, blobName } = await uploadToAzure(buffer, originalname, mimetype)
@@ -83,7 +89,7 @@ export const uploadFile = async (req, res) => {
  *         name: fileType
  *         schema:
  *           type: string
- *           enum: [assignment, class_material, class_record]
+ *           enum: [assignment, class_material, class_record, submission]
  *       - in: query
  *         name: page
  *         schema: { type: integer, default: 1 }

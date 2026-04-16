@@ -7,6 +7,7 @@ import { courseModulesApi } from "../../courseModules/api/courseModules.api";
 import api from "../../../lib/api";
 import { useAuth } from "../../../context/AuthContext";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
+import FileUploadZone from "./FileUploadZone";
 
 const BRAND = "#6b1142";
 
@@ -78,6 +79,10 @@ export default function CreateAssignmentModal({
   const [loading, setLoading] = useState(false);
   const [metaLoading, setMetaLoading] = useState(true);
   const [error, setError] = useState("");
+  // Files attached to the assignment (list of File records {id, name, fileUrl})
+  const [uploadedFiles, setUploadedFiles] = useState(
+    isEdit ? (editAssignment.assignmentFiles || []).map((af) => af.file || af) : []
+  );
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -313,13 +318,13 @@ export default function CreateAssignmentModal({
   useEffect(() => {
     if (form.courseId) {
       courseModulesApi
-        .list({ courseId: form.courseId, ...(form.sectionId ? { sectionId: form.sectionId } : {}), status: 'active' })
+        .list({ courseId: form.courseId, ...(form.sectionId ? { sectionId: form.sectionId } : {}) })
         .then((res) => setCourseModules(res.data?.modules || []))
         .catch(() => setCourseModules([]))
     } else {
       setCourseModules([])
+      setForm((prev) => ({ ...prev, courseModuleId: '' }))
     }
-    setForm((prev) => ({ ...prev, courseModuleId: '' }))
   }, [form.courseId, form.sectionId]);
 
   // For edit mode: Ensure filtered lists include the previously selected values
@@ -410,6 +415,7 @@ export default function CreateAssignmentModal({
         allowLateSubmission: Boolean(form.allowLateSubmission),
         status: statusOverride || form.status,
         targetType: form.sectionId ? "section" : "individual",
+        assignmentFileIds: uploadedFiles.map((f) => f.id),
         ...(isAdmin && form.teacherId ? { teacherId: form.teacherId } : {}),
       };
       if (isEdit) {
@@ -639,6 +645,19 @@ export default function CreateAssignmentModal({
                     rows={6}
                     placeholder="Step-by-step instructions, requirements, resources…"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] resize-none"
+                  />
+                </div>
+
+                {/* Attachments */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
+                  <label className="block text-sm font-semibold text-gray-900 mb-3">
+                    Attachments <span className="text-xs font-normal text-gray-400">(optional — students will see these)</span>
+                  </label>
+                  <FileUploadZone
+                    fileType="assignment"
+                    uploadedFiles={uploadedFiles}
+                    onFilesChange={setUploadedFiles}
+                    disabled={loading}
                   />
                 </div>
               </div>

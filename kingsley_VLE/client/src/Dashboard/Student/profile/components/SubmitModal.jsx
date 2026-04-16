@@ -1,12 +1,22 @@
 import { useState } from 'react'
 import { fmt } from '../utils/helpers'
+import { assignmentsApi } from '../../../../features/assignments/api/assignments.api'
+import FileUploadZone from '../../../../features/assignments/components/FileUploadZone'
 
 export default function SubmitModal({ assignment, onClose, onSubmit, submitting }) {
   const [notes, setNotes] = useState('')
+  const [uploadedFiles, setUploadedFiles] = useState([])
+  const [uploading, setUploading] = useState(false)
+
+  const handleFilesChange = (files) => {
+    setUploadedFiles(files)
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSubmit(assignment, { notes })
+    // Transform uploaded files array to submissionFileIds array
+    const submissionFileIds = uploadedFiles.map(f => f.id)
+    onSubmit(assignment, { notes, submissionFileIds })
   }
 
   return (
@@ -35,12 +45,15 @@ export default function SubmitModal({ assignment, onClose, onSubmit, submitting 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* File Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Attach File <span className="text-gray-400">(optional)</span>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attach Files <span className="text-gray-400">(optional)</span>
             </label>
-            <input
-              type="file"
-              className="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#6b1d3e] file:text-white hover:file:opacity-90 cursor-pointer border border-gray-200 rounded-lg p-1"
+            <FileUploadZone
+              fileType="submission"
+              uploadedFiles={uploadedFiles}
+              onFilesChange={handleFilesChange}
+              maxFiles={5}
+              disabled={uploading || submitting}
             />
           </div>
 
@@ -62,14 +75,14 @@ export default function SubmitModal({ assignment, onClose, onSubmit, submitting 
             <button
               type="button"
               onClick={onClose}
-              disabled={submitting}
+              disabled={submitting || uploading}
               className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || uploading}
               style={{ backgroundColor: '#6b1d3e' }}
               className="flex-1 px-4 py-2.5 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-60 flex items-center justify-center gap-2"
             >

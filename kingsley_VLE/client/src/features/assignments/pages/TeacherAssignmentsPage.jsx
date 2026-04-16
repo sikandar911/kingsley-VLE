@@ -36,6 +36,7 @@ export default function TeacherAssignmentsPage() {
   const [preview, setPreview] = useState(null);
   const [viewSubmissions, setViewSubmissions] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -99,6 +100,21 @@ export default function TeacherAssignmentsPage() {
       alert(e.response?.data?.error || "Failed to update status");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleDelete = async (assignment) => {
+    if (!window.confirm(`Are you sure you want to delete "${assignment.title}"? This action cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(assignment.id);
+    try {
+      await assignmentsApi.delete(assignment.id);
+      load();
+    } catch (e) {
+      alert(e.response?.data?.error || "Failed to delete assignment");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -345,6 +361,20 @@ export default function TeacherAssignmentsPage() {
                                 {updatingId === a.id ? "🟡" : "🔴"}
                               </button>
                             )}
+
+                            {/* Delete */}
+                            <button
+                              onClick={() => handleDelete(a)}
+                              disabled={deletingId === a.id}
+                              className={`p-1.5 rounded transition text-base ${
+                                deletingId === a.id
+                                  ? "animate-spin"
+                                  : "hover:bg-red-100"
+                              }`}
+                              title="Delete Assignment"
+                            >
+                              {deletingId === a.id ? "⏳" : "🗑️"}
+                            </button>
                           </div>
                         </td>
                       </tr>

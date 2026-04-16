@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ViewSubmissionsModal from "./ViewSubmissionsModal";
 import StudentSubmitModal from "./StudentSubmitModal";
+import FileViewerModal from "../../courseChat/components/FileViewerModal";
 
 const fmt = (d) =>
   d
@@ -34,6 +35,7 @@ export default function AssignmentPreviewModal({
 }) {
   const [showSubmissions, setShowSubmissions] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
+  const [viewerFile, setViewerFile] = useState(null);
 
   const mySubmissions = assignment.submissions || [];
   const isOverdue = Boolean(
@@ -171,6 +173,37 @@ export default function AssignmentPreviewModal({
                     </div>
                   )}
 
+                  {/* Attachments */}
+                  {assignment.assignmentFiles?.length > 0 && (
+                    <div>
+                      <h2 className="text-base font-bold text-gray-900 mb-3">
+                        Attachments
+                      </h2>
+                      <div className="space-y-2">
+                        {assignment.assignmentFiles.map((af) => {
+                          const f = af.file || af;
+                          return (
+                            <button
+                              key={af.id || f.id}
+                              type="button"
+                              onClick={() => setViewerFile({ fileId: f.id, name: f.name, fileUrl: f.fileUrl })}
+                              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition text-left group"
+                            >
+                              <svg className="w-5 h-5 text-[#6b1142] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="flex-1 text-sm text-gray-800 truncate font-medium">{f.name}</span>
+                              <span className="text-xs text-[#6b1142] opacity-0 group-hover:opacity-100 transition font-semibold flex-shrink-0">
+                                View →
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Student submission history */}
                   {role === "student" && mySubmissions.length > 0 && (
                     <div>
@@ -213,14 +246,23 @@ export default function AssignmentPreviewModal({
                                 {sub.submissionText}
                               </p>
                             )}
-                            {sub.submissionFileUrl && (
+                            {sub.submissionFile && (
+                              <button
+                                type="button"
+                                onClick={() => setViewerFile({ fileId: sub.submissionFile.id, name: sub.submissionFile.name, fileUrl: sub.submissionFile.fileUrl })}
+                                className="text-xs text-[#6b1142] underline flex items-center gap-1 mb-2 hover:text-[#5a0d38]"
+                              >
+                                📎 View submitted file
+                              </button>
+                            )}
+                            {!sub.submissionFile && sub.submissionFileUrl && (
                               <a
                                 href={sub.submissionFileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-blue-600 underline block mb-2"
                               >
-                                📎 View submitted file
+                                📎 View submitted link
                               </a>
                             )}
 
@@ -414,6 +456,13 @@ export default function AssignmentPreviewModal({
             onRefresh?.();
             onClose();
           }}
+        />
+      )}
+
+      {viewerFile && (
+        <FileViewerModal
+          file={viewerFile}
+          onClose={() => setViewerFile(null)}
         />
       )}
     </>

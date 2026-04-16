@@ -175,6 +175,64 @@ export const sendMessage = async (req, res) => {
         ? content.replace(/<[^>]*>/g, '').trim() || `Shared in course chat`
         : `Shared in course chat`
       
+      // Fetch the latest active course module for this course/section
+      let courseModuleId = null
+      console.log('\n========== [sendMessage] MODULE ASSIGNMENT START ==========')
+      console.log('[sendMessage] Resolving module with:', {
+        courseId,
+        resolvedUploadSectionId,
+        resolvedSemesterId,
+      })
+      
+      if (courseId) {
+        try {
+          console.log('[sendMessage] ✓ courseId exists, proceeding with module query...')
+          
+          // First, try to find active modules for this specific section + course
+          console.log('[sendMessage] Query 1: Searching for section-specific active modules (sectionId =', resolvedUploadSectionId, ')')
+          let activeModules = await prisma.courseModule.findMany({
+            where: {
+              courseId,
+              sectionId: resolvedUploadSectionId, // Match the specific section
+              status: 'active',
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+            select: { id: true, name: true, status: true, sectionId: true, courseId: true },
+          })
+          
+          console.log('[sendMessage] Query 1 result: Found', activeModules.length, 'modules', activeModules)
+          
+          // If no section-specific module found, look for course-wide modules (sectionId=null)
+          if (activeModules.length === 0) {
+            console.log('[sendMessage] Query 2: No section-specific modules, searching for course-wide modules (sectionId = null)...')
+            activeModules = await prisma.courseModule.findMany({
+              where: {
+                courseId,
+                sectionId: null, // Course-wide modules
+                status: 'active',
+              },
+              orderBy: { updatedAt: 'desc' },
+              take: 1,
+              select: { id: true, name: true, status: true, sectionId: true, courseId: true },
+            })
+            console.log('[sendMessage] Query 2 result: Found', activeModules.length, 'modules', activeModules)
+          }
+          
+          if (activeModules.length > 0) {
+            courseModuleId = activeModules[0].id
+            console.log(`[sendMessage] ✓ ASSIGNED module ${courseModuleId} (${activeModules[0].name})`)
+          } else {
+            console.warn('[sendMessage] ✗ No active modules found in any query')
+          }
+        } catch (err) {
+          console.error('[sendMessage] ✗ ERROR fetching modules:', err.message, err.stack)
+        }
+      } else {
+        console.warn('[sendMessage] ✗ Missing courseId - skipping module assignment')
+      }
+      console.log('========== [sendMessage] MODULE ASSIGNMENT END ==========\n')
+      
       const material = await prisma.classMaterial.create({
         data: {
           title: req.file.originalname,
@@ -184,9 +242,12 @@ export const sendMessage = async (req, res) => {
           courseId,
           sectionId: resolvedUploadSectionId,
           semesterId: resolvedSemesterId,
+          courseModuleId, // Include the latest active module (or null if none found)
           uploadedBy: req.user.id,
         },
       })
+      
+      console.log('[sendMessage] Created material with courseModuleId:', material.courseModuleId)
 
       classMaterialId = material.id
     }

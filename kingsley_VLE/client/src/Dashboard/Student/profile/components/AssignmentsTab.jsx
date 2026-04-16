@@ -4,29 +4,39 @@ import { useAssignmentsByCourse } from "../hooks/useAssignmentsByCourse";
 import { fmt, isOverdue } from "../utils/helpers";
 import SubmitModal from "./SubmitModal";
 import DetailsModal from "./DetailsModal";
+import EditSubmissionModal from "./EditSubmissionModal";
+import FileViewerModal from "../../../../features/courseChat/components/FileViewerModal";
 
 export default function AssignmentsTab({ courseId, sectionId }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const { assignments, submittedIds, loading, error, totalCount, totalPages } =
+  const [expandedSubmission, setExpandedSubmission] = useState(null);
+  const [viewFile, setViewFile] = useState(null);
+  const { assignments, submittedIds, setSubmittedIds, loading, error, totalCount, totalPages, currentPage: hookCurrentPage, refetch } =
     useAssignmentsByCourse(courseId, sectionId, currentPage);
   const [submitModal, setSubmitModal] = useState(null);
   const [detailsModal, setDetailsModal] = useState(null);
+  const [editSubmissionModal, setEditSubmissionModal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(null);
   const [submitError, setSubmitError] = useState(null);
 
-  const handleSubmitAssignment = async (assignment, { notes }) => {
+  const handleSubmitAssignment = async (assignment, { notes, submissionFileIds = [] }) => {
     setSubmitting(true);
     setSubmitError(null);
     try {
       const payload = {};
-      if (notes) payload.notes = notes;
+      if (notes) payload.submissionText = notes;
+      if (submissionFileIds && submissionFileIds.length > 0) payload.submissionFileIds = submissionFileIds;
 
       await assignmentsApi.submit(assignment.id, payload);
 
       setSubmittedIds((prev) => new Set([...prev, assignment.id]));
       setSubmitSuccess(assignment.title);
       setSubmitModal(null);
+      
+      // Refetch to show newly submitted data in accordion
+      await refetch();
+      setExpandedSubmission(assignment.id);
 
       setTimeout(() => setSubmitSuccess(null), 3500);
     } catch (err) {
@@ -69,6 +79,33 @@ export default function AssignmentsTab({ courseId, sectionId }) {
           assignment={detailsModal}
           onClose={() => setDetailsModal(null)}
         />
+      )}
+      {editSubmissionModal && (
+        <EditSubmissionModal
+          assignment={editSubmissionModal.assignment}
+          submission={editSubmissionModal.submission}
+          onClose={() => setEditSubmissionModal(null)}
+          onSubmit={() => {
+            setEditSubmissionModal(null);
+            setSubmitSuccess(editSubmissionModal.assignment.title);
+            // Trigger refresh by setting current page
+            setCurrentPage(currentPage);
+            setTimeout(() => setSubmitSuccess(null), 3500);
+          }}
+          isOverdue={isOverdue(editSubmissionModal.assignment.dueDate)}
+          isGraded={
+            editSubmissionModal.submission?.marks !== null &&
+            editSubmissionModal.submission?.marks !== undefined
+          }
+        />
+      )}
+      {viewFile && (
+        <div className="fixed inset-0 z-[60]">
+          <FileViewerModal
+            file={viewFile}
+            onClose={() => setViewFile(null)}
+          />
+        </div>
       )}
 
       <div className="space-y-6">
@@ -232,17 +269,59 @@ export default function AssignmentsTab({ courseId, sectionId }) {
             <h3 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wide">
               Submitted ({submitted.length})
             </h3>
-            <div className="space-y-3">
-              {submitted.map((a) => (
-                <div
-                  key={a.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 opacity-75"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+            <div className="space-y-2">
+              {submitted.map((a) => {
+                const submission = a.submissions?.[0]; // Latest submission
+                const isGraded = submission?.marks !== null && submission?.marks !== undefined;
+                const canEditSubmission =
+                  !isOverdue(a.dueDate) && !isGraded;
+                const isExpanded = expandedSubmission === a.id;
+
+                return (
+                  <div
+                    key={a.id}
+                    className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+                  >
+                    {/* Accordion Header */}
+                    <button
+                      onClick={() =>
+                        setExpandedSubmission(isExpanded ? null : a.id)
+                      }
+                      className="w-full flex items-start justify-between gap-3 p-5 hover:bg-gray-50 transition text-left"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                          <svg
+                            className="w-5 h-5 text-green-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {a.title}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Due: {fmt(a.dueDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                          ✓ Submitted
+                        </span>
                         <svg
-                          className="w-5 h-5 text-green-600"
+                          className={`w-5 h-5 text-gray-400 transition-transform ${
+                            isExpanded ? "rotate-180" : ""
+                          }`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -251,25 +330,147 @@ export default function AssignmentsTab({ courseId, sectionId }) {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M5 13l4 4L19 7"
+                            d="M19 14l-7 7m0 0l-7-7m7 7V3"
                           />
                         </svg>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-700 truncate">
-                          {a.title}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Due: {fmt(a.dueDate)}
-                        </p>
+                    </button>
+
+                    {/* Accordion Content */}
+                    {isExpanded && submission && (
+                      <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
+                        {/* Submitted files - handle both multiple and single */}
+                        {(submission.submissionFiles?.length > 0 || submission.submissionFile) && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-gray-600 uppercase">
+                              Submitted Files
+                            </p>
+                            <div className="space-y-2">
+                              {submission.submissionFiles?.map((file) => (
+                                <button
+                                  key={file.id}
+                                  onClick={() => setViewFile(file)}
+                                  className="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition text-left group"
+                                >
+                                  <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                                    <svg
+                                      className="w-4 h-4 text-blue-600"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-blue-900 truncate font-medium group-hover:underline">
+                                      {file.name}
+                                    </p>
+                                  </div>
+                                  <span className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition font-semibold whitespace-nowrap">
+                                    View →
+                                  </span>
+                                </button>
+                              ))}
+                              {/* Fallback for single file (backward compatibility) */}
+                              {!submission.submissionFiles?.length && submission.submissionFile && (
+                                <button
+                                  onClick={() => setViewFile(submission.submissionFile)}
+                                  className="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition text-left group"
+                                >
+                                  <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                                    <svg
+                                      className="w-4 h-4 text-blue-600"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-blue-900 truncate font-medium group-hover:underline">
+                                      {submission.submissionFile.name}
+                                    </p>
+                                  </div>
+                                  <span className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition font-semibold whitespace-nowrap">
+                                    View →
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Submitted notes */}
+                        {submission.submissionText && (
+                          <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                            <p className="text-xs text-gray-600 font-semibold mb-1">
+                              Your Notes
+                            </p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">
+                              {submission.submissionText}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Grading details */}
+                        {isGraded && (
+                          <div className="grid grid-cols-3 gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            {submission.marks !== null &&
+                              submission.marks !== undefined && (
+                                <div>
+                                  <p className="text-xs text-yellow-700 font-semibold">
+                                    Marks
+                                  </p>
+                                  <p className="text-lg font-bold text-yellow-900">
+                                    {submission.marks}/{a.totalMarks}
+                                  </p>
+                                </div>
+                              )}
+                            {submission.gradeLetter && (
+                              <div>
+                                <p className="text-xs text-yellow-700 font-semibold">
+                                  Grade
+                                </p>
+                                <p className="text-lg font-bold text-yellow-900">
+                                  {submission.gradeLetter}
+                                </p>
+                              </div>
+                            )}
+                            {submission.feedback && (
+                              <div className="col-span-3 mt-2 pt-2 border-t border-yellow-200">
+                                <p className="text-xs text-yellow-700 font-semibold mb-1">
+                                  Feedback
+                                </p>
+                                <p className="text-sm text-yellow-900 line-clamp-2 whitespace-pre-wrap">
+                                  {submission.feedback}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
+                          {canEditSubmission && (
+                            <button
+                              onClick={() => setEditSubmissionModal({ assignment: a, submission })}
+                              className="flex-1 px-3 py-2 text-xs font-semibold text-[#6b1142] bg-[#6b1142]/10 rounded-lg hover:bg-[#6b1142]/20 transition"
+                            >
+                              Edit Submission
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setDetailsModal(a)}
+                            className="flex-1 px-3 py-2 text-xs font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+                          >
+                            View Details
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
-                      ✓ Submitted
-                    </span>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

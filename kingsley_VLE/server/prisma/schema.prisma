@@ -21,6 +21,7 @@ enum FileCategory {
   assignment
   class_material
   class_record
+  submission
 }
 
 enum AssignmentTarget {
@@ -387,6 +388,7 @@ model Assignment {
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   dueDate DateTime?
 
@@ -447,6 +449,8 @@ model AssignmentSubmission {
 
   submissionFileId String?
   submissionFile File? @relation(fields: [submissionFileId], references: [id])
+
+  submissionFileIds String? @map("submission_file_ids") // JSON array of file IDs: ["id1", "id2"]
 
   submissionText String? @map("submission_text")
 

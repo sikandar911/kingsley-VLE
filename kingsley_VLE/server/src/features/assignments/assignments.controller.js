@@ -57,6 +57,36 @@ const submissionInclude = {
   },
 }
 
+// Helper function to populate submissionFiles array from submissionFileIds JSON
+const populateSubmissionFiles = async (submissions, prisma) => {
+  if (!Array.isArray(submissions)) {
+    submissions = [submissions]
+  }
+  
+  for (const submission of submissions) {
+    if (submission.submissionFileIds) {
+      try {
+        const fileIds = JSON.parse(submission.submissionFileIds)
+        if (fileIds?.length > 0) {
+          const files = await prisma.file.findMany({
+            where: { id: { in: fileIds } },
+          })
+          submission.submissionFiles = files
+        } else {
+          submission.submissionFiles = []
+        }
+      } catch (err) {
+        console.error('Error parsing submissionFileIds:', err)
+        submission.submissionFiles = []
+      }
+    } else {
+      submission.submissionFiles = submission.submissionFile ? [submission.submissionFile] : []
+    }
+  }
+  
+  return Array.isArray(submissions) ? submissions : submissions
+}
+
 const parseDate = (value) => (value ? new Date(value) : null)
 
 const normalizeRubrics = (rubrics) => {
@@ -525,8 +555,11 @@ export const listAssignments = async (req, res) => {
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     })
 
-    console.log('[listAssignments] Found assignments from DB:', assignments.length)
-    return res.json(assignments)
+    // Filter out soft-deleted assignments (until Prisma client is regenerated)
+    const activeAssignments = assignments.filter((a) => !a.deletedAt)
+
+    console.log('[listAssignments] Found assignments from DB:', activeAssignments.length)
+    return res.json(activeAssignments)
   } catch (err) {
     console.error('List assignments error:', err)
     return res.status(500).json({ error: 'Server error' })
@@ -888,6 +921,70 @@ export const updateAssignmentStatus = async (req, res) => {
 
 /**
  * @swagger
+ * /api/assignments/{id}:
+ *   delete:
+ *     summary: Delete an assignment (soft delete - sets deletedAt timestamp)
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Assignment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Assignment not found
+ *       403:
+ *         description: Not authorized to delete this assignment
+ */
+export const deleteAssignment = async (req, res) => {
+  try {
+    const existing = await prisma.assignment.findUnique({ where: { id: req.params.id } })
+    if (!existing) {
+      return res.status(404).json({ error: 'Assignment not found' })
+    }
+
+    if (req.user.role === 'teacher') {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id)
+      if (!teacherProfile || teacherProfile.id !== existing.teacherId) {
+        return res.status(403).json({ error: 'You can only delete your own assignments' })
+      }
+    }
+
+    // Soft delete: set deletedAt timestamp
+    await prisma.assignment.update({
+      where: { id: req.params.id },
+      data: { deletedAt: new Date() },
+    })
+
+    // Clean up calendar reminders associated with this assignment
+    await prisma.calendarReminder.deleteMany({
+      where: {
+        assignmentId: req.params.id,
+        type: 'assignment',
+      },
+    })
+
+    return res.json({ message: 'Assignment deleted successfully' })
+  } catch (err) {
+    console.error('Delete assignment error:', err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+}
+
+/**
+ * @swagger
  * /api/assignments/{id}/submissions:
  *   post:
  *     summary: Submit or resubmit an assignment as a student
@@ -911,6 +1008,10 @@ export const updateAssignmentStatus = async (req, res) => {
  *                 type: string
  *               submissionFileId:
  *                 type: string
+ *               submissionFileIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *               submissionFileUrl:
  *                 type: string
  *     responses:
@@ -922,10 +1023,10 @@ export const updateAssignmentStatus = async (req, res) => {
  *               $ref: '#/components/schemas/Submission'
  */
 export const submitAssignment = async (req, res) => {
-  const { submissionText, submissionFileId, submissionFileUrl } = req.body
+  const { submissionText, submissionFileId, submissionFileIds, submissionFileUrl } = req.body
 
-  if (!submissionText && !submissionFileId && !submissionFileUrl) {
-    return res.status(400).json({ error: 'Provide submissionText, submissionFileId, or submissionFileUrl' })
+  if (!submissionText && !submissionFileId && !submissionFileIds?.length && !submissionFileUrl) {
+    return res.status(400).json({ error: 'Provide submissionText, submissionFileId(s), or submissionFileUrl' })
   }
 
   try {
@@ -962,11 +1063,25 @@ export const submitAssignment = async (req, res) => {
       return res.status(400).json({ error: 'Late submission is not allowed for this assignment' })
     }
 
+    // Validate single file if provided
     if (submissionFileId) {
       const file = await prisma.file.findUnique({ where: { id: submissionFileId } })
       if (!file) {
         return res.status(400).json({ error: 'submissionFileId is invalid' })
       }
+    }
+
+    // Validate multiple files if provided
+    let fileIdsToStore = []
+    if (submissionFileIds?.length > 0) {
+      const files = await prisma.file.findMany({
+        where: { id: { in: submissionFileIds } },
+        select: { id: true },
+      })
+      if (files.length !== submissionFileIds.length) {
+        return res.status(400).json({ error: 'One or more submissionFileIds are invalid' })
+      }
+      fileIdsToStore = submissionFileIds
     }
 
     const latestAttempt = await prisma.assignmentSubmission.findFirst({
@@ -984,12 +1099,22 @@ export const submitAssignment = async (req, res) => {
         studentId: studentProfile.id,
         submissionText: submissionText || null,
         submissionFileId: submissionFileId || null,
+        submissionFileIds: fileIdsToStore.length > 0 ? JSON.stringify(fileIdsToStore) : null,
         submissionFileUrl: submissionFileUrl || null,
         status: isLate ? 'late' : 'submitted',
         attemptNumber: (latestAttempt?.attemptNumber || 0) + 1,
       },
       include: submissionInclude,
     })
+
+    // Fetch all related files if submissionFileIds exist
+    if (submission.submissionFileIds) {
+      const fileIds = JSON.parse(submission.submissionFileIds)
+      const files = await prisma.file.findMany({
+        where: { id: { in: fileIds } },
+      })
+      submission.submissionFiles = files
+    }
 
     return res.status(201).json(submission)
   } catch (err) {
@@ -1040,7 +1165,8 @@ export const listAssignmentSubmissions = async (req, res) => {
         include: submissionInclude,
         orderBy: [{ attemptNumber: 'desc' }],
       })
-      return res.json(submissions)
+      const withFiles = await populateSubmissionFiles(submissions, prisma)
+      return res.json(withFiles)
     }
 
     if (req.user.role === 'teacher') {
@@ -1059,10 +1185,132 @@ export const listAssignmentSubmissions = async (req, res) => {
       orderBy: [{ submittedAt: 'desc' }, { attemptNumber: 'desc' }],
     })
 
-    return res.json(submissions)
+    const withFiles = await populateSubmissionFiles(submissions, prisma)
+    return res.json(withFiles)
   } catch (err) {
     console.error('List assignment submissions error:', err)
     return res.status(500).json({ error: err.message || 'Server error' })
+  }
+}
+
+/**
+ * @swagger
+ * /api/assignments/submissions/{submissionId}:
+ *   patch:
+ *     summary: Update a student submission (notes or files) before grading
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: submissionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               submissionText:
+ *                 type: string
+ *               submissionFileId:
+ *                 type: string
+ *               submissionFileIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Submission updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Submission'
+ */
+export const updateSubmission = async (req, res) => {
+  const { submissionText, submissionFileId, submissionFileIds } = req.body
+  try {
+    const submission = await prisma.assignmentSubmission.findUnique({
+      where: { id: req.params.submissionId },
+      include: {
+        assignment: true,
+        student: true,
+      },
+    })
+
+    if (!submission) {
+      return res.status(404).json({ error: 'Submission not found' })
+    }
+
+    // Only the student who submitted can edit (if not graded)
+    const studentProfile = await getStudentProfileByUserId(req.user.id)
+    if (!studentProfile || studentProfile.id !== submission.student.id) {
+      return res.status(403).json({ error: 'You can only edit your own submissions' })
+    }
+
+    // Check if submission is already graded
+    if (submission.marks !== null && submission.marks !== undefined) {
+      return res.status(400).json({ error: 'Cannot edit a submission that has been graded' })
+    }
+
+    // Check if assignment is overdue
+    const now = new Date()
+    if (submission.assignment.dueDate && now > new Date(submission.assignment.dueDate)) {
+      return res.status(400).json({ error: 'Cannot edit submission after due date' })
+    }
+
+    // Validate single file if provided
+    if (submissionFileId) {
+      const file = await prisma.file.findUnique({ where: { id: submissionFileId } })
+      if (!file) {
+        return res.status(400).json({ error: 'submissionFileId is invalid' })
+      }
+    }
+
+    // Validate multiple files if provided
+    let fileIdsToStore = null
+    if (submissionFileIds?.length > 0) {
+      const files = await prisma.file.findMany({
+        where: { id: { in: submissionFileIds } },
+        select: { id: true },
+      })
+      if (files.length !== submissionFileIds.length) {
+        return res.status(400).json({ error: 'One or more submissionFileIds are invalid' })
+      }
+      fileIdsToStore = JSON.stringify(submissionFileIds)
+    } else if (submissionFileIds === null || (Array.isArray(submissionFileIds) && submissionFileIds.length === 0)) {
+      // Explicitly clear files if empty array is passed
+      fileIdsToStore = null
+    }
+
+    // Update submission
+    const updateData = {}
+    if (submissionText !== undefined) updateData.submissionText = submissionText
+    if (submissionFileId !== undefined) updateData.submissionFileId = submissionFileId
+    if (fileIdsToStore !== undefined) updateData.submissionFileIds = fileIdsToStore
+
+    const updatedSubmission = await prisma.assignmentSubmission.update({
+      where: { id: req.params.submissionId },
+      data: updateData,
+      include: submissionInclude,
+    })
+
+    // Fetch all related files if submissionFileIds exist
+    if (updatedSubmission.submissionFileIds) {
+      const fileIds = JSON.parse(updatedSubmission.submissionFileIds)
+      const files = await prisma.file.findMany({
+        where: { id: { in: fileIds } },
+      })
+      updatedSubmission.submissionFiles = files
+    }
+
+    return res.json(updatedSubmission)
+  } catch (err) {
+    console.error('Update submission error:', err)
+    return res.status(500).json({ error: 'Server error' })
   }
 }
 
@@ -1106,11 +1354,6 @@ export const listAssignmentSubmissions = async (req, res) => {
  */
 export const gradeSubmission = async (req, res) => {
   const { marks, gradeLetter, feedback, markedByTeacherId } = req.body
-
-  if (marks === undefined && gradeLetter === undefined && feedback === undefined) {
-    return res.status(400).json({ error: 'Provide marks, gradeLetter, or feedback to update grading' })
-  }
-
   try {
     const submission = await prisma.assignmentSubmission.findUnique({
       where: { id: req.params.submissionId },
