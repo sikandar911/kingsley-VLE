@@ -6,6 +6,23 @@ import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1142";
 
+const formatSchedule = (section) => {
+  if (!section.daysOfWeek) return <span className="text-gray-300">—</span>;
+  
+  // Already comes as comma-separated string (e.g., "Monday, Wednesday, Friday")
+  let schedule = section.daysOfWeek;
+  
+  if (section.startTime && section.endTime) {
+    schedule += ` ${section.startTime}-${section.endTime}`;
+  } else if (section.startTime) {
+    schedule += ` ${section.startTime}`;
+  } else if (section.endTime) {
+    schedule += ` (ends ${section.endTime})`;
+  }
+  
+  return schedule;
+};
+
 export default function AdminSectionsPage() {
   const [sections, setSections] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -117,6 +134,7 @@ export default function AdminSectionsPage() {
                   <th className="whitespace-nowrap">Section Name</th>
                   <th className="whitespace-nowrap">Course</th>
                   <th className="whitespace-nowrap">Semester</th>
+                  <th className="whitespace-nowrap">Class Schedule</th>
                   <th className="whitespace-nowrap">Students</th>
                   <th className="whitespace-nowrap">Actions</th>
                   <th></th>
@@ -139,6 +157,9 @@ export default function AdminSectionsPage() {
                       ) : (
                         <span className="text-gray-300">—</span>
                       )}
+                    </td>
+                    <td className="text-gray-600 whitespace-nowrap">
+                      {formatSchedule(section)}
                     </td>
                     <td className="whitespace-nowrap">
                       <span className="badge badge-active">

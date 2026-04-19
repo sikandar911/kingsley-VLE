@@ -2,6 +2,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../../config/prisma.js'
 
+// Constants
+const MAX_LOGIN_ATTEMPTS = 3
+const LOCK_TIME_MINUTES = 5
+const LOCK_TIME_MS = LOCK_TIME_MINUTES * 60 * 1000
+
 /**
  * @swagger
  * /api/auth/login:
@@ -34,6 +39,12 @@ import prisma from '../../config/prisma.js'
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Account locked due to too many failed attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const login = async (req, res) => {
   const { identifier, password } = req.body
@@ -43,6 +54,7 @@ export const login = async (req, res) => {
   }
 
   try {
+    // Step 1: Find the user
     const user = await prisma.user.findFirst({
       where: {
         OR: [{ email: identifier }, { username: identifier }],
@@ -58,22 +70,91 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
 
-    const isValid = await bcrypt.compare(password, user.passwordHash)
-    if (!isValid) {
-      return res.status(401).json({ error: 'Invalid credentials' })
+    // Step 2: Check if account is locked
+    const now = new Date()
+    if (user.lockedUntil && now < user.lockedUntil) {
+      return res
+        .status(429)
+        .json({ error: 'Account temporarily locked. Please try again in a few minutes.' })
     }
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRY || '24h' }
-    )
+    // Step 3: If lock period has expired, reset attempts
+    if (user.lockedUntil && now >= user.lockedUntil) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      })
+    }
 
-    const { passwordHash, ...userWithoutPassword } = user
-    return res.json({ token, user: userWithoutPassword })
+    // Step 4: Verify password
+    let isValid = false
+    try {
+      isValid = await bcrypt.compare(password, user.passwordHash)
+    } catch (bcryptErr) {
+      console.error('Bcrypt comparison error:', bcryptErr)
+      return res.status(500).json({ error: 'Authentication service error. Please try again.' })
+    }
+
+    if (!isValid) {
+      // Wrong password - increment failed attempts
+      const newFailedAttempts = (user.failedLoginAttempts || 0) + 1
+      const updateData = { failedLoginAttempts: newFailedAttempts }
+
+      // Lock account if max attempts reached
+      if (newFailedAttempts >= MAX_LOGIN_ATTEMPTS) {
+        updateData.lockedUntil = new Date(now.getTime() + LOCK_TIME_MS)
+        await prisma.user.update({
+          where: { id: user.id },
+          data: updateData,
+        })
+        return res
+          .status(401)
+          .json({ error: `Wrong password. Account locked for ${LOCK_TIME_MINUTES} minutes.` })
+      }
+
+      // Not locked yet, just increment
+      await prisma.user.update({
+        where: { id: user.id },
+        data: updateData,
+      })
+
+      const attemptsRemaining = MAX_LOGIN_ATTEMPTS - newFailedAttempts
+      return res.status(401).json({
+        error: `Wrong password. ${attemptsRemaining} attempt${attemptsRemaining !== 1 ? 's' : ''} remaining before account lockout.`,
+      })
+    }
+
+    // Step 5: Successful login - reset failed attempts and clear lock
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    })
+
+    // Step 6: Generate JWT token
+    let token
+    try {
+      token = jwt.sign(
+        { userId: user.id, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: process.env.JWT_EXPIRY || '24h' }
+      )
+    } catch (jwtErr) {
+      console.error('JWT generation error:', jwtErr)
+      return res.status(500).json({ error: 'Token generation failed. Please try again.' })
+    }
+
+    // Step 7: Return user without password hash
+    const { passwordHash, failedLoginAttempts, lockedUntil, ...userWithoutSensitiveData } = user
+    return res.status(200).json({ token, user: userWithoutSensitiveData })
   } catch (err) {
     console.error('Login error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    return res.status(500).json({ error: 'Server error. Please try again.' })
   }
 }
 
@@ -105,9 +186,13 @@ export const getMe = async (req, res) => {
       where: { id: req.user.id },
       include: { studentProfile: true, teacherProfile: true },
     })
-    const { passwordHash, ...result } = user
-    return res.json(result)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    const { passwordHash, failedLoginAttempts, lockedUntil, ...result } = user
+    return res.status(200).json(result)
   } catch (err) {
+    console.error('Get me error:', err)
     return res.status(500).json({ error: 'Server error' })
   }
 }

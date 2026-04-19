@@ -72,6 +72,16 @@ enum CourseModuleStatus {
   inactive
 }
 
+enum DayOfWeek {
+  Monday
+  Tuesday
+  Wednesday
+  Thursday
+  Friday
+  Saturday
+  Sunday
+}
+
 // ============================================================================
 // AUTHENTICATION & IDENTITY LAYER
 // ============================================================================
@@ -87,6 +97,10 @@ model User {
   role UserRole
 
   isActive Boolean @default(true) @map("is_active")
+
+  // Login security
+  failedLoginAttempts Int @default(0) @map("failed_login_attempts")
+  lockedUntil DateTime? @map("locked_until")
 
   createdBy String?
   createdByUser User? @relation("CreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -274,6 +288,11 @@ model Section {
   semester Semester? @relation(fields: [semesterId], references: [id])
 
   description String?
+
+  // Schedule fields
+  daysOfWeek String? @db.VarChar(255) // Comma-separated days, e.g., "Monday, Wednesday, Friday"
+  startTime String? @db.VarChar(5) // HH:mm format, e.g., "09:00"
+  endTime String? @db.VarChar(5)   // HH:mm format, e.g., "10:30"
 
   totalStudentCount Int @default(0) @map("total_student_count")
 

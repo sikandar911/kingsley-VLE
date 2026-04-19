@@ -65,7 +65,7 @@ export const listEnrollments = async (req, res) => {
           },
         },
         course: { select: { id: true, title: true } },
-        section: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true, daysOfWeek: true, startTime: true, endTime: true } },
         semester: { select: { id: true, name: true, year: true } },
       },
     })
@@ -163,7 +163,7 @@ export const createEnrollment = async (req, res) => {
       include: {
         student: { select: { id: true, fullName: true, studentId: true } },
         course: { select: { id: true, title: true } },
-        section: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true, daysOfWeek: true, startTime: true, endTime: true } },
         semester: { select: { id: true, name: true, year: true } },
       },
     })
@@ -246,7 +246,7 @@ export const getEnrollmentsByUser = async (req, res) => {
           },
         },
         course: { select: { id: true, title: true, description: true } },
-        section: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true, daysOfWeek: true, startTime: true, endTime: true } },
         semester: { select: { id: true, name: true, year: true } },
       },
     })
@@ -294,7 +294,7 @@ export const getEnrollment = async (req, res) => {
           select: { id: true, fullName: true, studentId: true, user: { select: { email: true } } },
         },
         course: { select: { id: true, title: true } },
-        section: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true, daysOfWeek: true, startTime: true, endTime: true } },
         semester: { select: { id: true, name: true, year: true } },
       },
     })
@@ -406,7 +406,7 @@ export const listTeacherCourses = async (req, res) => {
           },
         },
         course: { select: { id: true, title: true } },
-        section: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true, daysOfWeek: true, startTime: true, endTime: true } },
         semester: { select: { id: true, name: true, year: true } },
       },
     })
@@ -488,7 +488,7 @@ export const createTeacherCourse = async (req, res) => {
       include: {
         teacher: { select: { id: true, fullName: true, teacherId: true } },
         course: { select: { id: true, title: true } },
-        section: { select: { id: true, name: true } },
+        section: { select: { id: true, name: true, daysOfWeek: true, startTime: true, endTime: true } },
         semester: { select: { id: true, name: true, year: true } },
       },
     })

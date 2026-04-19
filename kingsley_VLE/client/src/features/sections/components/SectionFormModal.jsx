@@ -6,20 +6,46 @@ import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1142";
 
+const DAYS_OF_WEEK = [
+  { id: "Monday", short: "Mon" },
+  { id: "Tuesday", short: "Tue" },
+  { id: "Wednesday", short: "Wed" },
+  { id: "Thursday", short: "Thu" },
+  { id: "Friday", short: "Fri" },
+  { id: "Saturday", short: "Sat" },
+  { id: "Sunday", short: "Sun" },
+];
+
 const INITIAL = {
   name: "",
   courseId: "",
   semesterId: "",
+  daysOfWeek: [],
+  startTime: "",
+  endTime: "",
 };
 
 export default function SectionFormModal({ onClose, onSaved, editSection }) {
   const isEdit = Boolean(editSection);
+  
+  // Parse daysOfWeek - can be array, comma-separated string, or single day string
+  const parseDaysOfWeek = (data) => {
+    if (Array.isArray(data)) return data.filter(d => d);
+    if (typeof data === "string" && data) {
+      return data.split(",").map(d => d.trim()).filter(d => d);
+    }
+    return [];
+  };
+
   const [form, setForm] = useState(
     isEdit
       ? {
           name: editSection.name || "",
           courseId: editSection.courseId || "",
           semesterId: editSection.semesterId || "",
+          daysOfWeek: parseDaysOfWeek(editSection.daysOfWeek),
+          startTime: editSection.startTime || "",
+          endTime: editSection.endTime || "",
         }
       : INITIAL,
   );
@@ -54,6 +80,18 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const toggleDay = (day) => {
+    setForm((prev) => {
+      const isSelected = prev.daysOfWeek.includes(day);
+      return {
+        ...prev,
+        daysOfWeek: isSelected
+          ? prev.daysOfWeek.filter((d) => d !== day)
+          : [...prev.daysOfWeek, day],
+      };
+    });
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -64,6 +102,21 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
       setError("Please select a course");
       return;
     }
+    // Validate time format if provided
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (form.startTime && !timeRegex.test(form.startTime)) {
+      setError("Start time must be in HH:mm format (e.g., 09:00)");
+      return;
+    }
+    if (form.endTime && !timeRegex.test(form.endTime)) {
+      setError("End time must be in HH:mm format (e.g., 10:30)");
+      return;
+    }
+    // If both start and end times are provided, validate time logic
+    if (form.startTime && form.endTime && form.startTime >= form.endTime) {
+      setError("Start time must be before end time");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -71,6 +124,9 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
         name: form.name.trim(),
         courseId: form.courseId,
         semesterId: form.semesterId || null,
+        daysOfWeek: form.daysOfWeek.length > 0 ? form.daysOfWeek : null,
+        startTime: form.startTime || null,
+        endTime: form.endTime || null,
       };
       if (isEdit) {
         await sectionsApi.update(editSection.id, payload);
@@ -166,6 +222,68 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
               disabled={metaLoading}
               dropdownDirection="up"
             />
+          </div>
+
+          {/* Schedule Section */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="text-sm font-semibold text-gray-800 mb-3">
+              Class Schedule (Optional)
+            </h3>
+
+            <div className="form-group">
+              <label className="form-label">Days of Week</label>
+              <div className="flex flex-wrap gap-2">
+                {DAYS_OF_WEEK.map((day) => (
+                  <button
+                    key={day.id}
+                    type="button"
+                    onClick={() => toggleDay(day.id)}
+                    className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                      form.daysOfWeek.includes(day.id)
+                        ? "bg-[#6b1142] text-white shadow-md"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    {day.short}
+                  </button>
+                ))}
+              </div>
+              {form.daysOfWeek.length > 0 && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Selected: {form.daysOfWeek.join(", ")}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="form-group">
+                <label className="form-label">Start Time</label>
+                <input
+                  type="text"
+                  name="startTime"
+                  value={form.startTime}
+                  onChange={handleChange}
+                  placeholder="e.g. 09:00"
+                  className="form-input"
+                  disabled={metaLoading}
+                />
+                <p className="text-xs text-gray-500 mt-1">Format: HH:mm (24-hour)</p>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">End Time</label>
+                <input
+                  type="text"
+                  name="endTime"
+                  value={form.endTime}
+                  onChange={handleChange}
+                  placeholder="e.g. 10:30"
+                  className="form-input"
+                  disabled={metaLoading}
+                />
+                <p className="text-xs text-gray-500 mt-1">Format: HH:mm (24-hour)</p>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

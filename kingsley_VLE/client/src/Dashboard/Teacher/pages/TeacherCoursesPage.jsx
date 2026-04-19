@@ -3,6 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { authApi } from "../../../Auth/api/auth.api";
 import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.api";
 
+const formatSchedule = (course) => {
+  if (!course.daysOfWeek) return null;
+  
+  // Already comes as comma-separated string (e.g., "Monday, Wednesday, Friday")
+  let schedule = course.daysOfWeek;
+  
+  if (course.startTime && course.endTime) {
+    schedule += ` ${course.startTime}-${course.endTime}`;
+  } else if (course.startTime) {
+    schedule += ` ${course.startTime}`;
+  } else if (course.endTime) {
+    schedule += ` (ends ${course.endTime})`;
+  }
+  
+  return schedule;
+};
+
 export default function TeacherCoursesPage() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
@@ -41,6 +58,9 @@ export default function TeacherCoursesPage() {
             specialization: enrollment.teacher?.specialization,
             sectionId: enrollment.section?.id || null,
             sectionName: enrollment.section?.name || null,
+            daysOfWeek: enrollment.section?.daysOfWeek,
+            startTime: enrollment.section?.startTime,
+            endTime: enrollment.section?.endTime,
           }));
           setCourses(coursesData);
         }
@@ -216,6 +236,24 @@ export default function TeacherCoursesPage() {
                         <span>
                           Section: <span className="font-medium">{course.sectionName}</span>
                         </span>
+                      </div>
+                    )}
+                    {formatSchedule(course) && (
+                      <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                        <svg
+                          className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="font-medium">{formatSchedule(course)}</span>
                       </div>
                     )}
                     <div className="flex items-center text-xs sm:text-sm text-gray-600">

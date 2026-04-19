@@ -92,7 +92,7 @@ export const getSection = async (req, res) => {
         course: { select: { id: true, title: true } },
         semester: { select: { id: true, name: true, year: true } },
         enrollments: {
-          include: {
+          select: {
             student: { select: { id: true, fullName: true, studentId: true } },
           },
         },
@@ -131,6 +131,15 @@ export const getSection = async (req, res) => {
  *                 type: string
  *               description:
  *                 type: string
+ *               dayOfWeek:
+ *                 type: string
+ *                 enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+ *               startTime:
+ *                 type: string
+ *                 description: Time in HH:mm format (e.g., "09:00")
+ *               endTime:
+ *                 type: string
+ *                 description: Time in HH:mm format (e.g., "10:30")
  *     responses:
  *       201:
  *         description: Section created
@@ -152,9 +161,26 @@ export const getSection = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createSection = async (req, res) => {
-  const { name, courseId, semesterId, description } = req.body
+  const { name, courseId, semesterId, description, dayOfWeek, daysOfWeek, startTime, endTime } = req.body
   if (!name?.trim()) return res.status(400).json({ error: 'Section name is required' })
   if (!courseId) return res.status(400).json({ error: 'courseId is required — a section must belong to a course' })
+
+  // Convert daysOfWeek array to comma-separated string, or use single dayOfWeek for backward compatibility
+  let daysValue = null
+  if (daysOfWeek && Array.isArray(daysOfWeek) && daysOfWeek.length > 0) {
+    daysValue = daysOfWeek.join(', ')
+  } else if (dayOfWeek) {
+    daysValue = dayOfWeek
+  }
+
+  // Validate time format if provided (HH:mm)
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
+  if (startTime && !timeRegex.test(startTime)) {
+    return res.status(400).json({ error: 'startTime must be in HH:mm format (e.g., "09:00")' })
+  }
+  if (endTime && !timeRegex.test(endTime)) {
+    return res.status(400).json({ error: 'endTime must be in HH:mm format (e.g., "10:30")' })
+  }
 
   try {
     const course = await prisma.course.findUnique({ where: { id: courseId } })
@@ -171,6 +197,9 @@ export const createSection = async (req, res) => {
         courseId,
         semesterId: semesterId || null,
         description: description || null,
+        daysOfWeek: daysValue,
+        startTime: startTime || null,
+        endTime: endTime || null,
       },
       include: {
         course: { select: { id: true, title: true } },
@@ -217,6 +246,15 @@ export const createSection = async (req, res) => {
  *                 type: string
  *               description:
  *                 type: string
+ *               dayOfWeek:
+ *                 type: string
+ *                 enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+ *               startTime:
+ *                 type: string
+ *                 description: Time in HH:mm format (e.g., "09:00")
+ *               endTime:
+ *                 type: string
+ *                 description: Time in HH:mm format (e.g., "10:30")
  *     responses:
  *       200:
  *         description: Updated section
@@ -232,7 +270,25 @@ export const createSection = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSection = async (req, res) => {
-  const { name, semesterId, description } = req.body
+  const { name, semesterId, description, dayOfWeek, daysOfWeek, startTime, endTime } = req.body
+
+  // Convert daysOfWeek array to comma-separated string, or use single dayOfWeek for backward compatibility
+  let daysValue = undefined
+  if (daysOfWeek !== undefined && Array.isArray(daysOfWeek)) {
+    daysValue = daysOfWeek.length > 0 ? daysOfWeek.join(', ') : null
+  } else if (dayOfWeek !== undefined) {
+    daysValue = dayOfWeek
+  }
+
+  // Validate time format if provided (HH:mm)
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
+  if (startTime && !timeRegex.test(startTime)) {
+    return res.status(400).json({ error: 'startTime must be in HH:mm format (e.g., "09:00")' })
+  }
+  if (endTime && !timeRegex.test(endTime)) {
+    return res.status(400).json({ error: 'endTime must be in HH:mm format (e.g., "10:30")' })
+  }
+
   try {
     const existing = await prisma.section.findUnique({ where: { id: req.params.id } })
     if (!existing) return res.status(404).json({ error: 'Section not found' })
@@ -248,6 +304,9 @@ export const updateSection = async (req, res) => {
         ...(name?.trim() ? { name: name.trim() } : {}),
         ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
         ...(description !== undefined ? { description: description || null } : {}),
+        ...(daysValue !== undefined ? { daysOfWeek: daysValue } : {}),
+        ...(startTime !== undefined ? { startTime: startTime || null } : {}),
+        ...(endTime !== undefined ? { endTime: endTime || null } : {}),
       },
       include: {
         course: { select: { id: true, title: true } },
