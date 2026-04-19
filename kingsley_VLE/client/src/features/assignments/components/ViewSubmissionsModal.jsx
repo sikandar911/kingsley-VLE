@@ -12,7 +12,7 @@ const fmt = (d) =>
         hour: '2-digit',
         minute: '2-digit',
       })
-    : 'â€”'
+    : '—'
 
 const statusCls = {
   submitted: 'bg-blue-100 text-blue-700',
@@ -94,8 +94,8 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
             <div>
               <h2 className="text-xl font-bold text-gray-900">Submissions</h2>
               <p className="text-sm text-gray-500 mt-1">
-                {assignment.title} Â· Total marks: {assignment.totalMarks}
-                {assignment.passingMarks ? ` Â· Passing: ${assignment.passingMarks}` : ''}
+                {assignment.title} · Total marks: {assignment.totalMarks}
+                {assignment.passingMarks ? ` · Passing: ${assignment.passingMarks}` : ''}
               </p>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-4">
@@ -113,7 +113,7 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
               </div>
             ) : submissions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                <span className="text-5xl mb-3">ðŸ“­</span>
+                <span className="text-5xl mb-3">📭</span>
                 <p className="text-sm">No submissions yet</p>
               </div>
             ) : (
@@ -132,8 +132,8 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                       <div className="px-6 py-4 flex items-center gap-4 flex-wrap sm:flex-nowrap">
                         {/* Student info */}
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 text-sm truncate">{sub.student?.fullName || 'â€”'}</p>
-                          <p className="text-xs text-gray-500 font-mono mt-0.5">{sub.student?.studentId || 'â€”'}</p>
+                          <p className="font-semibold text-gray-900 text-sm truncate">{sub.student?.fullName || '—'}</p>
+                          <p className="text-xs text-gray-500 font-mono mt-0.5">{sub.student?.studentId || '—'}</p>
                         </div>
 
                         {/* Attempt + status */}
@@ -156,7 +156,7 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                               sub.marks >= (assignment.passingMarks ?? 0) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                             }`}>
                               {sub.marks}/{assignment.totalMarks}
-                              {sub.gradeLetter ? ` Â· ${sub.gradeLetter}` : ''}
+                              {sub.gradeLetter ? ` · ${sub.gradeLetter}` : ''}
                             </span>
                           ) : (
                             <span className="text-xs text-gray-400">Not graded</span>
@@ -186,7 +186,7 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                               rel="noopener noreferrer"
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                             >
-                              ðŸ“Ž View Link
+                              📎 View Link
                             </a>
                           )}
 
@@ -261,7 +261,7 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                                   rel="noopener noreferrer"
                                   className="text-xs text-blue-600 underline flex items-center gap-1"
                                 >
-                                  ðŸ“Ž View submitted link
+                                   View submitted link
                                 </a>
                               )}
                             </div>
@@ -279,7 +279,7 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div>
                                 <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                                  Marks <span className="text-gray-400 font-normal">(max {assignment.totalMarks}) â€” optional</span>
+                                  Marks <span className="text-gray-400 font-normal">(max {assignment.totalMarks}) — optional</span>
                                 </label>
                                 <input
                                   type="number"
@@ -289,13 +289,13 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                                   onChange={(e) =>
                                     setGradeForm((p) => ({ ...p, marks: e.target.value }))
                                   }
-                                  placeholder={`0 â€“ ${assignment.totalMarks}`}
+                                  placeholder={`0 — ${assignment.totalMarks}`}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                                 />
                               </div>
                               <div>
                                 <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                                  Grade Letter <span className="text-gray-400 font-normal">â€” optional</span>
+                                  Grade Letter <span className="text-gray-400 font-normal">— optional</span>
                                 </label>
                                 <select
                                   value={gradeForm.gradeLetter}
@@ -304,7 +304,7 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                                   }
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                                 >
-                                  <option value="">Selectâ€¦</option>
+                                  <option value="">Select</option>
                                   {GRADES.map((g) => (
                                     <option key={g} value={g}>{g}</option>
                                   ))}
@@ -316,14 +316,14 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                                   disabled={gradeLoading}
                                   className="w-full px-4 py-2 bg-[#6b1142] text-white text-sm font-semibold rounded-lg hover:bg-[#5a0d38] transition disabled:opacity-50"
                                 >
-                                  {gradeLoading ? 'Savingâ€¦' : 'Save Grade'}
+                                  {gradeLoading ? 'Saving…' : 'Save Grade'}
                                 </button>
                               </div>
                             </div>
 
                             <div className="mt-4">
                               <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                                Feedback <span className="text-gray-400 font-normal">(optional â€” visible to student)</span>
+                                Feedback <span className="text-gray-400 font-normal">(optional visible to student)</span>
                               </label>
                               <textarea
                                 value={gradeForm.feedback}
@@ -331,14 +331,14 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                                   setGradeForm((p) => ({ ...p, feedback: e.target.value }))
                                 }
                                 rows={2}
-                                placeholder="Write feedback visible to the studentâ€¦"
+                                placeholder="Write feedback visible to the student…"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142] resize-none"
                               />
                             </div>
 
                             {sub.markedByTeacher && (
                               <p className="text-xs text-gray-400 mt-3">
-                                Previously graded by {sub.markedByTeacher.fullName} Â· {fmt(sub.markedAt)}
+                                Previously graded by {sub.markedByTeacher.fullName} · {fmt(sub.markedAt)}
                               </p>
                             )}
                           </div>
@@ -357,12 +357,12 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
               {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
               {gradedCount > 0 && (
                 <span className="ml-2 text-green-600">
-                  Â· {gradedCount} graded
+                  · {gradedCount} graded
                 </span>
               )}
               {submissions.length - gradedCount > 0 && (
                 <span className="ml-2 text-orange-500">
-                  Â· {submissions.length - gradedCount} pending
+                  · {submissions.length - gradedCount} pending
                 </span>
               )}
             </p>

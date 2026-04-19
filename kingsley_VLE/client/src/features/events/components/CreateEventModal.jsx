@@ -89,6 +89,20 @@ export default function CreateEventModal({
           course: editEvent.course,
           section: editEvent.section,
         });
+
+        // Helper to convert UTC ISO string to local datetime-local format
+        const convertUTCToLocal = (utcDateStr) => {
+          if (!utcDateStr) return "";
+          const date = new Date(utcDateStr);
+          // Use local time getters to format for datetime-local input
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const hours = String(date.getHours()).padStart(2, "0");
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+
         setFormData({
           type: editEvent.type,
           title: editEvent.title,
@@ -98,12 +112,8 @@ export default function CreateEventModal({
           semesterId: editEvent.semesterId || "",
           courseId: editEvent.courseId || "",
           sectionId: editEvent.sectionId || "",
-          startTime: editEvent.startTime
-            ? new Date(editEvent.startTime).toISOString().slice(0, 16)
-            : "",
-          endTime: editEvent.endTime
-            ? new Date(editEvent.endTime).toISOString().slice(0, 16)
-            : "",
+          startTime: convertUTCToLocal(editEvent.startTime),
+          endTime: convertUTCToLocal(editEvent.endTime),
         });
       } else {
         // Reset form for create mode
@@ -260,6 +270,14 @@ export default function CreateEventModal({
     }
 
     try {
+      // Convert datetime-local strings to proper ISO UTC strings
+      // datetime-local gives us local time; toISOString() converts it to UTC automatically
+      const convertToUTC = (localDatetimeStr) => {
+        if (!localDatetimeStr) return undefined;
+        const date = new Date(localDatetimeStr);
+        return date.toISOString();
+      };
+
       const payload = {
         type: formData.type,
         title: formData.title.trim(),
@@ -269,8 +287,8 @@ export default function CreateEventModal({
         semesterId: formData.semesterId || undefined,
         courseId: formData.courseId || undefined,
         sectionId: formData.sectionId || undefined,
-        startTime: formData.startTime || undefined,
-        endTime: formData.endTime || undefined,
+        startTime: convertToUTC(formData.startTime),
+        endTime: convertToUTC(formData.endTime),
       };
 
       console.log("[CreateEventModal] Payload to send:", payload);

@@ -24,13 +24,33 @@ const parseDate = (value) => (value ? new Date(value) : null);
 const upsertEventReminder = async (event, createdBy, tx = prisma) => {
   if (!event.startTime) return null;
 
-  // Extract just the date in local time so it matches the calendar grid
-  const date = new Date(event.startTime);
-  date.setHours(0, 0, 0, 0);
+  // Extract UTC date to match calendar display expectations
+  let dateStr = null;
+  if (typeof event.startTime === "string" && event.startTime.includes("T")) {
+    const match = event.startTime.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      dateStr = `${match[1]}-${match[2]}-${match[3]}`;
+    }
+  }
+
+  if (!dateStr) {
+    // Fallback: extract UTC date from Date object
+    const dateObj = new Date(event.startTime);
+    const year = dateObj.getUTCFullYear();
+    const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getUTCDate()).padStart(2, "0");
+    dateStr = `${year}-${month}-${day}`;
+  }
+
+  // Create a UTC date at midnight for the reminder
+  const [year, month, day] = dateStr.split("-");
+  const reminderDate = new Date(
+    Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)),
+  );
 
   return tx.calendarReminder.create({
     data: {
-      date,
+      date: reminderDate,
       name: event.title,
       type: "event",
       eventId: event.id,

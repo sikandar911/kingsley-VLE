@@ -52,7 +52,10 @@ export default function CreateAssignmentModal({
           courseId: editAssignment.courseId || "",
           sectionId: editAssignment.sectionId || "",
           semesterId: editAssignment.semesterId || "",
-          courseModuleId: editAssignment.courseModule?.id || editAssignment.courseModuleId || "",
+          courseModuleId:
+            editAssignment.courseModule?.id ||
+            editAssignment.courseModuleId ||
+            "",
           title: editAssignment.title || "",
           description: editAssignment.description || "",
           teacherInstruction: editAssignment.teacherInstruction || "",
@@ -64,6 +67,8 @@ export default function CreateAssignmentModal({
         }
       : INITIAL,
   );
+
+  console.log("module info(edit):", editAssignment);
 
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -81,7 +86,9 @@ export default function CreateAssignmentModal({
   const [error, setError] = useState("");
   // Files attached to the assignment (list of File records {id, name, fileUrl})
   const [uploadedFiles, setUploadedFiles] = useState(
-    isEdit ? (editAssignment.assignmentFiles || []).map((af) => af.file || af) : []
+    isEdit
+      ? (editAssignment.assignmentFiles || []).map((af) => af.file || af)
+      : [],
   );
 
   // Fetch all data on component mount
@@ -318,12 +325,15 @@ export default function CreateAssignmentModal({
   useEffect(() => {
     if (form.courseId) {
       courseModulesApi
-        .list({ courseId: form.courseId, ...(form.sectionId ? { sectionId: form.sectionId } : {}) })
+        .list({
+          courseId: form.courseId,
+          ...(form.sectionId ? { sectionId: form.sectionId } : {}),
+        })
         .then((res) => setCourseModules(res.data?.modules || []))
-        .catch(() => setCourseModules([]))
+        .catch(() => setCourseModules([]));
     } else {
-      setCourseModules([])
-      setForm((prev) => ({ ...prev, courseModuleId: '' }))
+      setCourseModules([]);
+      setForm((prev) => ({ ...prev, courseModuleId: "" }));
     }
   }, [form.courseId, form.sectionId]);
 
@@ -382,11 +392,21 @@ export default function CreateAssignmentModal({
 
   const validate = () => {
     if (!form.title.trim()) return "Assignment title is required";
+    if (!form.semesterId) return "Please select a semester";
     if (!form.courseId) return "Please select a course";
-    if (!form.teacherId) return "Teacher information is missing";
+    if (!form.sectionId) return "Please select a section";
+    if (!form.courseModuleId) return "Please select a module";
+    if (!form.teacherId) return "Please select a teacher";
+    if (!form.dueDate) return "Please select a submission deadline";
     const total = Number(form.totalMarks);
-    if (!total || total <= 0) return "Total marks must be a positive number";
-    if (form.passingMarks !== "" && Number(form.passingMarks) > total)
+
+    if (!total) return "Please add total marks";
+    if (total <= 0) return "Total marks must be a positive number";
+
+    if (form.passingMarks === "") return "Please add passing marks";
+    const passing = Number(form.passingMarks);
+    if (passing <= 0) return "Passing marks must be a positive number";
+    if (passing > total)
       return `Passing marks cannot exceed total marks (${total})`;
     return null;
   };
@@ -488,8 +508,12 @@ export default function CreateAssignmentModal({
 
               <div
                 className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}
-              >                {/* Semester - First selector (always enabled) */}
+              >
+                {/* Semester - First selector (always enabled) */}
                 <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Semester <span className="text-red-500">*</span>
+                  </label>
                   <CustomDropdown
                     options={filteredSemesters.map((s) => ({
                       id: s.id,
@@ -502,7 +526,6 @@ export default function CreateAssignmentModal({
                       })
                     }
                     placeholder={metaLoading ? "Loading…" : "Select semester…"}
-                    label="Semester"
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={metaLoading}
@@ -511,6 +534,9 @@ export default function CreateAssignmentModal({
 
                 {/* Course - Second selector (disabled until semester selected) */}
                 <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Course <span className="text-red-500">*</span>
+                  </label>
                   <CustomDropdown
                     options={filteredCourses.map((c) => ({
                       id: c.id,
@@ -525,7 +551,6 @@ export default function CreateAssignmentModal({
                         ? "Select semester first"
                         : "Select course…"
                     }
-                    label="Select Course *"
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={!form.semesterId || metaLoading}
@@ -534,6 +559,9 @@ export default function CreateAssignmentModal({
 
                 {/* Section - Third selector (disabled until course selected) */}
                 <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Section <span className="text-red-500">*</span>
+                  </label>
                   <CustomDropdown
                     options={filteredSections.map((s) => ({
                       id: s.id,
@@ -548,7 +576,6 @@ export default function CreateAssignmentModal({
                     placeholder={
                       !form.courseId ? "Select course first" : "Select section"
                     }
-                    label="Select Section"
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={!form.courseId || metaLoading}
@@ -557,16 +584,27 @@ export default function CreateAssignmentModal({
 
                 {/* Course Module - optional, depends on course */}
                 <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Module <span className="text-red-500">*</span>
+                  </label>
                   <CustomDropdown
-                    options={courseModules.map((m) => ({ id: m.id, name: m.name }))}
+                    options={courseModules.map((m) => ({
+                      id: m.id,
+                      name: m.name,
+                    }))}
                     value={form.courseModuleId}
                     onChange={(val) =>
-                      handleChange({ target: { name: "courseModuleId", value: val } })
+                      handleChange({
+                        target: { name: "courseModuleId", value: val },
+                      })
                     }
                     placeholder={
-                      !form.courseId ? "Select course first" : courseModules.length === 0 ? "No modules" : "Select module (optional)"
+                      !form.courseId
+                        ? "Select course first"
+                        : courseModules.length === 0
+                          ? "No modules"
+                          : "Select module…"
                     }
-                    label="Course Module"
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={!form.courseId || courseModules.length === 0}
@@ -576,6 +614,9 @@ export default function CreateAssignmentModal({
                 {/* Assigning Teacher - Fourth selector (admin only, depends on course) */}
                 {isAdmin && (
                   <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Teacher <span className="text-red-500">*</span>
+                    </label>
                     <CustomDropdown
                       options={filteredTeachers.map((enrollment) => ({
                         id: enrollment.teacher.id,
@@ -592,7 +633,6 @@ export default function CreateAssignmentModal({
                           ? "Select course first"
                           : "Select teacher…"
                       }
-                      label="Assigning Teacher *"
                       isSmallScreen={false}
                       BRAND={BRAND}
                       disabled={!form.courseId || metaLoading}
@@ -651,7 +691,10 @@ export default function CreateAssignmentModal({
                 {/* Attachments */}
                 <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Attachments <span className="text-xs font-normal text-gray-400">(optional — students will see these)</span>
+                    Attachments{" "}
+                    <span className="text-xs font-normal text-gray-400">
+                      (optional — students will see these)
+                    </span>
                   </label>
                   <FileUploadZone
                     fileType="assignment"

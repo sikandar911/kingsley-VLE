@@ -1,4 +1,4 @@
-import prisma from '../../config/prisma.js'
+import prisma from "../../config/prisma.js";
 
 const assignmentBaseInclude = {
   course: true,
@@ -31,7 +31,7 @@ const assignmentBaseInclude = {
     },
   },
   rubrics: true,
-}
+};
 
 const submissionInclude = {
   student: {
@@ -55,42 +55,44 @@ const submissionInclude = {
       fullName: true,
     },
   },
-}
+};
 
 // Helper function to populate submissionFiles array from submissionFileIds JSON
 const populateSubmissionFiles = async (submissions, prisma) => {
   if (!Array.isArray(submissions)) {
-    submissions = [submissions]
+    submissions = [submissions];
   }
-  
+
   for (const submission of submissions) {
     if (submission.submissionFileIds) {
       try {
-        const fileIds = JSON.parse(submission.submissionFileIds)
+        const fileIds = JSON.parse(submission.submissionFileIds);
         if (fileIds?.length > 0) {
           const files = await prisma.file.findMany({
             where: { id: { in: fileIds } },
-          })
-          submission.submissionFiles = files
+          });
+          submission.submissionFiles = files;
         } else {
-          submission.submissionFiles = []
+          submission.submissionFiles = [];
         }
       } catch (err) {
-        console.error('Error parsing submissionFileIds:', err)
-        submission.submissionFiles = []
+        console.error("Error parsing submissionFileIds:", err);
+        submission.submissionFiles = [];
       }
     } else {
-      submission.submissionFiles = submission.submissionFile ? [submission.submissionFile] : []
+      submission.submissionFiles = submission.submissionFile
+        ? [submission.submissionFile]
+        : [];
     }
   }
-  
-  return Array.isArray(submissions) ? submissions : submissions
-}
 
-const parseDate = (value) => (value ? new Date(value) : null)
+  return Array.isArray(submissions) ? submissions : submissions;
+};
+
+const parseDate = (value) => (value ? new Date(value) : null);
 
 const normalizeRubrics = (rubrics) => {
-  if (!Array.isArray(rubrics)) return []
+  if (!Array.isArray(rubrics)) return [];
 
   return rubrics
     .filter((item) => item && item.criteria)
@@ -98,14 +100,23 @@ const normalizeRubrics = (rubrics) => {
       criteria: String(item.criteria).trim(),
       maxMarks: Number(item.maxMarks),
     }))
-    .filter((item) => item.criteria && Number.isFinite(item.maxMarks) && item.maxMarks > 0)
-}
+    .filter(
+      (item) =>
+        item.criteria && Number.isFinite(item.maxMarks) && item.maxMarks > 0,
+    );
+};
 
-const getTeacherProfileByUserId = (userId) => prisma.teacherProfile.findUnique({ where: { userId } })
+const getTeacherProfileByUserId = (userId) =>
+  prisma.teacherProfile.findUnique({ where: { userId } });
 
-const getStudentProfileByUserId = (userId) => prisma.studentProfile.findUnique({ where: { userId } })
+const getStudentProfileByUserId = (userId) =>
+  prisma.studentProfile.findUnique({ where: { userId } });
 
-const ensureTeacherCanManageCourse = async (teacherProfileId, courseId, sectionId) => {
+const ensureTeacherCanManageCourse = async (
+  teacherProfileId,
+  courseId,
+  sectionId,
+) => {
   const [teacherCourse, section] = await Promise.all([
     prisma.teacherCourse.findFirst({
       where: {
@@ -119,23 +130,31 @@ const ensureTeacherCanManageCourse = async (teacherProfileId, courseId, sectionI
           select: { id: true, courseId: true },
         })
       : Promise.resolve(null),
-  ])
+  ]);
 
   if (section && section.courseId !== courseId) {
-    return { ok: false, error: 'Section does not belong to the selected course' }
+    return {
+      ok: false,
+      error: "Section does not belong to the selected course",
+    };
   }
 
-  const canManage = Boolean(teacherCourse)
+  const canManage = Boolean(teacherCourse);
   if (!canManage) {
-    return { ok: false, error: 'Teacher is not assigned to the selected course' }
+    return {
+      ok: false,
+      error: "Teacher is not assigned to the selected course",
+    };
   }
 
-  return { ok: true }
-}
+  return { ok: true };
+};
 
 const buildAssignmentPayload = ({ body, teacherId, keepStatus = true }) => {
-  const rubrics = normalizeRubrics(body.rubrics)
-  const assignmentFileIds = Array.isArray(body.assignmentFileIds) ? body.assignmentFileIds : []
+  const rubrics = normalizeRubrics(body.rubrics);
+  const assignmentFileIds = Array.isArray(body.assignmentFileIds)
+    ? body.assignmentFileIds
+    : [];
 
   const data = {
     title: body.title,
@@ -144,78 +163,93 @@ const buildAssignmentPayload = ({ body, teacherId, keepStatus = true }) => {
     teacherId,
     dueDate: parseDate(body.dueDate),
     totalMarks: body.totalMarks !== undefined ? Number(body.totalMarks) : 100,
-    passingMarks: body.passingMarks !== undefined && body.passingMarks !== null ? Number(body.passingMarks) : null,
+    passingMarks:
+      body.passingMarks !== undefined && body.passingMarks !== null
+        ? Number(body.passingMarks)
+        : null,
     allowLateSubmission: Boolean(body.allowLateSubmission),
-    targetType: body.targetType || (body.sectionId ? 'section' : 'individual'),
+    targetType: body.targetType || (body.sectionId ? "section" : "individual"),
     courseId: body.courseId,
     sectionId: body.sectionId || null,
     semesterId: body.semesterId || null,
     courseModuleId: body.courseModuleId || null,
-  }
+  };
 
   if (keepStatus) {
-    data.status = body.status || 'draft'
+    data.status = body.status || "draft";
   }
 
   if (rubrics.length) {
     data.rubrics = {
       create: rubrics,
-    }
+    };
   }
 
   if (assignmentFileIds.length) {
     data.assignmentFiles = {
       create: assignmentFileIds.map((fileId) => ({ fileId })),
-    }
+    };
   }
 
-  return data
-}
+  return data;
+};
 
 const validateAssignmentPayload = async (body, { requireTeacherId }) => {
   if (!body.title || !body.courseId) {
-    return 'title and courseId are required'
+    return "title and courseId are required";
   }
 
   if (!body.semesterId) {
-    return 'semesterId is required'
+    return "semesterId is required";
   }
 
   if (!body.sectionId) {
-    return 'sectionId is required'
+    return "sectionId is required";
   }
 
-  const totalMarks = body.totalMarks !== undefined ? Number(body.totalMarks) : 100
-  const passingMarks = body.passingMarks !== undefined && body.passingMarks !== null ? Number(body.passingMarks) : null
+  const totalMarks =
+    body.totalMarks !== undefined ? Number(body.totalMarks) : 100;
+  const passingMarks =
+    body.passingMarks !== undefined && body.passingMarks !== null
+      ? Number(body.passingMarks)
+      : null;
 
   if (!Number.isFinite(totalMarks) || totalMarks <= 0) {
-    return 'totalMarks must be a positive number'
+    return "totalMarks must be a positive number";
   }
 
-  if (passingMarks !== null && (!Number.isFinite(passingMarks) || passingMarks < 0 || passingMarks > totalMarks)) {
-    return 'passingMarks must be between 0 and totalMarks'
+  if (
+    passingMarks !== null &&
+    (!Number.isFinite(passingMarks) ||
+      passingMarks < 0 ||
+      passingMarks > totalMarks)
+  ) {
+    return "passingMarks must be between 0 and totalMarks";
   }
 
   if (requireTeacherId && !body.teacherId) {
-    return 'teacherId is required'
+    return "teacherId is required";
   }
 
-  if (body.status && !['draft', 'published', 'closed'].includes(body.status)) {
-    return 'status must be draft, published, or closed'
+  if (body.status && !["draft", "published", "closed"].includes(body.status)) {
+    return "status must be draft, published, or closed";
   }
 
-  if (body.targetType && !['section', 'individual'].includes(body.targetType)) {
-    return 'targetType must be section or individual'
+  if (body.targetType && !["section", "individual"].includes(body.targetType)) {
+    return "targetType must be section or individual";
   }
 
   if (body.sectionId) {
-    const section = await prisma.section.findUnique({ where: { id: body.sectionId } })
-    if (!section) return 'Selected section was not found'
-    if (section.courseId !== body.courseId) return 'sectionId does not belong to the selected course'
+    const section = await prisma.section.findUnique({
+      where: { id: body.sectionId },
+    });
+    if (!section) return "Selected section was not found";
+    if (section.courseId !== body.courseId)
+      return "sectionId does not belong to the selected course";
   }
 
-  return null
-}
+  return null;
+};
 
 const getStudentEnrollmentScope = async (studentProfileId) => {
   const enrollments = await prisma.enrollment.findMany({
@@ -225,38 +259,55 @@ const getStudentEnrollmentScope = async (studentProfileId) => {
       sectionId: true,
       semesterId: true,
     },
-  })
+  });
 
-  const courseIds = [...new Set(enrollments.map((item) => item.courseId).filter(Boolean))]
-  const sectionIds = [...new Set(enrollments.map((item) => item.sectionId).filter(Boolean))]
-  const semesterIds = [...new Set(enrollments.map((item) => item.semesterId).filter(Boolean))]
+  const courseIds = [
+    ...new Set(enrollments.map((item) => item.courseId).filter(Boolean)),
+  ];
+  const sectionIds = [
+    ...new Set(enrollments.map((item) => item.sectionId).filter(Boolean)),
+  ];
+  const semesterIds = [
+    ...new Set(enrollments.map((item) => item.semesterId).filter(Boolean)),
+  ];
 
-  return { enrollments, courseIds, sectionIds, semesterIds }
-}
+  return { enrollments, courseIds, sectionIds, semesterIds };
+};
 
-const buildStudentAssignmentWhere = ({ id, courseIds, sectionIds, semesterIds }) => {
+const buildStudentAssignmentWhere = ({
+  id,
+  courseIds,
+  sectionIds,
+  semesterIds,
+}) => {
   const filters = [
-    { status: 'published' },
+    { status: "published" },
     { courseId: { in: courseIds } },
     {
-      OR: [{ sectionId: null }, ...(sectionIds.length ? [{ sectionId: { in: sectionIds } }] : [])],
+      OR: [
+        { sectionId: null },
+        ...(sectionIds.length ? [{ sectionId: { in: sectionIds } }] : []),
+      ],
     },
     {
-      OR: [{ semesterId: null }, ...(semesterIds.length ? [{ semesterId: { in: semesterIds } }] : [])],
+      OR: [
+        { semesterId: null },
+        ...(semesterIds.length ? [{ semesterId: { in: semesterIds } }] : []),
+      ],
     },
-  ]
+  ];
 
   if (id) {
-    filters.unshift({ id })
+    filters.unshift({ id });
   }
 
-  return { AND: filters }
-}
+  return { AND: filters };
+};
 
 const getTeacherManagedAssignmentWhere = async (userId, extraWhere = {}) => {
-  const teacherProfile = await getTeacherProfileByUserId(userId)
+  const teacherProfile = await getTeacherProfileByUserId(userId);
   if (!teacherProfile) {
-    return { teacherProfile: null, where: null }
+    return { teacherProfile: null, where: null };
   }
 
   return {
@@ -265,45 +316,48 @@ const getTeacherManagedAssignmentWhere = async (userId, extraWhere = {}) => {
       teacherId: teacherProfile.id,
       ...extraWhere,
     },
-  }
-}
+  };
+};
 
 /**
  * Create calendar reminder for assignment automatically when published
  */
-const createAssignmentCalendarReminder = async (assignment, createdByUserId) => {
+const createAssignmentCalendarReminder = async (
+  assignment,
+  createdByUserId,
+) => {
   try {
     // Only create reminder if assignment has a dueDate and status is published
-    if (!assignment.dueDate || assignment.status !== 'published') {
-      return null
+    if (!assignment.dueDate || assignment.status !== "published") {
+      return null;
     }
 
     // Extract just the date from dueDate in local time so it matches the calendar grid
-    const reminderDate = new Date(assignment.dueDate)
-    reminderDate.setHours(0, 0, 0, 0)
+    const reminderDate = new Date(assignment.dueDate);
+    reminderDate.setHours(0, 0, 0, 0);
 
     const reminder = await prisma.calendarReminder.create({
       data: {
         date: reminderDate,
         name: `Assignment Due: ${assignment.title}`,
-        type: 'assignment',
+        type: "assignment",
         assignmentId: assignment.id,
         courseId: assignment.courseId || null,
         sectionId: assignment.sectionId || null,
         semesterId: assignment.semesterId || null,
-        targetRole: 'student', // Students need to see assignment reminders
+        targetRole: "student", // Students need to see assignment reminders
         createdBy: createdByUserId,
         isAutoGenerated: true,
       },
-    })
+    });
 
-    return reminder
+    return reminder;
   } catch (err) {
-    console.error('Error creating assignment calendar reminder:', err)
+    console.error("Error creating assignment calendar reminder:", err);
     // Don't fail assignment creation if reminder creation fails
-    return null
+    return null;
   }
-}
+};
 
 /**
  * @swagger
@@ -374,37 +428,53 @@ const createAssignmentCalendarReminder = async (assignment, createdByUserId) => 
  */
 export const createAssignment = async (req, res) => {
   try {
-    const validationError = await validateAssignmentPayload(req.body, { requireTeacherId: req.user.role === 'admin' })
+    const validationError = await validateAssignmentPayload(req.body, {
+      requireTeacherId: req.user.role === "admin",
+    });
     if (validationError) {
-      return res.status(400).json({ error: validationError })
+      return res.status(400).json({ error: validationError });
     }
 
-    let teacherId = req.body.teacherId
+    let teacherId = req.body.teacherId;
 
-    if (req.user.role === 'teacher') {
-      const teacherProfile = await getTeacherProfileByUserId(req.user.id)
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
       if (!teacherProfile) {
-        return res.status(400).json({ error: 'Teacher profile not found' })
+        return res.status(400).json({ error: "Teacher profile not found" });
       }
 
-      const permission = await ensureTeacherCanManageCourse(teacherProfile.id, req.body.courseId, req.body.sectionId)
+      const permission = await ensureTeacherCanManageCourse(
+        teacherProfile.id,
+        req.body.courseId,
+        req.body.sectionId,
+      );
       if (!permission.ok) {
-        return res.status(403).json({ error: permission.error })
+        return res.status(403).json({ error: permission.error });
       }
 
-      teacherId = teacherProfile.id
+      teacherId = teacherProfile.id;
     } else {
-      const teacherProfile = await prisma.teacherProfile.findUnique({ where: { id: teacherId } })
+      const teacherProfile = await prisma.teacherProfile.findUnique({
+        where: { id: teacherId },
+      });
       if (!teacherProfile) {
-        return res.status(400).json({ error: 'Selected teacherId was not found' })
+        return res
+          .status(400)
+          .json({ error: "Selected teacherId was not found" });
       }
     }
 
-    const assignmentFileIds = Array.isArray(req.body.assignmentFileIds) ? req.body.assignmentFileIds : []
+    const assignmentFileIds = Array.isArray(req.body.assignmentFileIds)
+      ? req.body.assignmentFileIds
+      : [];
     if (assignmentFileIds.length) {
-      const fileCount = await prisma.file.count({ where: { id: { in: assignmentFileIds } } })
+      const fileCount = await prisma.file.count({
+        where: { id: { in: assignmentFileIds } },
+      });
       if (fileCount !== assignmentFileIds.length) {
-        return res.status(400).json({ error: 'One or more assignmentFileIds are invalid' })
+        return res
+          .status(400)
+          .json({ error: "One or more assignmentFileIds are invalid" });
       }
     }
 
@@ -416,19 +486,19 @@ export const createAssignment = async (req, res) => {
       include: {
         ...assignmentBaseInclude,
       },
-    })
+    });
 
     // Automatically create calendar reminder if assignment is published with a due date
-    if (assignment.status === 'published' && assignment.dueDate) {
-      await createAssignmentCalendarReminder(assignment, req.user.id)
+    if (assignment.status === "published" && assignment.dueDate) {
+      await createAssignmentCalendarReminder(assignment, req.user.id);
     }
 
-    return res.status(201).json(assignment)
+    return res.status(201).json(assignment);
   } catch (err) {
-    console.error('Create assignment error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Create assignment error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -464,59 +534,74 @@ export const createAssignment = async (req, res) => {
  */
 export const listAssignments = async (req, res) => {
   try {
-    const filters = {}
-    if (req.query.status) filters.status = req.query.status
-    if (req.query.courseId) filters.courseId = req.query.courseId
-    if (req.query.sectionId) filters.sectionId = req.query.sectionId
+    const filters = {};
+    if (req.query.status) filters.status = req.query.status;
+    if (req.query.courseId) filters.courseId = req.query.courseId;
+    if (req.query.sectionId) filters.sectionId = req.query.sectionId;
 
-    let where = filters
+    let where = filters;
 
-    if (req.user.role === 'teacher') {
-      const scoped = await getTeacherManagedAssignmentWhere(req.user.id, filters)
+    if (req.user.role === "teacher") {
+      const scoped = await getTeacherManagedAssignmentWhere(
+        req.user.id,
+        filters,
+      );
       if (!scoped.teacherProfile) {
-        return res.status(400).json({ error: 'Teacher profile not found' })
+        return res.status(400).json({ error: "Teacher profile not found" });
       }
-      where = scoped.where
+      where = scoped.where;
     }
 
-    if (req.user.role === 'student') {
-      const studentProfile = await getStudentProfileByUserId(req.user.id)
+    if (req.user.role === "student") {
+      const studentProfile = await getStudentProfileByUserId(req.user.id);
       if (!studentProfile) {
-        return res.status(400).json({ error: 'Student profile not found' })
+        return res.status(400).json({ error: "Student profile not found" });
       }
 
-      const { courseIds, sectionIds, semesterIds } = await getStudentEnrollmentScope(studentProfile.id)
-      console.log('[listAssignments] Student courseIds from enrollments:', courseIds)
-      console.log('[listAssignments] Requested courseId filter:', filters.courseId)
+      const { courseIds, sectionIds, semesterIds } =
+        await getStudentEnrollmentScope(studentProfile.id);
+      console.log(
+        "[listAssignments] Student courseIds from enrollments:",
+        courseIds,
+      );
+      console.log(
+        "[listAssignments] Requested courseId filter:",
+        filters.courseId,
+      );
       if (!courseIds.length) {
-        return res.json([])
+        return res.json([]);
       }
 
       // If specific course/section filters provided, scope to those if student is enrolled
       // Otherwise fall back to all enrolled courses
-      let filteredCourseIds = courseIds
-      let filteredSectionIds = sectionIds
-      let filteredSemesterIds = semesterIds
+      let filteredCourseIds = courseIds;
+      let filteredSectionIds = sectionIds;
+      let filteredSemesterIds = semesterIds;
 
       if (filters.courseId) {
         // If student requested a specific course, check if they're enrolled
-        const isEnrolled = courseIds.includes(filters.courseId)
-        console.log('[listAssignments] Is student enrolled in requested course?', isEnrolled)
+        const isEnrolled = courseIds.includes(filters.courseId);
+        console.log(
+          "[listAssignments] Is student enrolled in requested course?",
+          isEnrolled,
+        );
         if (isEnrolled) {
-          filteredCourseIds = [filters.courseId]
+          filteredCourseIds = [filters.courseId];
         } else {
           // If not in enrollment list, still allow fetching but restrict to empty result
           // This prevents "not found" errors for legitimate requests
-          console.log('[listAssignments] Student NOT enrolled in course, returning empty array')
-          return res.json([])
+          console.log(
+            "[listAssignments] Student NOT enrolled in course, returning empty array",
+          );
+          return res.json([]);
         }
       }
 
       if (filters.sectionId) {
         if (sectionIds.includes(filters.sectionId)) {
-          filteredSectionIds = [filters.sectionId]
+          filteredSectionIds = [filters.sectionId];
         } else {
-          return res.json([])
+          return res.json([]);
         }
       }
 
@@ -524,11 +609,17 @@ export const listAssignments = async (req, res) => {
         courseIds: filteredCourseIds,
         sectionIds: filteredSectionIds,
         semesterIds: filteredSemesterIds,
-      })
-      console.log('[listAssignments] Built where filter for student:', JSON.stringify(where, null, 2))
+      });
+      console.log(
+        "[listAssignments] Built where filter for student:",
+        JSON.stringify(where, null, 2),
+      );
     }
 
-    console.log('[listAssignments] Final where filter:', JSON.stringify(where, null, 2))
+    console.log(
+      "[listAssignments] Final where filter:",
+      JSON.stringify(where, null, 2),
+    );
     const assignments = await prisma.assignment.findMany({
       where,
       include: {
@@ -538,33 +629,47 @@ export const listAssignments = async (req, res) => {
             submissions: true,
           },
         },
-        submissions: req.user.role === 'student'
-          ? {
-              where: {
-                student: {
-                  userId: req.user.id,
+        submissions:
+          req.user.role === "student"
+            ? {
+                where: {
+                  student: {
+                    userId: req.user.id,
+                  },
+                  deletedAt: null,
                 },
-                deletedAt: null,
-              },
-              orderBy: { attemptNumber: 'desc' },
-              take: 1,
-              include: submissionInclude,
-            }
-          : false,
+                orderBy: { attemptNumber: "desc" },
+                take: 1,
+                include: submissionInclude,
+              }
+            : false,
       },
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
-    })
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+    });
 
     // Filter out soft-deleted assignments (until Prisma client is regenerated)
-    const activeAssignments = assignments.filter((a) => !a.deletedAt)
+    const activeAssignments = assignments.filter((a) => !a.deletedAt);
 
-    console.log('[listAssignments] Found assignments from DB:', activeAssignments.length)
-    return res.json(activeAssignments)
+    // Populate submission files for all submissions in assignments
+    for (const assignment of activeAssignments) {
+      if (
+        Array.isArray(assignment.submissions) &&
+        assignment.submissions.length > 0
+      ) {
+        await populateSubmissionFiles(assignment.submissions, prisma);
+      }
+    }
+
+    console.log(
+      "[listAssignments] Found assignments from DB:",
+      activeAssignments.length,
+    );
+    return res.json(activeAssignments);
   } catch (err) {
-    console.error('List assignments error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("List assignments error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -596,17 +701,18 @@ export const listAssignments = async (req, res) => {
  */
 export const getAssignmentById = async (req, res) => {
   try {
-    let assignment = null
+    let assignment = null;
 
-    if (req.user.role === 'student') {
-      const studentProfile = await getStudentProfileByUserId(req.user.id)
+    if (req.user.role === "student") {
+      const studentProfile = await getStudentProfileByUserId(req.user.id);
       if (!studentProfile) {
-        return res.status(400).json({ error: 'Student profile not found' })
+        return res.status(400).json({ error: "Student profile not found" });
       }
 
-      const { courseIds, sectionIds, semesterIds } = await getStudentEnrollmentScope(studentProfile.id)
+      const { courseIds, sectionIds, semesterIds } =
+        await getStudentEnrollmentScope(studentProfile.id);
       if (!courseIds.length) {
-        return res.status(404).json({ error: 'Assignment not found' })
+        return res.status(404).json({ error: "Assignment not found" });
       }
 
       assignment = await prisma.assignment.findFirst({
@@ -623,15 +729,17 @@ export const getAssignmentById = async (req, res) => {
               studentId: studentProfile.id,
               deletedAt: null,
             },
-            orderBy: { attemptNumber: 'desc' },
+            orderBy: { attemptNumber: "desc" },
             include: submissionInclude,
           },
         },
-      })
-    } else if (req.user.role === 'teacher') {
-      const scoped = await getTeacherManagedAssignmentWhere(req.user.id, { id: req.params.id })
+      });
+    } else if (req.user.role === "teacher") {
+      const scoped = await getTeacherManagedAssignmentWhere(req.user.id, {
+        id: req.params.id,
+      });
       if (!scoped.teacherProfile) {
-        return res.status(400).json({ error: 'Teacher profile not found' })
+        return res.status(400).json({ error: "Teacher profile not found" });
       }
 
       assignment = await prisma.assignment.findFirst({
@@ -640,11 +748,11 @@ export const getAssignmentById = async (req, res) => {
           ...assignmentBaseInclude,
           submissions: {
             where: { deletedAt: null },
-            orderBy: [{ submittedAt: 'desc' }, { attemptNumber: 'desc' }],
+            orderBy: [{ submittedAt: "desc" }, { attemptNumber: "desc" }],
             include: submissionInclude,
           },
         },
-      })
+      });
     } else {
       assignment = await prisma.assignment.findUnique({
         where: { id: req.params.id },
@@ -652,23 +760,23 @@ export const getAssignmentById = async (req, res) => {
           ...assignmentBaseInclude,
           submissions: {
             where: { deletedAt: null },
-            orderBy: [{ submittedAt: 'desc' }, { attemptNumber: 'desc' }],
+            orderBy: [{ submittedAt: "desc" }, { attemptNumber: "desc" }],
             include: submissionInclude,
           },
         },
-      })
+      });
     }
 
     if (!assignment) {
-      return res.status(404).json({ error: 'Assignment not found' })
+      return res.status(404).json({ error: "Assignment not found" });
     }
 
-    return res.json(assignment)
+    return res.json(assignment);
   } catch (err) {
-    console.error('Get assignment error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Get assignment error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -697,69 +805,114 @@ export const updateAssignment = async (req, res) => {
     const existing = await prisma.assignment.findUnique({
       where: { id: req.params.id },
       include: { rubrics: true },
-    })
+    });
 
     if (!existing) {
-      return res.status(404).json({ error: 'Assignment not found' })
+      return res.status(404).json({ error: "Assignment not found" });
     }
 
-    let teacherId = existing.teacherId
+    let teacherId = existing.teacherId;
 
-    if (req.user.role === 'teacher') {
-      const teacherProfile = await getTeacherProfileByUserId(req.user.id)
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
       if (!teacherProfile) {
-        return res.status(400).json({ error: 'Teacher profile not found' })
+        return res.status(400).json({ error: "Teacher profile not found" });
       }
       if (existing.teacherId !== teacherProfile.id) {
-        return res.status(403).json({ error: 'You can only update your own assignments' })
+        return res
+          .status(403)
+          .json({ error: "You can only update your own assignments" });
       }
 
-      const courseId = req.body.courseId || existing.courseId
-      const sectionId = req.body.sectionId !== undefined ? req.body.sectionId : existing.sectionId
-      const permission = await ensureTeacherCanManageCourse(teacherProfile.id, courseId, sectionId)
+      const courseId = req.body.courseId || existing.courseId;
+      const sectionId =
+        req.body.sectionId !== undefined
+          ? req.body.sectionId
+          : existing.sectionId;
+      const permission = await ensureTeacherCanManageCourse(
+        teacherProfile.id,
+        courseId,
+        sectionId,
+      );
       if (!permission.ok) {
-        return res.status(403).json({ error: permission.error })
+        return res.status(403).json({ error: permission.error });
       }
-    } else if (req.body.teacherId && req.body.teacherId !== existing.teacherId) {
-      const teacherProfile = await prisma.teacherProfile.findUnique({ where: { id: req.body.teacherId } })
+    } else if (
+      req.body.teacherId &&
+      req.body.teacherId !== existing.teacherId
+    ) {
+      const teacherProfile = await prisma.teacherProfile.findUnique({
+        where: { id: req.body.teacherId },
+      });
       if (!teacherProfile) {
-        return res.status(400).json({ error: 'Selected teacherId was not found' })
+        return res
+          .status(400)
+          .json({ error: "Selected teacherId was not found" });
       }
-      teacherId = teacherProfile.id
+      teacherId = teacherProfile.id;
     }
 
     const mergedPayload = {
       ...existing,
       ...req.body,
       courseId: req.body.courseId || existing.courseId,
-      sectionId: req.body.sectionId !== undefined ? req.body.sectionId : existing.sectionId,
-      semesterId: req.body.semesterId !== undefined ? req.body.semesterId : existing.semesterId,
-      totalMarks: req.body.totalMarks !== undefined ? req.body.totalMarks : existing.totalMarks,
-      passingMarks: req.body.passingMarks !== undefined ? req.body.passingMarks : existing.passingMarks,
+      sectionId:
+        req.body.sectionId !== undefined
+          ? req.body.sectionId
+          : existing.sectionId,
+      semesterId:
+        req.body.semesterId !== undefined
+          ? req.body.semesterId
+          : existing.semesterId,
+      totalMarks:
+        req.body.totalMarks !== undefined
+          ? req.body.totalMarks
+          : existing.totalMarks,
+      passingMarks:
+        req.body.passingMarks !== undefined
+          ? req.body.passingMarks
+          : existing.passingMarks,
       status: req.body.status || existing.status,
       targetType: req.body.targetType || existing.targetType,
-    }
+    };
 
-    const validationError = await validateAssignmentPayload(mergedPayload, { requireTeacherId: false })
+    const validationError = await validateAssignmentPayload(mergedPayload, {
+      requireTeacherId: false,
+    });
     if (validationError) {
-      return res.status(400).json({ error: validationError })
+      return res.status(400).json({ error: validationError });
     }
 
-    const assignmentFileIds = Array.isArray(req.body.assignmentFileIds) ? req.body.assignmentFileIds : null
+    const assignmentFileIds = Array.isArray(req.body.assignmentFileIds)
+      ? req.body.assignmentFileIds
+      : null;
     if (assignmentFileIds?.length) {
-      const fileCount = await prisma.file.count({ where: { id: { in: assignmentFileIds } } })
+      const fileCount = await prisma.file.count({
+        where: { id: { in: assignmentFileIds } },
+      });
       if (fileCount !== assignmentFileIds.length) {
-        return res.status(400).json({ error: 'One or more assignmentFileIds are invalid' })
+        return res
+          .status(400)
+          .json({ error: "One or more assignmentFileIds are invalid" });
       }
     }
 
     const updateData = {
       title: req.body.title ?? existing.title,
       description: req.body.description ?? existing.description,
-      teacherInstruction: req.body.instructions ?? req.body.teacherInstruction ?? existing.teacherInstruction,
+      teacherInstruction:
+        req.body.instructions ??
+        req.body.teacherInstruction ??
+        existing.teacherInstruction,
       teacherId,
-      dueDate: req.body.dueDate !== undefined ? parseDate(req.body.dueDate) : existing.dueDate,
-      totalMarks: req.body.totalMarks !== undefined ? Number(req.body.totalMarks) : existing.totalMarks,
+      dueDate:
+        req.body.dueDate !== undefined
+          ? parseDate(req.body.dueDate)
+          : existing.dueDate,
+      totalMarks:
+        req.body.totalMarks !== undefined
+          ? Number(req.body.totalMarks)
+          : existing.totalMarks,
       passingMarks:
         req.body.passingMarks !== undefined
           ? req.body.passingMarks === null
@@ -773,23 +926,33 @@ export const updateAssignment = async (req, res) => {
       status: req.body.status || existing.status,
       targetType: req.body.targetType || existing.targetType,
       courseId: req.body.courseId || existing.courseId,
-      sectionId: req.body.sectionId !== undefined ? req.body.sectionId : existing.sectionId,
-      semesterId: req.body.semesterId !== undefined ? req.body.semesterId : existing.semesterId,
-    }
+      sectionId:
+        req.body.sectionId !== undefined
+          ? req.body.sectionId
+          : existing.sectionId,
+      semesterId:
+        req.body.semesterId !== undefined
+          ? req.body.semesterId
+          : existing.semesterId,
+      courseModuleId:
+        req.body.courseModuleId !== undefined
+          ? req.body.courseModuleId
+          : existing.courseModuleId,
+    };
 
     if (Array.isArray(req.body.rubrics)) {
-      const rubrics = normalizeRubrics(req.body.rubrics)
+      const rubrics = normalizeRubrics(req.body.rubrics);
       updateData.rubrics = {
         deleteMany: {},
         create: rubrics,
-      }
+      };
     }
 
     if (assignmentFileIds) {
       updateData.assignmentFiles = {
         deleteMany: {},
         create: assignmentFileIds.map((fileId) => ({ fileId })),
-      }
+      };
     }
 
     const updated = await prisma.assignment.update({
@@ -798,38 +961,38 @@ export const updateAssignment = async (req, res) => {
       include: {
         ...assignmentBaseInclude,
       },
-    })
+    });
 
     // Handle calendar reminder: create or delete based on status and dueDate
-    if (updated.dueDate && updated.status === 'published') {
+    if (updated.dueDate && updated.status === "published") {
       // Check if reminder already exists
       const existingReminder = await prisma.calendarReminder.findFirst({
         where: {
           assignmentId: updated.id,
-          type: 'assignment',
+          type: "assignment",
         },
-      })
+      });
 
       if (!existingReminder) {
         // Create new reminder if it doesn't exist
-        await createAssignmentCalendarReminder(updated, req.user.id)
+        await createAssignmentCalendarReminder(updated, req.user.id);
       }
-    } else if (!updated.dueDate || updated.status !== 'published') {
+    } else if (!updated.dueDate || updated.status !== "published") {
       // Delete reminder if assignment lost its dueDate or is no longer published
       await prisma.calendarReminder.deleteMany({
         where: {
           assignmentId: updated.id,
-          type: 'assignment',
+          type: "assignment",
         },
-      })
+      });
     }
 
-    return res.json(updated)
+    return res.json(updated);
   } catch (err) {
-    console.error('Update assignment error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Update assignment error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -865,21 +1028,27 @@ export const updateAssignment = async (req, res) => {
  *               $ref: '#/components/schemas/Assignment'
  */
 export const updateAssignmentStatus = async (req, res) => {
-  const { status } = req.body
-  if (!['draft', 'published', 'closed'].includes(status)) {
-    return res.status(400).json({ error: 'status must be draft, published, or closed' })
+  const { status } = req.body;
+  if (!["draft", "published", "closed"].includes(status)) {
+    return res
+      .status(400)
+      .json({ error: "status must be draft, published, or closed" });
   }
 
   try {
-    const existing = await prisma.assignment.findUnique({ where: { id: req.params.id } })
+    const existing = await prisma.assignment.findUnique({
+      where: { id: req.params.id },
+    });
     if (!existing) {
-      return res.status(404).json({ error: 'Assignment not found' })
+      return res.status(404).json({ error: "Assignment not found" });
     }
 
-    if (req.user.role === 'teacher') {
-      const teacherProfile = await getTeacherProfileByUserId(req.user.id)
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
       if (!teacherProfile || teacherProfile.id !== existing.teacherId) {
-        return res.status(403).json({ error: 'You can only update your own assignments' })
+        return res
+          .status(403)
+          .json({ error: "You can only update your own assignments" });
       }
     }
 
@@ -887,37 +1056,37 @@ export const updateAssignmentStatus = async (req, res) => {
       where: { id: req.params.id },
       data: { status },
       include: assignmentBaseInclude,
-    })
+    });
 
     // Handle calendar reminder based on new status
-    if (status === 'published' && updated.dueDate) {
+    if (status === "published" && updated.dueDate) {
       // When publishing, create reminder if it doesn't exist
       const existingReminder = await prisma.calendarReminder.findFirst({
         where: {
           assignmentId: updated.id,
-          type: 'assignment',
+          type: "assignment",
         },
-      })
+      });
 
       if (!existingReminder) {
-        await createAssignmentCalendarReminder(updated, req.user.id)
+        await createAssignmentCalendarReminder(updated, req.user.id);
       }
-    } else if (status !== 'published') {
+    } else if (status !== "published") {
       // When unpublishing, delete the reminder
       await prisma.calendarReminder.deleteMany({
         where: {
           assignmentId: updated.id,
-          type: 'assignment',
+          type: "assignment",
         },
-      })
+      });
     }
 
-    return res.json(updated)
+    return res.json(updated);
   } catch (err) {
-    console.error('Update assignment status error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Update assignment status error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -950,15 +1119,19 @@ export const updateAssignmentStatus = async (req, res) => {
  */
 export const deleteAssignment = async (req, res) => {
   try {
-    const existing = await prisma.assignment.findUnique({ where: { id: req.params.id } })
+    const existing = await prisma.assignment.findUnique({
+      where: { id: req.params.id },
+    });
     if (!existing) {
-      return res.status(404).json({ error: 'Assignment not found' })
+      return res.status(404).json({ error: "Assignment not found" });
     }
 
-    if (req.user.role === 'teacher') {
-      const teacherProfile = await getTeacherProfileByUserId(req.user.id)
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
       if (!teacherProfile || teacherProfile.id !== existing.teacherId) {
-        return res.status(403).json({ error: 'You can only delete your own assignments' })
+        return res
+          .status(403)
+          .json({ error: "You can only delete your own assignments" });
       }
     }
 
@@ -966,22 +1139,22 @@ export const deleteAssignment = async (req, res) => {
     await prisma.assignment.update({
       where: { id: req.params.id },
       data: { deletedAt: new Date() },
-    })
+    });
 
     // Clean up calendar reminders associated with this assignment
     await prisma.calendarReminder.deleteMany({
       where: {
         assignmentId: req.params.id,
-        type: 'assignment',
+        type: "assignment",
       },
-    })
+    });
 
-    return res.json({ message: 'Assignment deleted successfully' })
+    return res.json({ message: "Assignment deleted successfully" });
   } catch (err) {
-    console.error('Delete assignment error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Delete assignment error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -1023,21 +1196,37 @@ export const deleteAssignment = async (req, res) => {
  *               $ref: '#/components/schemas/Submission'
  */
 export const submitAssignment = async (req, res) => {
-  const { submissionText, submissionFileId, submissionFileIds, submissionFileUrl } = req.body
+  const {
+    submissionText,
+    submissionFileId,
+    submissionFileIds,
+    submissionFileUrl,
+  } = req.body;
 
-  if (!submissionText && !submissionFileId && !submissionFileIds?.length && !submissionFileUrl) {
-    return res.status(400).json({ error: 'Provide submissionText, submissionFileId(s), or submissionFileUrl' })
+  if (
+    !submissionText &&
+    !submissionFileId &&
+    !submissionFileIds?.length &&
+    !submissionFileUrl
+  ) {
+    return res.status(400).json({
+      error:
+        "Provide submissionText, submissionFileId(s), or submissionFileUrl",
+    });
   }
 
   try {
-    const studentProfile = await getStudentProfileByUserId(req.user.id)
+    const studentProfile = await getStudentProfileByUserId(req.user.id);
     if (!studentProfile) {
-      return res.status(400).json({ error: 'Student profile not found' })
+      return res.status(400).json({ error: "Student profile not found" });
     }
 
-    const { courseIds, sectionIds, semesterIds } = await getStudentEnrollmentScope(studentProfile.id)
+    const { courseIds, sectionIds, semesterIds } =
+      await getStudentEnrollmentScope(studentProfile.id);
     if (!courseIds.length) {
-      return res.status(403).json({ error: 'You are not enrolled in any course' })
+      return res
+        .status(403)
+        .json({ error: "You are not enrolled in any course" });
     }
 
     const assignment = await prisma.assignment.findFirst({
@@ -1047,41 +1236,49 @@ export const submitAssignment = async (req, res) => {
         sectionIds,
         semesterIds,
       }),
-    })
+    });
 
     if (!assignment) {
-      return res.status(404).json({ error: 'Assignment not found' })
+      return res.status(404).json({ error: "Assignment not found" });
     }
 
-    if (assignment.status !== 'published') {
-      return res.status(400).json({ error: 'Only published assignments can receive submissions' })
+    if (assignment.status !== "published") {
+      return res
+        .status(400)
+        .json({ error: "Only published assignments can receive submissions" });
     }
 
-    const now = new Date()
-    const isLate = Boolean(assignment.dueDate && now > assignment.dueDate)
+    const now = new Date();
+    const isLate = Boolean(assignment.dueDate && now > assignment.dueDate);
     if (isLate && !assignment.allowLateSubmission) {
-      return res.status(400).json({ error: 'Late submission is not allowed for this assignment' })
+      return res
+        .status(400)
+        .json({ error: "Late submission is not allowed for this assignment" });
     }
 
     // Validate single file if provided
     if (submissionFileId) {
-      const file = await prisma.file.findUnique({ where: { id: submissionFileId } })
+      const file = await prisma.file.findUnique({
+        where: { id: submissionFileId },
+      });
       if (!file) {
-        return res.status(400).json({ error: 'submissionFileId is invalid' })
+        return res.status(400).json({ error: "submissionFileId is invalid" });
       }
     }
 
     // Validate multiple files if provided
-    let fileIdsToStore = []
+    let fileIdsToStore = [];
     if (submissionFileIds?.length > 0) {
       const files = await prisma.file.findMany({
         where: { id: { in: submissionFileIds } },
         select: { id: true },
-      })
+      });
       if (files.length !== submissionFileIds.length) {
-        return res.status(400).json({ error: 'One or more submissionFileIds are invalid' })
+        return res
+          .status(400)
+          .json({ error: "One or more submissionFileIds are invalid" });
       }
-      fileIdsToStore = submissionFileIds
+      fileIdsToStore = submissionFileIds;
     }
 
     const latestAttempt = await prisma.assignmentSubmission.findFirst({
@@ -1089,9 +1286,9 @@ export const submitAssignment = async (req, res) => {
         assignmentId: assignment.id,
         studentId: studentProfile.id,
       },
-      orderBy: { attemptNumber: 'desc' },
+      orderBy: { attemptNumber: "desc" },
       select: { attemptNumber: true },
-    })
+    });
 
     const submission = await prisma.assignmentSubmission.create({
       data: {
@@ -1099,29 +1296,30 @@ export const submitAssignment = async (req, res) => {
         studentId: studentProfile.id,
         submissionText: submissionText || null,
         submissionFileId: submissionFileId || null,
-        submissionFileIds: fileIdsToStore.length > 0 ? JSON.stringify(fileIdsToStore) : null,
+        submissionFileIds:
+          fileIdsToStore.length > 0 ? JSON.stringify(fileIdsToStore) : null,
         submissionFileUrl: submissionFileUrl || null,
-        status: isLate ? 'late' : 'submitted',
+        status: isLate ? "late" : "submitted",
         attemptNumber: (latestAttempt?.attemptNumber || 0) + 1,
       },
       include: submissionInclude,
-    })
+    });
 
     // Fetch all related files if submissionFileIds exist
     if (submission.submissionFileIds) {
-      const fileIds = JSON.parse(submission.submissionFileIds)
+      const fileIds = JSON.parse(submission.submissionFileIds);
       const files = await prisma.file.findMany({
         where: { id: { in: fileIds } },
-      })
-      submission.submissionFiles = files
+      });
+      submission.submissionFiles = files;
     }
 
-    return res.status(201).json(submission)
+    return res.status(201).json(submission);
   } catch (err) {
-    console.error('Submit assignment error:', err)
-    return res.status(500).json({ error: err.message || 'Server error' })
+    console.error("Submit assignment error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -1149,30 +1347,38 @@ export const submitAssignment = async (req, res) => {
  */
 export const listAssignmentSubmissions = async (req, res) => {
   try {
-    const assignment = await prisma.assignment.findUnique({ where: { id: req.params.id } })
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: req.params.id },
+    });
     if (!assignment) {
-      return res.status(404).json({ error: 'Assignment not found' })
+      return res.status(404).json({ error: "Assignment not found" });
     }
 
     // Students can only view their own submissions for this assignment
-    if (req.user.role === 'student') {
-      const studentProfile = await getStudentProfileByUserId(req.user.id)
+    if (req.user.role === "student") {
+      const studentProfile = await getStudentProfileByUserId(req.user.id);
       if (!studentProfile) {
-        return res.status(400).json({ error: 'Student profile not found' })
+        return res.status(400).json({ error: "Student profile not found" });
       }
       const submissions = await prisma.assignmentSubmission.findMany({
-        where: { assignmentId: req.params.id, studentId: studentProfile.id, deletedAt: null },
+        where: {
+          assignmentId: req.params.id,
+          studentId: studentProfile.id,
+          deletedAt: null,
+        },
         include: submissionInclude,
-        orderBy: [{ attemptNumber: 'desc' }],
-      })
-      const withFiles = await populateSubmissionFiles(submissions, prisma)
-      return res.json(withFiles)
+        orderBy: [{ attemptNumber: "desc" }],
+      });
+      const withFiles = await populateSubmissionFiles(submissions, prisma);
+      return res.json(withFiles);
     }
 
-    if (req.user.role === 'teacher') {
-      const teacherProfile = await getTeacherProfileByUserId(req.user.id)
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
       if (!teacherProfile || teacherProfile.id !== assignment.teacherId) {
-        return res.status(403).json({ error: 'You can only view submissions for your own assignments' })
+        return res.status(403).json({
+          error: "You can only view submissions for your own assignments",
+        });
       }
     }
 
@@ -1182,16 +1388,16 @@ export const listAssignmentSubmissions = async (req, res) => {
         deletedAt: null,
       },
       include: submissionInclude,
-      orderBy: [{ submittedAt: 'desc' }, { attemptNumber: 'desc' }],
-    })
+      orderBy: [{ submittedAt: "desc" }, { attemptNumber: "desc" }],
+    });
 
-    const withFiles = await populateSubmissionFiles(submissions, prisma)
-    return res.json(withFiles)
+    const withFiles = await populateSubmissionFiles(submissions, prisma);
+    return res.json(withFiles);
   } catch (err) {
-    console.error('List assignment submissions error:', err)
-    return res.status(500).json({ error: err.message || 'Server error' })
+    console.error("List assignment submissions error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -1231,7 +1437,7 @@ export const listAssignmentSubmissions = async (req, res) => {
  *               $ref: '#/components/schemas/Submission'
  */
 export const updateSubmission = async (req, res) => {
-  const { submissionText, submissionFileId, submissionFileIds } = req.body
+  const { submissionText, submissionFileId, submissionFileIds } = req.body;
   try {
     const submission = await prisma.assignmentSubmission.findUnique({
       where: { id: req.params.submissionId },
@@ -1239,80 +1445,97 @@ export const updateSubmission = async (req, res) => {
         assignment: true,
         student: true,
       },
-    })
+    });
 
     if (!submission) {
-      return res.status(404).json({ error: 'Submission not found' })
+      return res.status(404).json({ error: "Submission not found" });
     }
 
     // Only the student who submitted can edit (if not graded)
-    const studentProfile = await getStudentProfileByUserId(req.user.id)
+    const studentProfile = await getStudentProfileByUserId(req.user.id);
     if (!studentProfile || studentProfile.id !== submission.student.id) {
-      return res.status(403).json({ error: 'You can only edit your own submissions' })
+      return res
+        .status(403)
+        .json({ error: "You can only edit your own submissions" });
     }
 
     // Check if submission is already graded
     if (submission.marks !== null && submission.marks !== undefined) {
-      return res.status(400).json({ error: 'Cannot edit a submission that has been graded' })
+      return res
+        .status(400)
+        .json({ error: "Cannot edit a submission that has been graded" });
     }
 
     // Check if assignment is overdue
-    const now = new Date()
-    if (submission.assignment.dueDate && now > new Date(submission.assignment.dueDate)) {
-      return res.status(400).json({ error: 'Cannot edit submission after due date' })
+    const now = new Date();
+    if (
+      submission.assignment.dueDate &&
+      now > new Date(submission.assignment.dueDate)
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Cannot edit submission after due date" });
     }
 
     // Validate single file if provided
     if (submissionFileId) {
-      const file = await prisma.file.findUnique({ where: { id: submissionFileId } })
+      const file = await prisma.file.findUnique({
+        where: { id: submissionFileId },
+      });
       if (!file) {
-        return res.status(400).json({ error: 'submissionFileId is invalid' })
+        return res.status(400).json({ error: "submissionFileId is invalid" });
       }
     }
 
     // Validate multiple files if provided
-    let fileIdsToStore = null
-    if (submissionFileIds?.length > 0) {
-      const files = await prisma.file.findMany({
-        where: { id: { in: submissionFileIds } },
-        select: { id: true },
-      })
-      if (files.length !== submissionFileIds.length) {
-        return res.status(400).json({ error: 'One or more submissionFileIds are invalid' })
+    let fileIdsToStore = undefined; // Only update if explicitly provided
+    if (submissionFileIds !== undefined) {
+      fileIdsToStore = null; // Default to null (can be cleared)
+      if (submissionFileIds?.length > 0) {
+        const files = await prisma.file.findMany({
+          where: { id: { in: submissionFileIds } },
+          select: { id: true },
+        });
+        if (files.length !== submissionFileIds.length) {
+          return res
+            .status(400)
+            .json({ error: "One or more submissionFileIds are invalid" });
+        }
+        fileIdsToStore = JSON.stringify(submissionFileIds);
       }
-      fileIdsToStore = JSON.stringify(submissionFileIds)
-    } else if (submissionFileIds === null || (Array.isArray(submissionFileIds) && submissionFileIds.length === 0)) {
-      // Explicitly clear files if empty array is passed
-      fileIdsToStore = null
+      // If empty or zero length, fileIdsToStore stays null (explicitly clear files)
     }
 
-    // Update submission
-    const updateData = {}
-    if (submissionText !== undefined) updateData.submissionText = submissionText
-    if (submissionFileId !== undefined) updateData.submissionFileId = submissionFileId
-    if (fileIdsToStore !== undefined) updateData.submissionFileIds = fileIdsToStore
+    // Update submission - only include fields that were provided
+    const updateData = {};
+    if (submissionText !== undefined)
+      updateData.submissionText = submissionText;
+    if (submissionFileId !== undefined)
+      updateData.submissionFileId = submissionFileId;
+    if (fileIdsToStore !== undefined)
+      updateData.submissionFileIds = fileIdsToStore;
 
     const updatedSubmission = await prisma.assignmentSubmission.update({
       where: { id: req.params.submissionId },
       data: updateData,
       include: submissionInclude,
-    })
+    });
 
     // Fetch all related files if submissionFileIds exist
     if (updatedSubmission.submissionFileIds) {
-      const fileIds = JSON.parse(updatedSubmission.submissionFileIds)
+      const fileIds = JSON.parse(updatedSubmission.submissionFileIds);
       const files = await prisma.file.findMany({
         where: { id: { in: fileIds } },
-      })
-      updatedSubmission.submissionFiles = files
+      });
+      updatedSubmission.submissionFiles = files;
     }
 
-    return res.json(updatedSubmission)
+    return res.json(updatedSubmission);
   } catch (err) {
-    console.error('Update submission error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Update submission error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -1353,41 +1576,56 @@ export const updateSubmission = async (req, res) => {
  *               $ref: '#/components/schemas/Submission'
  */
 export const gradeSubmission = async (req, res) => {
-  const { marks, gradeLetter, feedback, markedByTeacherId } = req.body
+  const { marks, gradeLetter, feedback, markedByTeacherId } = req.body;
   try {
     const submission = await prisma.assignmentSubmission.findUnique({
       where: { id: req.params.submissionId },
       include: {
         assignment: true,
       },
-    })
+    });
 
     if (!submission) {
-      return res.status(404).json({ error: 'Submission not found' })
+      return res.status(404).json({ error: "Submission not found" });
     }
 
-    let graderTeacherId = markedByTeacherId || null
+    let graderTeacherId = markedByTeacherId || null;
 
-    if (req.user.role === 'teacher') {
-      const teacherProfile = await getTeacherProfileByUserId(req.user.id)
-      if (!teacherProfile || teacherProfile.id !== submission.assignment.teacherId) {
-        return res.status(403).json({ error: 'You can only grade submissions for your own assignments' })
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
+      if (
+        !teacherProfile ||
+        teacherProfile.id !== submission.assignment.teacherId
+      ) {
+        return res.status(403).json({
+          error: "You can only grade submissions for your own assignments",
+        });
       }
-      graderTeacherId = teacherProfile.id
+      graderTeacherId = teacherProfile.id;
     } else {
       if (!graderTeacherId) {
-        return res.status(400).json({ error: 'markedByTeacherId is required when grading as admin' })
+        return res.status(400).json({
+          error: "markedByTeacherId is required when grading as admin",
+        });
       }
-      const teacherProfile = await prisma.teacherProfile.findUnique({ where: { id: graderTeacherId } })
+      const teacherProfile = await prisma.teacherProfile.findUnique({
+        where: { id: graderTeacherId },
+      });
       if (!teacherProfile) {
-        return res.status(400).json({ error: 'markedByTeacherId is invalid' })
+        return res.status(400).json({ error: "markedByTeacherId is invalid" });
       }
     }
 
     if (marks !== undefined) {
-      const numericMarks = Number(marks)
-      if (!Number.isFinite(numericMarks) || numericMarks < 0 || numericMarks > submission.assignment.totalMarks) {
-        return res.status(400).json({ error: `marks must be between 0 and ${submission.assignment.totalMarks}` })
+      const numericMarks = Number(marks);
+      if (
+        !Number.isFinite(numericMarks) ||
+        numericMarks < 0 ||
+        numericMarks > submission.assignment.totalMarks
+      ) {
+        return res.status(400).json({
+          error: `marks must be between 0 and ${submission.assignment.totalMarks}`,
+        });
       }
     }
 
@@ -1395,7 +1633,8 @@ export const gradeSubmission = async (req, res) => {
       where: { id: req.params.submissionId },
       data: {
         marks: marks !== undefined ? Number(marks) : submission.marks,
-        gradeLetter: gradeLetter !== undefined ? gradeLetter : submission.gradeLetter,
+        gradeLetter:
+          gradeLetter !== undefined ? gradeLetter : submission.gradeLetter,
         feedback: feedback !== undefined ? feedback : submission.feedback,
         markedBy: graderTeacherId,
         markedAt: new Date(),
@@ -1406,14 +1645,14 @@ export const gradeSubmission = async (req, res) => {
           include: assignmentBaseInclude,
         },
       },
-    })
+    });
 
-    return res.json(graded)
+    return res.json(graded);
   } catch (err) {
-    console.error('Grade submission error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Grade submission error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -1433,18 +1672,23 @@ export const gradeSubmission = async (req, res) => {
  */
 export const getAssignmentsMeta = async (req, res) => {
   try {
-    let courseWhere = {}
+    let courseWhere = {};
 
-    if (req.user.role === 'teacher') {
-      const teacherProfile = await prisma.teacherProfile.findUnique({ where: { userId: req.user.id } })
-      if (!teacherProfile) return res.status(400).json({ error: 'Teacher profile not found' })
+    if (req.user.role === "teacher") {
+      const teacherProfile = await prisma.teacherProfile.findUnique({
+        where: { userId: req.user.id },
+      });
+      if (!teacherProfile)
+        return res.status(400).json({ error: "Teacher profile not found" });
 
       const teacherCourses = await prisma.teacherCourse.findMany({
         where: { teacherId: teacherProfile.id },
         select: { courseId: true },
-      })
-      const courseIds = teacherCourses.map((tc) => tc.courseId)
-      courseWhere = courseIds.length ? { id: { in: courseIds } } : { id: { in: [] } }
+      });
+      const courseIds = teacherCourses.map((tc) => tc.courseId);
+      courseWhere = courseIds.length
+        ? { id: { in: courseIds } }
+        : { id: { in: [] } };
     }
 
     const courses = await prisma.course.findMany({
@@ -1456,15 +1700,15 @@ export const getAssignmentsMeta = async (req, res) => {
         semester: { select: { id: true, name: true, year: true } },
         sections: {
           select: { id: true, name: true },
-          orderBy: { name: 'asc' },
+          orderBy: { name: "asc" },
         },
       },
-      orderBy: { title: 'asc' },
-    })
+      orderBy: { title: "asc" },
+    });
 
-    const result = { courses }
+    const result = { courses };
 
-    if (req.user.role === 'admin') {
+    if (req.user.role === "admin") {
       const teachers = await prisma.teacherProfile.findMany({
         select: {
           id: true,
@@ -1472,14 +1716,14 @@ export const getAssignmentsMeta = async (req, res) => {
           fullName: true,
           user: { select: { email: true } },
         },
-        orderBy: { fullName: 'asc' },
-      })
-      result.teachers = teachers
+        orderBy: { fullName: "asc" },
+      });
+      result.teachers = teachers;
     }
 
-    return res.json(result)
+    return res.json(result);
   } catch (err) {
-    console.error('Assignment meta error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("Assignment meta error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};

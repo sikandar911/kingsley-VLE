@@ -91,6 +91,8 @@ export default function TeacherAssignmentsPage() {
     setShowCreate(true);
   };
 
+  console.log("Assignments:", assignments);
+
   const handleStatusChange = async (assignment, newStatus) => {
     setUpdatingId(assignment.id);
     try {

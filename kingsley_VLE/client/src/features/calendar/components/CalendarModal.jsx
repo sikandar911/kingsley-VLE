@@ -34,6 +34,14 @@ export default function CalendarModal({ isOpen, onClose }) {
     if (isOpen) fetchMonth(year, month);
   }, [isOpen, year, month, fetchMonth]);
 
+  // Clear reminder selection when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedDate(null);
+      setSelectedReminders([]);
+    }
+  }, [isOpen]);
+
   // Listen for month navigation events from CanvasCalendar
   const handleMonthChange = (newYear, newMonth) => {
     setYear(newYear);

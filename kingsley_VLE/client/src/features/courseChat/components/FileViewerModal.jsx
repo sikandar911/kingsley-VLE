@@ -1,121 +1,132 @@
-import { useEffect, useRef, useState } from 'react'
-import api from '../../../lib/api'
+import { useEffect, useRef, useState } from "react";
+import api from "../../../lib/api";
 
-const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp']
-const PDF_EXTS = ['pdf']
-const OFFICE_EXTS = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']
+const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp"];
+const PDF_EXTS = ["pdf"];
+const OFFICE_EXTS = ["doc", "docx", "ppt", "pptx", "xls", "xlsx"];
 
-function getExt(name = '') {
-  return name.split('.').pop().toLowerCase()
+function getExt(name = "") {
+  return name.split(".").pop().toLowerCase();
 }
 
-function getFileType(name = '') {
-  const ext = getExt(name)
-  if (IMAGE_EXTS.includes(ext)) return 'image'
-  if (PDF_EXTS.includes(ext)) return 'pdf'
-  if (OFFICE_EXTS.includes(ext)) return 'office'
-  return 'unknown'
+function getFileType(name = "") {
+  const ext = getExt(name);
+  if (IMAGE_EXTS.includes(ext)) return "image";
+  if (PDF_EXTS.includes(ext)) return "pdf";
+  if (OFFICE_EXTS.includes(ext)) return "office";
+  return "unknown";
 }
 
 function ExtBadge({ name }) {
-  const ext = getExt(name).toUpperCase()
+  const ext = getExt(name).toUpperCase();
   const colors = {
-    PDF: 'bg-red-100 text-red-700',
-    DOC: 'bg-blue-100 text-blue-700',
-    DOCX: 'bg-blue-100 text-blue-700',
-    PPT: 'bg-orange-100 text-orange-700',
-    PPTX: 'bg-orange-100 text-orange-700',
-    XLS: 'bg-green-100 text-green-700',
-    XLSX: 'bg-green-100 text-green-700',
-  }
+    PDF: "bg-red-100 text-red-700",
+    DOC: "bg-blue-100 text-blue-700",
+    DOCX: "bg-blue-100 text-blue-700",
+    PPT: "bg-orange-100 text-orange-700",
+    PPTX: "bg-orange-100 text-orange-700",
+    XLS: "bg-green-100 text-green-700",
+    XLSX: "bg-green-100 text-green-700",
+  };
   return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${colors[ext] || 'bg-gray-100 text-gray-600'}`}>
+    <span
+      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${colors[ext] || "bg-gray-100 text-gray-600"}`}
+    >
       {ext}
     </span>
-  )
+  );
 }
 
 export default function FileViewerModal({ file, onClose }) {
-  const overlayRef = useRef(null)
-  const fileType = getFileType(file.name)
-  const [secureUrl, setSecureUrl] = useState(file.fileUrl || null)
-  const [loading, setLoading] = useState(!!file.fileId)
-  const [error, setError] = useState(null)
+  const overlayRef = useRef(null);
+  const fileType = getFileType(file.name);
+  const [secureUrl, setSecureUrl] = useState(file.fileUrl || null);
+  const [loading, setLoading] = useState(!!file.fileId);
+  const [error, setError] = useState(null);
 
   // Fetch secure SAS URL if fileId is provided
   useEffect(() => {
-    if (!file.fileId) return
+    if (!file.fileId) return;
 
     const fetchSecureUrl = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        const res = await api.get(`/files/${file.fileId}/secure-url`)
-        const nextUrl = res.data?.url || null
-        setSecureUrl(nextUrl)
+        setLoading(true);
+        setError(null);
+        const res = await api.get(`/files/${file.fileId}/secure-url`);
+        const nextUrl = res.data?.url || null;
+        setSecureUrl(nextUrl);
         if (!nextUrl) {
-          setError('No secure URL was returned for this file.')
+          setError("No secure URL was returned for this file.");
         }
       } catch (err) {
-        console.error('Error fetching secure URL:', err)
-        setError('Failed to load file. Please try again.')
+        console.error("Error fetching secure URL:", err);
+        setError("Failed to load file. Please try again.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchSecureUrl()
-  }, [file.fileId])
+    fetchSecureUrl();
+  }, [file.fileId]);
 
   // Close on Escape
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [onClose])
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
   // Prevent body scroll
   useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   const handleOverlayClick = (e) => {
-    if (e.target === overlayRef.current) onClose()
-  }
+    if (e.target === overlayRef.current) onClose();
+  };
 
   const handleDownload = () => {
-    if (!secureUrl) return
-    const a = document.createElement('a')
-    a.href = secureUrl
-    a.download = file.name || 'download'
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
+    if (!secureUrl) return;
+    const a = document.createElement("a");
+    a.href = secureUrl;
+    a.download = file.name || "download";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   // Office viewer URL (Microsoft Office Online)
-  const officeViewerSrc = secureUrl ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(secureUrl)}` : null
+  const officeViewerSrc = secureUrl
+    ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(secureUrl)}`
+    : null;
   // Google Docs viewer as fallback / for PDFs too
-  const googleViewerSrc = secureUrl ? `https://docs.google.com/gview?url=${encodeURIComponent(secureUrl)}&embedded=true` : null
+  const googleViewerSrc = secureUrl
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(secureUrl)}&embedded=true`
+    : null;
 
   return (
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm"
     >
-      <div className="relative flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden"
-        style={{ width: 'min(92vw, 900px)', height: 'min(90vh, 680px)' }}
+      <div
+        className="relative flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden"
+        style={{ width: "min(92vw, 900px)", height: "min(90vh, 680px)" }}
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <ExtBadge name={file.name} />
-          <span className="flex-1 text-sm font-semibold text-gray-800 truncate">{file.name}</span>
+          <span className="flex-1 text-sm font-semibold text-gray-800 truncate">
+            {file.name}
+          </span>
 
           {/* Download button */}
           <button
@@ -123,11 +134,20 @@ export default function FileViewerModal({ file, onClose }) {
             disabled={loading || !secureUrl}
             title="Download"
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#6b1d3e' }}
+            style={{ backgroundColor: "#6b1d3e" }}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
             </svg>
             Download
           </button>
@@ -138,8 +158,18 @@ export default function FileViewerModal({ file, onClose }) {
             title="Close"
             className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-200 transition flex-shrink-0"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -160,14 +190,14 @@ export default function FileViewerModal({ file, onClose }) {
               <button
                 onClick={onClose}
                 className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition"
-                style={{ backgroundColor: '#6b1d3e' }}
+                style={{ backgroundColor: "#6b1d3e" }}
               >
                 Close
               </button>
             </div>
           )}
 
-          {!loading && !error && fileType === 'image' && secureUrl && (
+          {!loading && !error && fileType === "image" && secureUrl && (
             <img
               src={secureUrl}
               alt={file.name}
@@ -176,7 +206,7 @@ export default function FileViewerModal({ file, onClose }) {
             />
           )}
 
-          {!loading && !error && fileType === 'pdf' && secureUrl && (
+          {!loading && !error && fileType === "pdf" && secureUrl && (
             <iframe
               src={secureUrl}
               title={file.name}
@@ -185,7 +215,7 @@ export default function FileViewerModal({ file, onClose }) {
             />
           )}
 
-          {!loading && !error && fileType === 'office' && officeViewerSrc && (
+          {!loading && !error && fileType === "office" && officeViewerSrc && (
             <iframe
               src={officeViewerSrc}
               title={file.name}
@@ -194,15 +224,17 @@ export default function FileViewerModal({ file, onClose }) {
             />
           )}
 
-          {!loading && !error && fileType === 'unknown' && (
+          {!loading && !error && fileType === "unknown" && (
             <div className="text-center p-8">
               <div className="text-5xl mb-3">📎</div>
-              <p className="text-gray-600 text-sm mb-4">Preview not available for this file type.</p>
+              <p className="text-gray-600 text-sm mb-4">
+                Preview not available for this file type.
+              </p>
               <button
                 onClick={handleDownload}
                 disabled={!secureUrl}
                 className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#6b1d3e' }}
+                style={{ backgroundColor: "#6b1d3e" }}
               >
                 Download File
               </button>
@@ -211,5 +243,5 @@ export default function FileViewerModal({ file, onClose }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

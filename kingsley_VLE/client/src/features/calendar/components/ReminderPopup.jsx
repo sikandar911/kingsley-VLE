@@ -60,13 +60,41 @@ export default function ReminderPopup({ reminders = [], dateStr, onClose }) {
 
   // Use the clicked calendar date (dateStr) for the header
   // This is the date the user clicked on, not derived from event times
+  // Extract UTC date directly to prevent timezone shifts
   const displayDate = dateStr
-    ? new Date(dateStr + "T00:00:00Z").toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
+    ? (() => {
+        const utcDateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!utcDateMatch) return "";
+
+        const [, year, month, day] = utcDateMatch;
+        const monthNum = parseInt(month) - 1;
+        const dayNum = parseInt(day);
+        const yearNum = parseInt(year);
+
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+        const monthName = monthNames[monthNum];
+
+        // Create a date in UTC to get the correct day of week
+        const utcDate = new Date(Date.UTC(yearNum, monthNum, dayNum));
+        const dayOfWeek = utcDate.toLocaleDateString("en-US", {
+          weekday: "long",
+        });
+
+        return `${dayOfWeek}, ${monthName} ${dayNum}, ${year}`;
+      })()
     : "";
 
   return (

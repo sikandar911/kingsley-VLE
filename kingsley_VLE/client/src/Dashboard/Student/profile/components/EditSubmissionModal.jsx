@@ -31,7 +31,8 @@ export default function EditSubmissionModal({
 
   const handleSubmit = async () => {
     if (!canEdit) return;
-    if (!notes && uploadedFiles.length === 0 && !submission?.submissionFile) {
+    const existingFiles = submission?.submissionFiles || [];
+    if (!notes && uploadedFiles.length === 0 && existingFiles.length === 0) {
       setError("Please provide notes or upload a file");
       return;
     }
@@ -40,18 +41,16 @@ export default function EditSubmissionModal({
     setError("");
     try {
       const payload = {};
-      
+
       // Only include notes if changed
       if (notes !== submission?.submissionText) {
         payload.submissionText = notes || null;
       }
 
-      // If uploadedFiles has content, pass all file IDs
+      // Only include files if changed
       if (uploadedFiles.length > 0) {
-        payload.submissionFileIds = uploadedFiles.map(f => f.id);
-      } else if (uploadedFiles.length === 0 && submission?.submissionFile) {
-        // If files were cleared, explicitly clear them
-        payload.submissionFileIds = [];
+        // New files uploaded - send them
+        payload.submissionFileIds = uploadedFiles.map((f) => f.id);
       }
 
       if (Object.keys(payload).length === 0) {
@@ -72,11 +71,8 @@ export default function EditSubmissionModal({
   return (
     <>
       {viewFile && (
-        <div className="fixed inset-0 z-[60]"> 
-          <FileViewerModal
-            file={viewFile}
-            onClose={() => setViewFile(null)}
-          />
+        <div className="fixed inset-0 z-[60]">
+          <FileViewerModal file={viewFile} onClose={() => setViewFile(null)} />
         </div>
       )}
 
@@ -115,7 +111,9 @@ export default function EditSubmissionModal({
               </h3>
               <p className="text-sm text-gray-500 mt-1">
                 {!canEdit && isGraded && "This submission has been graded"}
-                {!canEdit && isOverdue && "Editing is not allowed after due date"}
+                {!canEdit &&
+                  isOverdue &&
+                  "Editing is not allowed after due date"}
               </p>
             </div>
 
@@ -125,55 +123,63 @@ export default function EditSubmissionModal({
               </div>
             )}
 
-            {/* Current submission file (if exists and not replaced) */}
-            {submission?.submissionFile && uploadedFiles.length === 0 && (
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-xs font-semibold text-gray-600 uppercase mb-3">
-                  Current Submission File
-                </p>
-                <div className="flex items-center justify-between">
-                  <div
-                    className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-                    onClick={() => setViewFile(submission.submissionFile)}
-                  >
-                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-4 h-4 text-blue-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+            {/* Current submission files (if exists and not replaced) */}
+            {submission?.submissionFiles?.length > 0 &&
+              uploadedFiles.length === 0 && (
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <p className="text-xs font-semibold text-gray-600 uppercase mb-3">
+                    Current Submission Files (
+                    {submission.submissionFiles.length})
+                  </p>
+                  <div className="space-y-2">
+                    {submission.submissionFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center justify-between"
                       >
-                        <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate hover:underline">
-                        {submission.submissionFile.name}
-                      </p>
-                      <p className="text-xs text-gray-500">Click to view</p>
-                    </div>
+                        <div
+                          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                          onClick={() => setViewFile(file)}
+                        >
+                          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                            <svg
+                              className="w-4 h-4 text-blue-600"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate hover:underline">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Click to view
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {canEdit && (
-                    <button
-                      onClick={handleRemoveCurrentFile}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                      title="Remove file"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Newly uploaded files */}
             {uploadedFiles.length > 0 && (
               <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                 <p className="text-xs font-semibold text-green-700 uppercase mb-3">
-                  New File {uploadedFiles.length > 1 ? `(${uploadedFiles.length})` : "(Will Replace Current)"}
+                  New File{" "}
+                  {uploadedFiles.length > 1
+                    ? `(${uploadedFiles.length})`
+                    : "(Will Replace Current)"}
                 </p>
                 <div className="space-y-2">
                   {uploadedFiles.map((file) => (
-                    <div key={file.id} className="flex items-center gap-3 bg-white rounded p-2 border border-green-100">
+                    <div
+                      key={file.id}
+                      className="flex items-center gap-3 bg-white rounded p-2 border border-green-100"
+                    >
                       <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center flex-shrink-0">
                         <svg
                           className="w-4 h-4 text-green-600"
@@ -187,7 +193,9 @@ export default function EditSubmissionModal({
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {file.name}
                         </p>
-                        <p className="text-xs text-green-600">Ready to upload</p>
+                        <p className="text-xs text-green-600">
+                          Ready to upload
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -232,14 +240,15 @@ export default function EditSubmissionModal({
                   Grading Details
                 </p>
                 <div className="grid grid-cols-3 gap-3">
-                  {submission?.marks !== null && submission?.marks !== undefined && (
-                    <div>
-                      <p className="text-xs text-blue-600 mb-1">Marks</p>
-                      <p className="text-lg font-bold text-blue-900">
-                        {submission.marks} / {assignment.totalMarks}
-                      </p>
-                    </div>
-                  )}
+                  {submission?.marks !== null &&
+                    submission?.marks !== undefined && (
+                      <div>
+                        <p className="text-xs text-blue-600 mb-1">Marks</p>
+                        <p className="text-lg font-bold text-blue-900">
+                          {submission.marks} / {assignment.totalMarks}
+                        </p>
+                      </div>
+                    )}
                   {submission?.gradeLetter && (
                     <div>
                       <p className="text-xs text-blue-600 mb-1">Grade</p>

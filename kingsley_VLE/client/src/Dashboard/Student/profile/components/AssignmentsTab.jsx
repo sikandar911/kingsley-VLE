@@ -11,8 +11,17 @@ export default function AssignmentsTab({ courseId, sectionId }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedSubmission, setExpandedSubmission] = useState(null);
   const [viewFile, setViewFile] = useState(null);
-  const { assignments, submittedIds, setSubmittedIds, loading, error, totalCount, totalPages, currentPage: hookCurrentPage, refetch } =
-    useAssignmentsByCourse(courseId, sectionId, currentPage);
+  const {
+    assignments,
+    submittedIds,
+    setSubmittedIds,
+    loading,
+    error,
+    totalCount,
+    totalPages,
+    currentPage: hookCurrentPage,
+    refetch,
+  } = useAssignmentsByCourse(courseId, sectionId, currentPage);
   const [submitModal, setSubmitModal] = useState(null);
   const [detailsModal, setDetailsModal] = useState(null);
   const [editSubmissionModal, setEditSubmissionModal] = useState(null);
@@ -20,20 +29,24 @@ export default function AssignmentsTab({ courseId, sectionId }) {
   const [submitSuccess, setSubmitSuccess] = useState(null);
   const [submitError, setSubmitError] = useState(null);
 
-  const handleSubmitAssignment = async (assignment, { notes, submissionFileIds = [] }) => {
+  const handleSubmitAssignment = async (
+    assignment,
+    { notes, submissionFileIds = [] },
+  ) => {
     setSubmitting(true);
     setSubmitError(null);
     try {
       const payload = {};
       if (notes) payload.submissionText = notes;
-      if (submissionFileIds && submissionFileIds.length > 0) payload.submissionFileIds = submissionFileIds;
+      if (submissionFileIds && submissionFileIds.length > 0)
+        payload.submissionFileIds = submissionFileIds;
 
       await assignmentsApi.submit(assignment.id, payload);
 
       setSubmittedIds((prev) => new Set([...prev, assignment.id]));
       setSubmitSuccess(assignment.title);
       setSubmitModal(null);
-      
+
       // Refetch to show newly submitted data in accordion
       await refetch();
       setExpandedSubmission(assignment.id);
@@ -85,11 +98,11 @@ export default function AssignmentsTab({ courseId, sectionId }) {
           assignment={editSubmissionModal.assignment}
           submission={editSubmissionModal.submission}
           onClose={() => setEditSubmissionModal(null)}
-          onSubmit={() => {
+          onSubmit={async () => {
             setEditSubmissionModal(null);
             setSubmitSuccess(editSubmissionModal.assignment.title);
-            // Trigger refresh by setting current page
-            setCurrentPage(currentPage);
+            // Refetch assignments to show updated submission with new files
+            await refetch();
             setTimeout(() => setSubmitSuccess(null), 3500);
           }}
           isOverdue={isOverdue(editSubmissionModal.assignment.dueDate)}
@@ -101,10 +114,7 @@ export default function AssignmentsTab({ courseId, sectionId }) {
       )}
       {viewFile && (
         <div className="fixed inset-0 z-[60]">
-          <FileViewerModal
-            file={viewFile}
-            onClose={() => setViewFile(null)}
-          />
+          <FileViewerModal file={viewFile} onClose={() => setViewFile(null)} />
         </div>
       )}
 
@@ -272,9 +282,9 @@ export default function AssignmentsTab({ courseId, sectionId }) {
             <div className="space-y-2">
               {submitted.map((a) => {
                 const submission = a.submissions?.[0]; // Latest submission
-                const isGraded = submission?.marks !== null && submission?.marks !== undefined;
-                const canEditSubmission =
-                  !isOverdue(a.dueDate) && !isGraded;
+                const isGraded =
+                  submission?.marks !== null && submission?.marks !== undefined;
+                const canEditSubmission = !isOverdue(a.dueDate) && !isGraded;
                 const isExpanded = expandedSubmission === a.id;
 
                 return (
@@ -340,7 +350,8 @@ export default function AssignmentsTab({ courseId, sectionId }) {
                     {isExpanded && submission && (
                       <div className="border-t border-gray-100 p-5 space-y-3 bg-gray-50">
                         {/* Submitted files - handle both multiple and single */}
-                        {(submission.submissionFiles?.length > 0 || submission.submissionFile) && (
+                        {(submission.submissionFiles?.length > 0 ||
+                          submission.submissionFile) && (
                           <div className="space-y-2">
                             <p className="text-xs font-semibold text-gray-600 uppercase">
                               Submitted Files
@@ -372,30 +383,33 @@ export default function AssignmentsTab({ courseId, sectionId }) {
                                 </button>
                               ))}
                               {/* Fallback for single file (backward compatibility) */}
-                              {!submission.submissionFiles?.length && submission.submissionFile && (
-                                <button
-                                  onClick={() => setViewFile(submission.submissionFile)}
-                                  className="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition text-left group"
-                                >
-                                  <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
-                                    <svg
-                                      className="w-4 h-4 text-blue-600"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
-                                    </svg>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-blue-900 truncate font-medium group-hover:underline">
-                                      {submission.submissionFile.name}
-                                    </p>
-                                  </div>
-                                  <span className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition font-semibold whitespace-nowrap">
-                                    View →
-                                  </span>
-                                </button>
-                              )}
+                              {!submission.submissionFiles?.length &&
+                                submission.submissionFile && (
+                                  <button
+                                    onClick={() =>
+                                      setViewFile(submission.submissionFile)
+                                    }
+                                    className="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition text-left group"
+                                  >
+                                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
+                                      <svg
+                                        className="w-4 h-4 text-blue-600"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                                      </svg>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm text-blue-900 truncate font-medium group-hover:underline">
+                                        {submission.submissionFile.name}
+                                      </p>
+                                    </div>
+                                    <span className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition font-semibold whitespace-nowrap">
+                                      View →
+                                    </span>
+                                  </button>
+                                )}
                             </div>
                           </div>
                         )}
@@ -453,7 +467,12 @@ export default function AssignmentsTab({ courseId, sectionId }) {
                         <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
                           {canEditSubmission && (
                             <button
-                              onClick={() => setEditSubmissionModal({ assignment: a, submission })}
+                              onClick={() =>
+                                setEditSubmissionModal({
+                                  assignment: a,
+                                  submission,
+                                })
+                              }
                               className="flex-1 px-3 py-2 text-xs font-semibold text-[#6b1142] bg-[#6b1142]/10 rounded-lg hover:bg-[#6b1142]/20 transition"
                             >
                               Edit Submission
