@@ -4,6 +4,7 @@ import { fmt } from '../utils/helpers'
 import { classMaterialsApi } from '../../../../features/classMaterials/api/classMaterials.api'
 import { classRecordsApi } from '../../../../features/classRecords/api/classRecords.api'
 import { courseModulesApi } from '../../../../features/courseModules/api/courseModules.api'
+import SecureFileLink, { getMaterialSource } from '../../../../features/classMaterials/components/SecureFileLink'
 
 export default function TeacherMaterialsTab({ courseId, sectionId }) {
   const [activeSwitch, setActiveSwitch] = useState('materials')
@@ -235,7 +236,9 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
       {/* Materials cards */}
       {activeSwitch === 'materials' && filteredData.length > 0 && (
         <div className="space-y-3">
-          {filteredData.map((m) => (
+          {filteredData.map((m) => {
+              const src = getMaterialSource(m)
+              return (
             <div
               key={m.id}
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-start gap-4"
@@ -255,16 +258,14 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
                     <p className="text-xs text-gray-400 mt-1">{m.uploadedAt ? fmt(m.uploadedAt) : ''}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {m.fileUrl && (
-                      <a
-                        href={m.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    {src.type && (
+                      <SecureFileLink
+                        material={m}
+                        className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition cursor-pointer"
                         style={{ backgroundColor: '#6b1d3e' }}
-                        className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition"
                       >
-                        Download
-                      </a>
+                        {src.type === 'url' ? 'Open URL' : 'View File'}
+                      </SecureFileLink>
                     )}
                     <button
                       onClick={() => handleDeleteMaterial(m.id, m.title)}
@@ -288,7 +289,8 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
                 </div>
               </div>
             </div>
-          ))}
+              )
+            })}
         </div>
       )}
 

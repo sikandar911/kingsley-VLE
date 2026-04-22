@@ -43,6 +43,11 @@ export default function FileViewerModal({ file, onClose }) {
   const [secureUrl, setSecureUrl] = useState(file.fileUrl || null);
   const [loading, setLoading] = useState(!!file.fileId);
   const [error, setError] = useState(null);
+  const [viewerKey, setViewerKey] = useState(0);
+
+  const handleReloadViewer = () => {
+    setViewerKey((prev) => prev + 1);
+  };
 
   // Fetch secure SAS URL if fileId is provided
   useEffect(() => {
@@ -102,9 +107,9 @@ export default function FileViewerModal({ file, onClose }) {
     document.body.removeChild(a);
   };
 
-  // Office viewer URL (Microsoft Office Online)
+  // Office viewer URL (Google Docs Viewer instead of view.officeapps.live.com)
   const officeViewerSrc = secureUrl
-    ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(secureUrl)}`
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(secureUrl)}&embedded=true`
     : null;
   // Google Docs viewer as fallback / for PDFs too
   const googleViewerSrc = secureUrl
@@ -127,6 +132,19 @@ export default function FileViewerModal({ file, onClose }) {
           <span className="flex-1 text-sm font-semibold text-gray-800 truncate">
             {file.name}
           </span>
+
+          {/* Reload button (useful for Google Docs viewer glitches or blank PDFs) */}
+          <button
+            onClick={handleReloadViewer}
+            disabled={loading || !secureUrl}
+            title="Reload Preview"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reload
+          </button>
 
           {/* Download button */}
           <button
@@ -199,6 +217,7 @@ export default function FileViewerModal({ file, onClose }) {
 
           {!loading && !error && fileType === "image" && secureUrl && (
             <img
+              key={`img-${viewerKey}`}
               src={secureUrl}
               alt={file.name}
               className="max-w-full max-h-full object-contain select-none"
@@ -207,16 +226,24 @@ export default function FileViewerModal({ file, onClose }) {
           )}
 
           {!loading && !error && fileType === "pdf" && secureUrl && (
-            <iframe
-              src={secureUrl}
-              title={file.name}
-              className="w-full h-full border-0"
-              allow="fullscreen"
-            />
+            <object
+              key={`pdf-${viewerKey}`}
+              data={secureUrl}
+              type="application/pdf"
+              className="w-full h-full"
+            >
+              <iframe
+                src={secureUrl}
+                title={file.name}
+                className="w-full h-full border-0"
+                allow="fullscreen"
+              />
+            </object>
           )}
 
           {!loading && !error && fileType === "office" && officeViewerSrc && (
             <iframe
+              key={`office-${viewerKey}`}
               src={officeViewerSrc}
               title={file.name}
               className="w-full h-full border-0"

@@ -17,7 +17,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('vle_token')
-      window.location.href = '/login'
+      
+      // Prevent full page reload if the 401 was a failed login attempt
+      if (!error.config?.url?.includes('/auth/login')) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

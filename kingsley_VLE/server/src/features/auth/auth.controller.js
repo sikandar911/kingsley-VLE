@@ -53,11 +53,16 @@ export const login = async (req, res) => {
     return res.status(400).json({ error: 'Identifier and password are required' })
   }
 
+  const cleanIdentifier = identifier.trim()
+
   try {
-    // Step 1: Find the user
+    // Step 1: Find the user (case-insensitive for Postgres)
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: identifier }, { username: identifier }],
+        OR: [
+          { email: { equals: cleanIdentifier, mode: 'insensitive' } },
+          { username: { equals: cleanIdentifier, mode: 'insensitive' } }
+        ],
         isActive: true,
       },
       include: {

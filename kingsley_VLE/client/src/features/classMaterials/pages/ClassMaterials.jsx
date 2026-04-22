@@ -1,6 +1,7 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Plus, Eye, Trash2, FileText, Link, Edit2 } from "lucide-react";
 import ClassMaterialsModal from "../components/ClassMaterialsModal";
+import SecureFileLink, { getMaterialSource } from "../components/SecureFileLink";
 import { classMaterialsApi } from "../api/classMaterials.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
@@ -276,8 +277,7 @@ const ClassMaterials = () => {
     return semester ? semester.name : material.semesterId;
   };
 
-  const getMaterialUrl = (material) =>
-    material.fileUrl || material.file?.fileUrl || null;
+  // getMaterialUrl is replaced by getMaterialSource + SecureFileLink
 
   return (
     <>
@@ -435,7 +435,7 @@ const ClassMaterials = () => {
                   </tr>
                 ) : materials.length > 0 ? (
                   materials.map((material, index) => {
-                    const url = getMaterialUrl(material);
+                    const src = getMaterialSource(material);
                     return (
                       <tr
                         key={material.id}
@@ -459,23 +459,18 @@ const ClassMaterials = () => {
                           {getSemesterName(material)}
                         </td>
                         <td className="px-4 py-4 text-xs sm:text-sm">
-                          {url ? (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 hover:underline transition"
+                          {src.type ? (
+                            <SecureFileLink
+                              material={material}
+                              className="inline-flex items-center gap-1.5 hover:underline transition cursor-pointer"
                               style={{ color: BRAND }}
                             >
-                              {material.fileUrl ? (
-                                <Link className="w-4 h-4" />
+                              {src.type === "url" ? (
+                                <><Link className="w-4 h-4" /><span>Open URL</span></>
                               ) : (
-                                <FileText className="w-4 h-4" />
+                                <><FileText className="w-4 h-4" /><span>View File</span></>
                               )}
-                              <span>
-                                {material.fileUrl ? "Open URL" : "View File"}
-                              </span>
-                            </a>
+                            </SecureFileLink>
                           ) : (
                             <span className="text-gray-400 text-xs">
                               No source
@@ -569,7 +564,7 @@ const ClassMaterials = () => {
                 </thead>
                 <tbody>
                   {materials.map((material, index) => {
-                    const url = getMaterialUrl(material);
+                    const src = getMaterialSource(material);
                     return (
                       <tr
                         key={material.id}
@@ -595,23 +590,18 @@ const ClassMaterials = () => {
                           {getSemesterName(material)}
                         </td>
                         <td className="px-3 py-3">
-                          {url ? (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 hover:underline transition"
+                          {src.type ? (
+                            <SecureFileLink
+                              material={material}
+                              className="inline-flex items-center gap-1 hover:underline transition cursor-pointer"
                               style={{ color: BRAND }}
-                              title={
-                                material.fileUrl ? "Open URL" : "View File"
-                              }
                             >
-                              {material.fileUrl ? (
+                              {src.type === "url" ? (
                                 <Link className="w-3 h-3" />
                               ) : (
                                 <FileText className="w-3 h-3" />
                               )}
-                            </a>
+                            </SecureFileLink>
                           ) : (
                             <span className="text-gray-400 text-xs">—</span>
                           )}
