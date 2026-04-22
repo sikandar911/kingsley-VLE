@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import {
   Search,
   Plus,
@@ -41,6 +42,8 @@ const TeacherClassRecords = () => {
   const [editingRecord, setEditingRecord] = useState(null);
   const [viewMode, setViewMode] = useState("grid");
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
+  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
 
   // Handle screen resize for responsive styling
   useEffect(() => {
@@ -56,6 +59,7 @@ const TeacherClassRecords = () => {
   useEffect(() => {
     const fetchTeacherCoursesAndData = async () => {
       try {
+        setLoadingDropdowns(true);
         // Fetch teacher's courses from enrollments
         const enrollmentsResponse = await enrollmentsApi.teachers.list();
         const enrollments = enrollmentsResponse.data;
@@ -155,8 +159,20 @@ const TeacherClassRecords = () => {
 
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
+
+        // Auto-select the latest semester (first one in the list)
+        if (semestersData.length > 0) {
+          setSelectedSemester(semestersData[0].id);
+        }
+
+        // Mark initial load as complete to trigger records fetch
+        setIsInitialLoadComplete(true);
       } catch (err) {
         console.error("Error fetching teacher courses and data:", err);
+        // Still mark as complete even on error to allow manual filtering
+        setIsInitialLoadComplete(true);
+      } finally {
+        setLoadingDropdowns(false);
       }
     };
     fetchTeacherCoursesAndData();
@@ -224,6 +240,9 @@ const TeacherClassRecords = () => {
 
   // Fetch class records for selected filters
   useEffect(() => {
+    // Don't fetch records until initial load (semester auto-selection) is complete
+    if (!isInitialLoadComplete) return;
+
     const fetchRecords = async () => {
       try {
         setLoading(true);
@@ -263,6 +282,7 @@ const TeacherClassRecords = () => {
     };
     fetchRecords();
   }, [
+    isInitialLoadComplete,
     selectedCourse,
     selectedSection,
     selectedSemester,
@@ -276,9 +296,22 @@ const TeacherClassRecords = () => {
       setRecords((prev) => [res.data, ...prev]);
       setIsModalOpen(false);
       setEditingRecord(null);
+      await Swal.fire({
+        title: "Success!",
+        text: "Class record created successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (err) {
       console.error("Error creating record:", err);
-      alert("Failed to create record. Please try again.");
+      await Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.error ||
+          "Failed to create record. Please try again.",
+        icon: "error",
+      });
     }
   };
 
@@ -290,20 +323,57 @@ const TeacherClassRecords = () => {
       );
       setEditingRecord(null);
       setIsModalOpen(false);
+      await Swal.fire({
+        title: "Success!",
+        text: "Class record updated successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (err) {
       console.error("Error updating record:", err);
-      alert("Failed to update record. Please try again.");
+      await Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.error ||
+          "Failed to update record. Please try again.",
+        icon: "error",
+      });
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this class record?")) return;
+    const result = await Swal.fire({
+      title: "Delete Class Record?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await classRecordsApi.delete(id);
       setRecords((prev) => prev.filter((r) => r.id !== id));
+      await Swal.fire({
+        title: "Deleted!",
+        text: "Class record has been deleted successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (err) {
       console.error("Error deleting record:", err);
-      alert("Failed to delete. Please try again.");
+      await Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.error || "Failed to delete. Please try again.",
+        icon: "error",
+      });
     }
   };
 
@@ -407,15 +477,25 @@ const TeacherClassRecords = () => {
           {/* Semester Dropdown (First) */}
           <div className="flex flex-col">
             <CustomDropdown
-              options={filteredSemesters.map((semester) => ({
-                id: semester.id,
-                name: semester.name || "Untitled Semester",
-              }))}
+              options={[
+                {
+                  id: "",
+                  name: loadingDropdowns
+                    ? "Loading..."
+                    : `All Semesters (${filteredSemesters.length})`,
+                },
+                ...filteredSemesters.map((semester) => ({
+                  id: semester?.id,
+                  name: `${semester?.name || "Untitled Semester"} ${semester?.year ? `(${semester.year})` : ""}`,
+                })),
+              ]}
               value={selectedSemester}
               onChange={setSelectedSemester}
-              placeholder="All Semesters"
+              placeholder={loadingDropdowns ? "Loading..." : "All Semesters"}
               label="Semester"
-              countText={`(${filteredSemesters.length})`}
+              countText={
+                loadingDropdowns ? "" : `(${filteredSemesters.length})`
+              }
               isSmallScreen={isSmallScreen}
               BRAND={BRAND}
             />
@@ -424,10 +504,13 @@ const TeacherClassRecords = () => {
           {/* Course Dropdown (Second - depends on semester) */}
           <div className="flex flex-col">
             <CustomDropdown
-              options={filteredCourses.map((course) => ({
-                id: course.id,
-                name: course.title || course.name || "Untitled Course",
-              }))}
+              options={[
+                { id: "", name: `All Courses (${filteredCourses.length})` },
+                ...filteredCourses.map((course) => ({
+                  id: course.id,
+                  name: course.title || course.name || "Untitled Course",
+                })),
+              ]}
               value={selectedCourse}
               onChange={setSelectedCourse}
               placeholder="All Courses"
@@ -442,10 +525,13 @@ const TeacherClassRecords = () => {
           {/* Section Dropdown (Third - depends on course) */}
           <div className="flex flex-col">
             <CustomDropdown
-              options={filteredSections.map((section) => ({
-                id: section.id,
-                name: section.name || "Untitled Section",
-              }))}
+              options={[
+                { id: "", name: `All Sections (${filteredSections.length})` },
+                ...filteredSections.map((section) => ({
+                  id: section.id,
+                  name: section.name || "Untitled Section",
+                })),
+              ]}
               value={selectedSection}
               onChange={setSelectedSection}
               placeholder="All Sections"
@@ -460,7 +546,7 @@ const TeacherClassRecords = () => {
       </div>
 
       {/* Content */}
-      {loading && (
+      {(loading || !isInitialLoadComplete) && (
         <div className="flex items-center justify-center py-16">
           <div
             className="w-8 h-8 border-4 border-gray-200 rounded-full animate-spin"
@@ -475,7 +561,7 @@ const TeacherClassRecords = () => {
         </div>
       )}
 
-      {!loading && courses.length === 0 && (
+      {isInitialLoadComplete && !loading && courses.length === 0 && (
         <div className="text-center py-16">
           <Video className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 text-base font-medium">
@@ -488,17 +574,21 @@ const TeacherClassRecords = () => {
         </div>
       )}
 
-      {!loading && !error && records.length === 0 && courses.length > 0 && (
-        <div className="text-center py-16">
-          <Video className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 text-base font-medium">
-            No class recordings found
-          </p>
-          <p className="text-gray-400 text-sm mt-1">
-            Add your first recording using the button above.
-          </p>
-        </div>
-      )}
+      {isInitialLoadComplete &&
+        !loading &&
+        !error &&
+        records.length === 0 &&
+        courses.length > 0 && (
+          <div className="text-center py-16">
+            <Video className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-base font-medium">
+              No class recordings found
+            </p>
+            <p className="text-gray-400 text-sm mt-1">
+              Add your first recording using the button above.
+            </p>
+          </div>
+        )}
 
       {!loading && !error && records.length > 0 && (
         <>

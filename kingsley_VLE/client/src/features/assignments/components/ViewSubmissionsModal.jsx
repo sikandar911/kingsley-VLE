@@ -1,89 +1,104 @@
-import { useState, useEffect } from 'react'
-import { assignmentsApi } from '../api/assignments.api'
-import { useAuth } from '../../../context/AuthContext'
-import FileViewerModal from '../../courseChat/components/FileViewerModal'
+import { useState, useEffect } from "react";
+import { assignmentsApi } from "../api/assignments.api";
+import { useAuth } from "../../../context/AuthContext";
+import FileViewerModal from "../../courseChat/components/FileViewerModal";
 
 const fmt = (d) =>
   d
-    ? new Date(d).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+    ? new Date(d).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       })
-    : '—'
+    : "—";
 
 const statusCls = {
-  submitted: 'bg-blue-100 text-blue-700',
-  late: 'bg-orange-100 text-orange-700',
-  missing: 'bg-red-100 text-red-700',
-}
+  submitted: "bg-blue-100 text-blue-700",
+  late: "bg-orange-100 text-orange-700",
+  missing: "bg-red-100 text-red-700",
+};
 
-const GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D', 'F']
+const GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"];
 
 export default function ViewSubmissionsModal({ assignment, onClose }) {
-  const { user } = useAuth()
-  const [submissions, setSubmissions] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [gradingId, setGradingId] = useState(null)
-  const [gradeForm, setGradeForm] = useState({ marks: '', gradeLetter: '', feedback: '' })
-  const [gradeLoading, setGradeLoading] = useState(false)
-  const [gradeError, setGradeError] = useState('')
-  const [viewerFile, setViewerFile] = useState(null)
-  const [expandedId, setExpandedId] = useState(null)
+  const { user } = useAuth();
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [gradingId, setGradingId] = useState(null);
+  const [gradeForm, setGradeForm] = useState({
+    marks: "",
+    gradeLetter: "",
+    feedback: "",
+  });
+  const [gradeLoading, setGradeLoading] = useState(false);
+  const [gradeError, setGradeError] = useState("");
+  const [viewerFile, setViewerFile] = useState(null);
 
   const load = () => {
-    setLoading(true)
+    setLoading(true);
     assignmentsApi
       .getSubmissions(assignment.id)
       .then((res) => setSubmissions(res.data))
       .catch(() => {})
-      .finally(() => setLoading(false))
-  }
+      .finally(() => setLoading(false));
+  };
 
-  useEffect(() => { load() }, [assignment.id])
+  useEffect(() => {
+    load();
+  }, [assignment.id]);
 
   const openGrade = (sub) => {
     setGradeForm({
-      marks: sub.marks ?? '',
-      gradeLetter: sub.gradeLetter ?? '',
-      feedback: sub.feedback ?? '',
-    })
-    setGradeError('')
-    setGradingId(sub.id)
-  }
+      marks: sub.marks ?? "",
+      gradeLetter: sub.gradeLetter ?? "",
+      feedback: sub.feedback ?? "",
+    });
+    setGradeError("");
+    setGradingId(sub.id);
+  };
 
   const saveGrade = async () => {
-    const marks = gradeForm.marks !== '' ? Number(gradeForm.marks) : undefined
-    if (marks !== undefined && (marks < 0 || marks > assignment.totalMarks)) {
-      setGradeError(`Marks must be between 0 and ${assignment.totalMarks}`)
-      return
+    // Marks is now required
+    if (gradeForm.marks === "" || gradeForm.marks === null) {
+      setGradeError("Marks is required");
+      return;
     }
-    setGradeLoading(true)
-    setGradeError('')
+
+    const marks = Number(gradeForm.marks);
+    if (marks < 0 || marks > assignment.totalMarks) {
+      setGradeError(`Marks must be between 0 and ${assignment.totalMarks}`);
+      return;
+    }
+    setGradeLoading(true);
+    setGradeError("");
     try {
       await assignmentsApi.grade(gradingId, {
         marks,
         gradeLetter: gradeForm.gradeLetter || undefined,
         feedback: gradeForm.feedback || undefined,
-        ...(user?.role === 'admin' ? { markedByTeacherId: assignment.teacher?.id } : {}),
-      })
-      setGradingId(null)
-      load()
+        ...(user?.role === "admin"
+          ? { markedByTeacherId: assignment.teacher?.id }
+          : {}),
+      });
+      setGradingId(null);
+      load();
     } catch (e) {
-      setGradeError(e.response?.data?.error || 'Failed to save grade')
+      setGradeError(e.response?.data?.error || "Failed to save grade");
     } finally {
-      setGradeLoading(false)
+      setGradeLoading(false);
     }
-  }
+  };
 
   const openFileViewer = (file) => {
-    if (!file) return
-    setViewerFile({ fileId: file.id, name: file.name, fileUrl: file.fileUrl })
-  }
+    if (!file) return;
+    setViewerFile({ fileId: file.id, name: file.name, fileUrl: file.fileUrl });
+  };
 
-  const gradedCount = submissions.filter((s) => s.marks !== null && s.marks !== undefined).length
+  const gradedCount = submissions.filter(
+    (s) => s.marks !== null && s.marks !== undefined,
+  ).length;
 
   return (
     <>
@@ -95,12 +110,27 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
               <h2 className="text-xl font-bold text-gray-900">Submissions</h2>
               <p className="text-sm text-gray-500 mt-1">
                 {assignment.title} · Total marks: {assignment.totalMarks}
-                {assignment.passingMarks ? ` · Passing: ${assignment.passingMarks}` : ''}
+                {assignment.passingMarks
+                  ? ` · Passing: ${assignment.passingMarks}`
+                  : ""}
               </p>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-4">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-4"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -119,27 +149,34 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
             ) : (
               <div className="divide-y divide-gray-100">
                 {submissions.map((sub) => {
-                  const isExpanded = expandedId === sub.id
-                  const isGrading = gradingId === sub.id
-                  const hasSubmittedFile = sub.submissionFile
-                  const hasSubmittedUrl = sub.submissionFileUrl
+                  const isGrading = gradingId === sub.id;
+                  const hasSubmittedFile = sub.submissionFiles?.length > 0;
+                  const hasSubmittedUrl = sub.submissionFileUrl;
                   return (
                     <div
                       key={sub.id}
-                      className={`transition ${isGrading ? 'bg-amber-50' : isExpanded ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
+                      className={`transition ${isGrading ? "bg-white" : "hover:bg-gray-50"}`}
                     >
                       {/* Submission row */}
                       <div className="px-6 py-4 flex items-center gap-4 flex-wrap sm:flex-nowrap">
                         {/* Student info */}
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 text-sm truncate">{sub.student?.fullName || '—'}</p>
-                          <p className="text-xs text-gray-500 font-mono mt-0.5">{sub.student?.studentId || '—'}</p>
+                          <p className="font-semibold text-gray-900 text-sm truncate">
+                            {sub.student?.fullName || "—"}
+                          </p>
+                          <p className="text-xs text-gray-500 font-mono mt-0.5">
+                            {sub.student?.studentId || "—"}
+                          </p>
                         </div>
 
                         {/* Attempt + status */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-xs text-gray-400">#{sub.attemptNumber}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusCls[sub.status] || 'bg-gray-100 text-gray-600'}`}>
+                          <span className="text-xs text-gray-400">
+                            #{sub.attemptNumber}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusCls[sub.status] || "bg-gray-100 text-gray-600"}`}
+                          >
                             {sub.status}
                           </span>
                         </div>
@@ -152,33 +189,25 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                         {/* Score chip */}
                         <div className="flex-shrink-0 min-w-[80px] text-center">
                           {sub.marks !== null && sub.marks !== undefined ? (
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                              sub.marks >= (assignment.passingMarks ?? 0) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
+                            <span
+                              className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
+                                sub.marks >= (assignment.passingMarks ?? 0)
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
                               {sub.marks}/{assignment.totalMarks}
-                              {sub.gradeLetter ? ` · ${sub.gradeLetter}` : ''}
+                              {sub.gradeLetter ? ` · ${sub.gradeLetter}` : ""}
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-400">Not graded</span>
+                            <span className="text-xs text-gray-400">
+                              Not graded
+                            </span>
                           )}
                         </div>
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {/* View submitted file */}
-                          {hasSubmittedFile && (
-                            <button
-                              onClick={() => openFileViewer(sub.submissionFile)}
-                              title="View submitted file"
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              View File
-                            </button>
-                          )}
                           {hasSubmittedUrl && !hasSubmittedFile && (
                             <a
                               href={sub.submissionFileUrl}
@@ -188,16 +217,6 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                             >
                               📎 View Link
                             </a>
-                          )}
-
-                          {/* Expand for text */}
-                          {sub.submissionText && (
-                            <button
-                              onClick={() => setExpandedId(isExpanded ? null : sub.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                            >
-                              {isExpanded ? 'Collapse' : 'Read'}
-                            </button>
                           )}
 
                           {/* Grade / Edit */}
@@ -213,47 +232,46 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                               onClick={() => openGrade(sub)}
                               className="px-3 py-1.5 bg-[#6b1142] text-white text-xs font-medium rounded-lg hover:bg-[#5a0d38] transition whitespace-nowrap"
                             >
-                              {sub.marks !== null && sub.marks !== undefined ? 'Edit Grade' : 'Grade'}
+                              {sub.marks !== null && sub.marks !== undefined
+                                ? "Edit Grade"
+                                : "Grade"}
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Expanded text */}
-                      {isExpanded && sub.submissionText && (
-                        <div className="px-6 pb-4">
-                          <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                            {sub.submissionText}
-                          </div>
-                          {sub.feedback && (
-                            <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
-                              <span className="font-semibold">Feedback: </span>{sub.feedback}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       {/* Inline grading panel */}
                       {isGrading && (
                         <div className="px-6 pb-6">
-                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                          <div className="bg-white border border-gray-200 rounded-xl p-5">
                             <div className="flex items-center gap-3 mb-4 flex-wrap">
                               <span className="text-sm font-semibold text-gray-800">
                                 Grading: {sub.student?.fullName}
                               </span>
-                              {hasSubmittedFile && (
+                              {/* {hasSubmittedFile && (
                                 <button
                                   type="button"
-                                  onClick={() => openFileViewer(sub.submissionFile)}
+                                  onClick={() =>
+                                    openFileViewer(sub.submissionFiles[0])
+                                  }
                                   className="text-xs text-[#6b1142] font-semibold hover:underline flex items-center gap-1"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    />
                                   </svg>
                                   Open Submitted File
                                 </button>
-                              )}
+                              )} */}
                               {hasSubmittedUrl && !hasSubmittedFile && (
                                 <a
                                   href={sub.submissionFileUrl}
@@ -261,7 +279,7 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                                   rel="noopener noreferrer"
                                   className="text-xs text-blue-600 underline flex items-center gap-1"
                                 >
-                                   View submitted link
+                                  View submitted link
                                 </a>
                               )}
                             </div>
@@ -273,40 +291,68 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                             )}
 
                             {gradeError && (
-                              <p className="text-xs text-red-600 mb-3">{gradeError}</p>
+                              <p className="text-xs text-red-600 mb-3">
+                                {gradeError}
+                              </p>
                             )}
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div>
                                 <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                                  Marks <span className="text-gray-400 font-normal">(max {assignment.totalMarks}) — optional</span>
+                                  Marks{" "}
+                                  <span className="text-gray-400 font-normal">
+                                    (max {assignment.totalMarks})
+                                  </span>
+                                  <span className="text-red-500 ml-1">*</span>
                                 </label>
                                 <input
                                   type="number"
                                   min={0}
                                   max={assignment.totalMarks}
+                                  step={1}
                                   value={gradeForm.marks}
-                                  onChange={(e) =>
-                                    setGradeForm((p) => ({ ...p, marks: e.target.value }))
-                                  }
+                                  onChange={(e) => {
+                                    let value = e.target.value;
+                                    // Check for negative numbers
+                                    if (value !== "" && Number(value) < 0) {
+                                      setGradeError(
+                                        "Marks cannot be negative. Please enter a positive number.",
+                                      );
+                                      return;
+                                    }
+                                    setGradeError("");
+                                    setGradeForm((p) => ({
+                                      ...p,
+                                      marks: value,
+                                    }));
+                                  }}
                                   placeholder={`0 — ${assignment.totalMarks}`}
+                                  required
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                                 />
                               </div>
                               <div>
                                 <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                                  Grade Letter <span className="text-gray-400 font-normal">— optional</span>
+                                  Grade Letter{" "}
+                                  <span className="text-gray-400 font-normal">
+                                    — optional
+                                  </span>
                                 </label>
                                 <select
                                   value={gradeForm.gradeLetter}
                                   onChange={(e) =>
-                                    setGradeForm((p) => ({ ...p, gradeLetter: e.target.value }))
+                                    setGradeForm((p) => ({
+                                      ...p,
+                                      gradeLetter: e.target.value,
+                                    }))
                                   }
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                                 >
                                   <option value="">Select</option>
                                   {GRADES.map((g) => (
-                                    <option key={g} value={g}>{g}</option>
+                                    <option key={g} value={g}>
+                                      {g}
+                                    </option>
                                   ))}
                                 </select>
                               </div>
@@ -316,19 +362,57 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
                                   disabled={gradeLoading}
                                   className="w-full px-4 py-2 bg-[#6b1142] text-white text-sm font-semibold rounded-lg hover:bg-[#5a0d38] transition disabled:opacity-50"
                                 >
-                                  {gradeLoading ? 'Saving…' : 'Save Grade'}
+                                  {gradeLoading ? "Saving…" : "Save Grade"}
                                 </button>
                               </div>
                             </div>
 
+                            {/* Submission files list */}
+                            {sub.submissionFiles &&
+                              sub.submissionFiles.length > 0 && (
+                                <div className="mt-4">
+                                  <label className="text-xs font-semibold text-gray-700 block mb-2">
+                                    Submitted Files (
+                                    {sub.submissionFiles.length})
+                                  </label>
+                                  <div className="bg-white rounded-lg border border-gray-200 p-3 space-y-2">
+                                    {sub.submissionFiles.map((file) => (
+                                      <button
+                                        key={file.id}
+                                        onClick={() => openFileViewer(file)}
+                                        className="w-full text-left flex items-center gap-2 p-2 hover:bg-blue-50 rounded transition group"
+                                      >
+                                        <svg
+                                          className="w-4 h-4 text-gray-400 flex-shrink-0 group-hover:text-[#6b1142]"
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4z" />
+                                        </svg>
+                                        <span className="text-sm  group-hover:text-[#6b1142] group-hover:underline truncate font-medium">
+                                          {file.name}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                             <div className="mt-4">
+                              {/* Feedback */}
                               <label className="text-xs font-semibold text-gray-700 block mb-1.5">
-                                Feedback <span className="text-gray-400 font-normal">(optional visible to student)</span>
+                                Feedback{" "}
+                                <span className="text-gray-400 font-normal">
+                                  (optional visible to student)
+                                </span>
                               </label>
                               <textarea
                                 value={gradeForm.feedback}
                                 onChange={(e) =>
-                                  setGradeForm((p) => ({ ...p, feedback: e.target.value }))
+                                  setGradeForm((p) => ({
+                                    ...p,
+                                    feedback: e.target.value,
+                                  }))
                                 }
                                 rows={2}
                                 placeholder="Write feedback visible to the student…"
@@ -338,14 +422,16 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
 
                             {sub.markedByTeacher && (
                               <p className="text-xs text-gray-400 mt-3">
-                                Previously graded by {sub.markedByTeacher.fullName} · {fmt(sub.markedAt)}
+                                Previously graded by{" "}
+                                {sub.markedByTeacher.fullName} ·{" "}
+                                {fmt(sub.markedAt)}
                               </p>
                             )}
                           </div>
                         </div>
                       )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -354,7 +440,8 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
           {/* Footer */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
             <p className="text-xs text-gray-500">
-              {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
+              {submissions.length} submission
+              {submissions.length !== 1 ? "s" : ""}
               {gradedCount > 0 && (
                 <span className="ml-2 text-green-600">
                   · {gradedCount} graded
@@ -383,5 +470,5 @@ export default function ViewSubmissionsModal({ assignment, onClose }) {
         />
       )}
     </>
-  )
+  );
 }

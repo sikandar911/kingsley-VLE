@@ -1203,15 +1203,12 @@ export const submitAssignment = async (req, res) => {
     submissionFileUrl,
   } = req.body;
 
-  if (
-    !submissionText &&
-    !submissionFileId &&
-    !submissionFileIds?.length &&
-    !submissionFileUrl
-  ) {
+  // NEW REQUIREMENT: At least 1 file must be provided during submission
+  // File can be via submissionFileId (single), submissionFileIds (multiple), or submissionFileUrl
+  if (!submissionFileId && !submissionFileIds?.length && !submissionFileUrl) {
     return res.status(400).json({
       error:
-        "Provide submissionText, submissionFileId(s), or submissionFileUrl",
+        "At least 1 file must be provided for submission (file, URL, or notes with file)",
     });
   }
 
@@ -1269,6 +1266,20 @@ export const submitAssignment = async (req, res) => {
     // Validate multiple files if provided
     let fileIdsToStore = [];
     if (submissionFileIds?.length > 0) {
+      // Validate: at least 1 file must be provided
+      if (!submissionFileIds || submissionFileIds.length === 0) {
+        return res.status(400).json({
+          error: "At least 1 file must be provided for submission",
+        });
+      }
+
+      // Validate: maximum 5 files per submission
+      if (submissionFileIds.length > 5) {
+        return res.status(400).json({
+          error: "Maximum 5 files allowed per submission",
+        });
+      }
+
       const files = await prisma.file.findMany({
         where: { id: { in: submissionFileIds } },
         select: { id: true },
@@ -1492,6 +1503,13 @@ export const updateSubmission = async (req, res) => {
     if (submissionFileIds !== undefined) {
       fileIdsToStore = null; // Default to null (can be cleared)
       if (submissionFileIds?.length > 0) {
+        // Validate: maximum 5 files per submission
+        if (submissionFileIds.length > 5) {
+          return res.status(400).json({
+            error: "Maximum 5 files allowed per submission",
+          });
+        }
+
         const files = await prisma.file.findMany({
           where: { id: { in: submissionFileIds } },
           select: { id: true },
@@ -1502,6 +1520,20 @@ export const updateSubmission = async (req, res) => {
             .json({ error: "One or more submissionFileIds are invalid" });
         }
         fileIdsToStore = JSON.stringify(submissionFileIds);
+      } else {
+        // NEW REQUIREMENT: Trying to clear all files
+        // Check if there are existing files
+        const existingFileIds = submission.submissionFileIds
+          ? JSON.parse(submission.submissionFileIds)
+          : [];
+
+        if (existingFileIds.length > 0) {
+          // Can't delete all files - at least 1 must remain
+          return res.status(400).json({
+            error:
+              "At least 1 file must remain in the submission. Cannot delete all files.",
+          });
+        }
       }
       // If empty or zero length, fileIdsToStore stays null (explicitly clear files)
     }

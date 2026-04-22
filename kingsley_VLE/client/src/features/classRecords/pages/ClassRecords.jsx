@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import {
   Search,
   Plus,
@@ -42,6 +43,7 @@ const ClassRecords = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
 
   // Handle screen resize for responsive styling
   useEffect(() => {
@@ -131,8 +133,12 @@ const ClassRecords = () => {
         if (semestersData.length > 0) {
           setSelectedSemester(semestersData[0].id);
         }
+
+        // Mark initial load as complete so records can be fetched
+        setIsInitialLoadComplete(true);
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
+        setIsInitialLoadComplete(true);
       } finally {
         setLoadingDropdowns(false);
       }
@@ -201,6 +207,9 @@ const ClassRecords = () => {
   }, [semesters]);
 
   useEffect(() => {
+    // Prevent fetch before initial load is complete (semester auto-selection)
+    if (!isInitialLoadComplete) return;
+
     const fetchRecords = async () => {
       try {
         setLoading(true);
@@ -228,29 +237,95 @@ const ClassRecords = () => {
       }
     };
     fetchRecords();
-  }, [selectedCourse, selectedSection, selectedSemester, searchTerm]);
+  }, [
+    isInitialLoadComplete,
+    selectedCourse,
+    selectedSection,
+    selectedSemester,
+    searchTerm,
+  ]);
 
   const handleCreate = async (payload) => {
-    const res = await classRecordsApi.create(payload);
-    setRecords((prev) => [res.data, ...prev]);
+    try {
+      const res = await classRecordsApi.create(payload);
+      setRecords((prev) => [res.data, ...prev]);
+      await Swal.fire({
+        title: "Success!",
+        text: "Class record created successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error("Error creating record:", err);
+      await Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.error ||
+          "Failed to create record. Please try again.",
+        icon: "error",
+      });
+    }
   };
 
   const handleUpdate = async (payload) => {
-    const res = await classRecordsApi.update(editingRecord.id, payload);
-    setRecords((prev) =>
-      prev.map((r) => (r.id === editingRecord.id ? res.data : r)),
-    );
-    setEditingRecord(null);
+    try {
+      const res = await classRecordsApi.update(editingRecord.id, payload);
+      setRecords((prev) =>
+        prev.map((r) => (r.id === editingRecord.id ? res.data : r)),
+      );
+      setEditingRecord(null);
+      await Swal.fire({
+        title: "Success!",
+        text: "Class record updated successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error("Error updating record:", err);
+      await Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.error ||
+          "Failed to update record. Please try again.",
+        icon: "error",
+      });
+    }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this class record?")) return;
+    const result = await Swal.fire({
+      title: "Delete Class Record?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await classRecordsApi.delete(id);
       setRecords((prev) => prev.filter((r) => r.id !== id));
+      await Swal.fire({
+        title: "Deleted!",
+        text: "Class record has been deleted successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (err) {
       console.error("Error deleting record:", err);
-      alert("Failed to delete. Please try again.");
+      await Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.error || "Failed to delete. Please try again.",
+        icon: "error",
+      });
     }
   };
 
@@ -422,7 +497,7 @@ const ClassRecords = () => {
       </div>
 
       {/* Content */}
-      {loading && (
+      {(loading || !isInitialLoadComplete) && (
         <div className="flex items-center justify-center py-16">
           <div
             className="w-8 h-8 border-4 border-gray-200 rounded-full animate-spin"
@@ -437,7 +512,7 @@ const ClassRecords = () => {
         </div>
       )}
 
-      {!loading && !error && records.length === 0 && (
+      {!loading && !error && records.length === 0 && isInitialLoadComplete && (
         <div className="text-center py-16">
           <Video className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 text-base font-medium">
@@ -451,7 +526,7 @@ const ClassRecords = () => {
         </div>
       )}
 
-      {!loading && !error && records.length > 0 && (
+      {!loading && !error && records.length > 0 && isInitialLoadComplete && (
         <>
           {/* Grid View */}
           {viewMode === "grid" && (
@@ -551,23 +626,26 @@ const ClassRecords = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                    <tr
+                      className="text-white"
+                      style={{ backgroundColor: BRAND }}
+                    >
+                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">
                         Title
                       </th>
-                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">
                         Course
                       </th>
-                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">
                         Semester
                       </th>
-                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">
                         Section
                       </th>
-                      <th className="hidden lg:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-gray-900">
+                      <th className="hidden lg:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold">
                         Date
                       </th>
-                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900">
+                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-semibold">
                         Actions
                       </th>
                     </tr>

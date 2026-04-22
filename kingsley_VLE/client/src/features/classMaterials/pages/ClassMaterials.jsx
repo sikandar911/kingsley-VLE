@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import { Search, Plus, Eye, Trash2, FileText, Link, Edit2 } from "lucide-react";
 import ClassMaterialsModal from "../components/ClassMaterialsModal";
 import SecureFileLink, { getMaterialSource } from "../components/SecureFileLink";
@@ -32,6 +33,18 @@ const ClassMaterials = () => {
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
+
+  // Handle screen resize for responsive styling
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Fetch all courses on mount
   useEffect(() => {
@@ -111,8 +124,13 @@ const ClassMaterials = () => {
         if (semestersData.length > 0) {
           setSelectedSemester(semestersData[0].id);
         }
+
+        // Mark initial load as complete to trigger materials fetch
+        setIsInitialLoadComplete(true);
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
+        // Still mark as complete even on error to allow manual filtering
+        setIsInitialLoadComplete(true);
       } finally {
         setLoadingDropdowns(false);
       }
@@ -182,6 +200,9 @@ const ClassMaterials = () => {
 
   // When filters change, update materials
   useEffect(() => {
+    // Don't fetch materials until initial load (semester auto-selection) is complete
+    if (!isInitialLoadComplete) return;
+
     const fetchMaterials = async () => {
       try {
         setLoading(true);
@@ -207,7 +228,13 @@ const ClassMaterials = () => {
     };
 
     fetchMaterials();
-  }, [selectedCourse, selectedSection, selectedSemester, searchTerm]);
+  }, [
+    isInitialLoadComplete,
+    selectedCourse,
+    selectedSection,
+    selectedSemester,
+    searchTerm,
+  ]);
 
   const handleCourseChange = (courseId) => {
     setSelectedCourse(courseId);
@@ -227,25 +254,71 @@ const ClassMaterials = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this material?")) {
-      try {
-        await classMaterialsApi.delete(id);
-        setMaterials(materials.filter((m) => m.id !== id));
-      } catch (err) {
-        console.error("Error deleting material:", err);
-        alert("Failed to delete material. Please try again.");
-      }
+    const result = await Swal.fire({
+      title: "Delete Class Material?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await classMaterialsApi.delete(id);
+      setMaterials(materials.filter((m) => m.id !== id));
+      await Swal.fire({
+        title: "Deleted!",
+        text: "Class material has been deleted successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error("Error deleting material:", err);
+      await Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.error ||
+          "Failed to delete material. Please try again.",
+        icon: "error",
+      });
     }
   };
 
   const handleAddMaterial = async (formData) => {
     try {
-      const response = await classMaterialsApi.create(formData);
-      setMaterials([...materials, response.data || response]);
+      // If formData provided, create a new material
+      if (formData) {
+        await classMaterialsApi.create(formData);
+      }
+      // Refresh materials list
+      await refreshMaterials();
       setIsModalOpen(false);
     } catch (err) {
-      console.error("Error creating material:", err);
-      alert("Failed to create material. Please try again.");
+      console.error("Error with material:", err);
+      // Re-throw so modal can handle it
+      throw err;
+    }
+  };
+
+  const refreshMaterials = async () => {
+    try {
+      const params = {};
+      if (selectedCourse) params.courseId = selectedCourse;
+      if (selectedSection) params.sectionId = selectedSection;
+      if (selectedSemester) params.semesterId = selectedSemester;
+      if (searchTerm) params.search = searchTerm;
+
+      const response = await classMaterialsApi.list(params);
+      const data = response.data?.materials || response.data || response || [];
+      const materialsData = Array.isArray(data) ? data : [];
+      setMaterials(materialsData);
+    } catch (err) {
+      console.error("Error refreshing materials:", err);
     }
   };
 
@@ -307,23 +380,43 @@ const ClassMaterials = () => {
 
         {/* Filters */}
         <div
-          className="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8"
-          style={{ background: "linear-gradient(to right, #6b1d3e, #5a1630)" }}
+          className="rounded-lg lg:p-6 mb-6 sm:mb-8"
+          style={{
+            background: isSmallScreen
+              ? "transparent"
+              : "linear-gradient(to right, #6b1d3e, #5a1630)",
+            padding: isSmallScreen ? "0" : undefined,
+          }}
         >
-          <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Search Input div*/}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5" />
+          <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3">
+            {/* Search */}
+            <div className="flex flex-col">
+              <label
+                className="text-xs sm:text-sm font-semibold mb-1.5 flex items-center gap-1.5"
+                style={{
+                  color: isSmallScreen ? "#374151" : "white",
+                }}
+              >
+                <Search className="w-4 h-4" />
+                Search
+              </label>
               <input
                 type="text"
-                placeholder="Search by material title..."
+                placeholder="Search title..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 placeholder-gray-400"
-                style={{ "--tw-ring-color": BRAND }}
+                className="w-full px-4 py-2 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:ring-2"
+                style={{
+                  "--tw-ring-color": BRAND,
+                  backgroundColor: isSmallScreen ? "#5f1834" : "white",
+                  color: isSmallScreen ? "white" : "#374151",
+                  padding: isSmallScreen ? "10px 8px" : "10px 16px",
+                }}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+
+            {/* Semester Dropdown */}
+            <div className="flex flex-col">
               <CustomDropdown
                 options={[
                   {
@@ -339,14 +432,19 @@ const ClassMaterials = () => {
                 ]}
                 value={selectedSemester}
                 onChange={(val) => handleSemesterChange(val)}
-                placeholder={
-                  loadingDropdowns ? "Loading..." : "Select semester…"
+                placeholder={loadingDropdowns ? "Loading..." : "All Semesters"}
+                label="Semester"
+                countText={
+                  loadingDropdowns ? "" : `(${filteredSemesters.length})`
                 }
-                isSmallScreen={false}
+                isSmallScreen={isSmallScreen}
                 BRAND={BRAND}
                 disabled={loadingDropdowns}
               />
+            </div>
 
+            {/* Course Dropdown */}
+            <div className="flex flex-col">
               <CustomDropdown
                 options={[
                   { id: "", name: `All Courses (${filteredCourses.length})` },
@@ -357,14 +455,17 @@ const ClassMaterials = () => {
                 ]}
                 value={selectedCourse}
                 onChange={(val) => handleCourseChange(val)}
-                placeholder={
-                  !selectedSemester ? "Select semester first" : "Select course…"
-                }
-                isSmallScreen={false}
+                placeholder="All Courses"
+                label="Course"
+                countText={`(${filteredCourses.length})`}
+                isSmallScreen={isSmallScreen}
                 BRAND={BRAND}
                 disabled={!selectedSemester}
               />
+            </div>
 
+            {/* Section Dropdown */}
+            <div className="flex flex-col">
               <CustomDropdown
                 options={[
                   { id: "", name: `All Sections (${filteredSections.length})` },
@@ -375,10 +476,10 @@ const ClassMaterials = () => {
                 ]}
                 value={selectedSection}
                 onChange={(val) => handleSectionChange(val)}
-                placeholder={
-                  !selectedCourse ? "Select course first" : "Select section…"
-                }
-                isSmallScreen={false}
+                placeholder="All Sections"
+                label="Section"
+                countText={`(${filteredSections.length})`}
+                isSmallScreen={isSmallScreen}
                 BRAND={BRAND}
                 disabled={!selectedCourse}
               />
@@ -449,16 +550,16 @@ const ClassMaterials = () => {
                             </p>
                           )}
                         </td>
-                        <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
+                        <td className="px-4 py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                           {getCourseName(material)}
                         </td>
-                        <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
+                        <td className="px-4 py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                           {getSectionName(material)}
                         </td>
-                        <td className="px-4 py-4 text-xs sm:text-sm text-gray-700">
+                        <td className="px-4 py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                           {getSemesterName(material)}
                         </td>
-                        <td className="px-4 py-4 text-xs sm:text-sm">
+                        <td className="px-4 py-4 text-xs sm:text-sm whitespace-nowrap">
                           {src.type ? (
                             <SecureFileLink
                               material={material}
@@ -601,6 +702,9 @@ const ClassMaterials = () => {
                               ) : (
                                 <FileText className="w-3 h-3" />
                               )}
+                              <span className="text-xs">
+                                {src.type === "url" ? "Open URL" : "View File"}
+                              </span>
                             </SecureFileLink>
                           ) : (
                             <span className="text-gray-400 text-xs">—</span>
