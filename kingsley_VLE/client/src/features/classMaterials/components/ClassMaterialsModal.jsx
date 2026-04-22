@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { X, Upload, Link } from "lucide-react";
+import Swal from "sweetalert2";
 import { classMaterialsApi } from "../api/classMaterials.api";
 import { courseModulesApi } from "../../courseModules/api/courseModules.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
@@ -20,7 +21,8 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
           courseId: editMaterial.courseId || "",
           sectionId: editMaterial.sectionId || "",
           semesterId: editMaterial.semesterId || "",
-          courseModuleId: editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
+          courseModuleId:
+            editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
         }
       : {
           title: "",
@@ -31,7 +33,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
           sectionId: "",
           semesterId: "",
           courseModuleId: "",
-        }
+        },
   );
 
   // Update form data when editMaterial changes (on modal open during edit)
@@ -45,22 +47,52 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
         courseId: editMaterial.courseId || "",
         sectionId: editMaterial.sectionId || "",
         semesterId: editMaterial.semesterId || "",
-        courseModuleId: editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
+        courseModuleId:
+          editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
       });
-      
-      // Set initial input mode
+
+      // Set initial input mode and display previously uploaded file/URL
       if (editMaterial.fileUrl) {
         setInputMode("url");
+        setUploadedFile(null);
       } else if (editMaterial.fileId) {
         setInputMode("file");
+        // Set uploadedFile so previously uploaded file is displayed
+        setUploadedFile({
+          name:
+            editMaterial.file.name ||
+            `File-${editMaterial.fileId?.substring(0, 8)}`,
+        });
+      } else {
+        setInputMode("file");
+        setUploadedFile(null);
       }
+    } else if (!isEdit && isOpen) {
+      // Reset form when opening create modal (not in edit mode)
+      setFormData({
+        title: "",
+        description: "",
+        fileId: "",
+        fileUrl: "",
+        courseId: "",
+        sectionId: "",
+        semesterId: "",
+        courseModuleId: "",
+      });
+      setInputMode("file");
+      setUploadedFile(null);
+      setUrlError("");
+      setFieldErrors({});
     }
-  }, [editMaterial, isOpen]);
+  }, [editMaterial, isEdit, isOpen]);
+
+  console.log("Edit Material:", editMaterial);
 
   const [loading, setLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [urlError, setUrlError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
@@ -194,14 +226,21 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
   useEffect(() => {
     if (formData.courseId) {
       courseModulesApi
-        .list({ courseId: formData.courseId, ...(formData.sectionId ? { sectionId: formData.sectionId } : {}), status: 'active' })
+        .list({
+          courseId: formData.courseId,
+          ...(formData.sectionId ? { sectionId: formData.sectionId } : {}),
+          status: "active",
+        })
         .then((res) => setCourseModules(res.data?.modules || []))
-        .catch(() => setCourseModules([]))
+        .catch(() => setCourseModules([]));
     } else {
-      setCourseModules([])
+      setCourseModules([]);
     }
-    setFormData((prev) => ({ ...prev, courseModuleId: '' }))
-  }, [formData.courseId, formData.sectionId]);
+    // Only reset courseModuleId when creating new material
+    if (!isEdit) {
+      setFormData((prev) => ({ ...prev, courseModuleId: "" }));
+    }
+  }, [formData.courseId, formData.sectionId, isEdit]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -219,12 +258,51 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
         fileId: uploadedFileData.id,
         fileUrl: "",
       }));
+      // Clear materialSource error when file is uploaded
+      setFieldErrors((prev) => ({ ...prev, materialSource: "" }));
     } catch (err) {
       console.error("Error uploading file:", err);
-      alert("Failed to upload file. Please try again.");
+      Swal.fire({
+        icon: "error",
+        title: "Upload Failed",
+        text: "Failed to upload file. Please try again.",
+        confirmButtonText: "OK",
+      });
       setUploadedFile(null);
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  const handleRemoveFile = async () => {
+    if (!uploadedFile || !uploadedFile.id) return;
+
+    try {
+      // Call delete API to remove file from Azure storage
+      await classMaterialsApi.deleteFile(uploadedFile.id);
+
+      // On success, update UI state
+      setUploadedFile(null);
+      setFormData((prev) => ({ ...prev, fileId: "" }));
+
+      await Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: "File removed successfully.",
+        confirmButtonText: "OK",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error("Error removing file:", err);
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text:
+          err?.response?.data?.error ||
+          "Failed to remove file. Please try again.",
+        confirmButtonText: "OK",
+      });
     }
   };
 
@@ -233,8 +311,16 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
     if (name === "fileUrl") {
       setUrlError("");
       setFormData((prev) => ({ ...prev, fileUrl: value, fileId: "" }));
+      // Clear materialSource error when URL is entered
+      if (value.trim()) {
+        setFieldErrors((prev) => ({ ...prev, materialSource: "" }));
+      }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
+      // Clear field error when user starts typing
+      if (fieldErrors[name]) {
+        setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+      }
     }
   };
 
@@ -251,49 +337,99 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
   };
 
   const handleModeSwitch = (mode) => {
+    // Prevent mode switching in edit mode if a file/URL already exists
+    if (isEdit && (formData.fileId || formData.fileUrl)) {
+      return;
+    }
+
     setInputMode(mode);
     setUrlError("");
-    setFormData((prev) => ({ ...prev, fileId: "", fileUrl: "" }));
-    setUploadedFile(null);
+
+    // In edit mode, preserve existing file/URL and only clear the non-active mode
+    if (isEdit) {
+      if (mode === "file") {
+        // Switching to file mode - clear URL, keep file
+        setFormData((prev) => ({ ...prev, fileUrl: "" }));
+      } else {
+        // Switching to URL mode - clear file, keep URL
+        setFormData((prev) => ({ ...prev, fileId: "" }));
+        setUploadedFile(null);
+      }
+    } else {
+      // In create mode, clear everything
+      setFormData((prev) => ({ ...prev, fileId: "", fileUrl: "" }));
+      setUploadedFile(null);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const errors = {};
 
+    // Check title field
     if (!formData.title.trim()) {
-      alert("Material title is required");
+      errors.title = "Material title is required";
+    }
+
+    // Check each field individually
+    if (!formData.semesterId) {
+      errors.semesterId = "Please select a Semester";
+    }
+    if (!formData.courseId) {
+      errors.courseId = "Please select a Course";
+    }
+    if (!formData.sectionId) {
+      errors.sectionId = "Please select a Section";
+    }
+    if (!formData.courseModuleId) {
+      errors.courseModuleId = "Please select a Course Module";
+    }
+
+    // If there are errors, set them and return
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-    if (!formData.courseId || !formData.sectionId || !formData.semesterId) {
-      alert("Please select a Course, Section, and Semester");
-      return;
-    }
+
+    setFieldErrors({});
 
     // For new materials, require a file or URL
     if (!isEdit) {
       if (inputMode === "file" && !formData.fileId) {
-        alert("Please upload a file");
+        setFieldErrors((prev) => ({
+          ...prev,
+          materialSource: "Please upload a file",
+        }));
         return;
       }
 
       if (inputMode === "url") {
         const err = validateUrl(formData.fileUrl);
         if (err) {
-          setUrlError(err);
+          setFieldErrors((prev) => ({
+            ...prev,
+            materialSource: err,
+          }));
           return;
         }
       }
     } else {
       // For edits, only validate if changing to a different mode
       if (inputMode === "file" && !formData.fileId) {
-        alert("Please upload a file or use the URL mode");
+        setFieldErrors((prev) => ({
+          ...prev,
+          materialSource: "Please upload a file or use the URL mode",
+        }));
         return;
       }
 
       if (inputMode === "url") {
         const err = validateUrl(formData.fileUrl);
         if (err) {
-          setUrlError(err);
+          setFieldErrors((prev) => ({
+            ...prev,
+            materialSource: err,
+          }));
           return;
         }
       }
@@ -314,17 +450,40 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
       } else {
         payload.fileUrl = formData.fileUrl.trim();
       }
-      
+
       if (isEdit) {
         await classMaterialsApi.update(editMaterial.id, payload);
       } else {
         await onSubmit(payload);
       }
-      
+
+      await Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: isEdit
+          ? "Class material updated successfully!"
+          : "Class material created successfully!",
+        confirmButtonText: "OK",
+      });
+
+      // For edit mode, call onSubmit to refresh the list
+      if (isEdit && onSubmit) {
+        onSubmit();
+      }
+
       handleClose();
     } catch (err) {
       console.error("Error submitting form:", err);
-      alert(err.response?.data?.error || "Failed to save material");
+      const errorMessage =
+        err.response?.data?.error ||
+        "Failed to save material. Please try again.";
+      await Swal.fire({
+        icon: "error",
+        title: "Save Failed",
+        text: errorMessage,
+        confirmButtonText: "OK",
+      });
+      // Don't close modal on error so user can retry
     } finally {
       setLoading(false);
     }
@@ -341,7 +500,10 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
             courseId: editMaterial.courseId || "",
             sectionId: editMaterial.sectionId || "",
             semesterId: editMaterial.semesterId || "",
-            courseModuleId: editMaterial.courseModule?.id || editMaterial.courseModuleId || "",
+            courseModuleId:
+              editMaterial.courseModule?.id ||
+              editMaterial.courseModuleId ||
+              "",
           }
         : {
             title: "",
@@ -352,7 +514,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
             sectionId: "",
             semesterId: "",
             courseModuleId: "",
-          }
+          },
     );
     setUploadedFile(null);
     setUrlError("");
@@ -393,9 +555,16 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
               value={formData.title}
               onChange={handleChange}
               placeholder="e.g. Lecture 01 - Introduction to DBMS"
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400"
-              style={{ "--tw-ring-color": BRAND }}
+              className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
+                fieldErrors.title
+                  ? "border-red-400 focus:ring-red-300"
+                  : "border-gray-300"
+              }`}
+              style={!fieldErrors.title ? { "--tw-ring-color": BRAND } : {}}
             />
+            {fieldErrors.title && (
+              <p className="text-xs text-red-500 mt-1">{fieldErrors.title}</p>
+            )}
           </div>
 
           {/* Description */}
@@ -426,12 +595,25 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
               <button
                 type="button"
                 onClick={() => handleModeSwitch("file")}
+                disabled={isEdit && (formData.fileId || formData.fileUrl)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition ${
                   inputMode === "file"
                     ? "text-white"
                     : "text-gray-600 bg-white hover:bg-gray-50"
-                }`}
-                style={inputMode === "file" ? { backgroundColor: BRAND } : {}}
+                } ${isEdit && (formData.fileId || formData.fileUrl) ? "opacity-50 cursor-not-allowed" : ""}`}
+                style={
+                  inputMode === "file" &&
+                  !(isEdit && (formData.fileId || formData.fileUrl))
+                    ? { backgroundColor: BRAND }
+                    : inputMode === "file"
+                      ? { backgroundColor: "#999" }
+                      : {}
+                }
+                title={
+                  isEdit && (formData.fileId || formData.fileUrl)
+                    ? "Material source cannot be changed"
+                    : ""
+                }
               >
                 <Upload className="w-4 h-4" />
                 Upload File
@@ -439,12 +621,25 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
               <button
                 type="button"
                 onClick={() => handleModeSwitch("url")}
+                disabled={isEdit && (formData.fileId || formData.fileUrl)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition border-l border-gray-300 ${
                   inputMode === "url"
                     ? "text-white"
                     : "text-gray-600 bg-white hover:bg-gray-50"
-                }`}
-                style={inputMode === "url" ? { backgroundColor: BRAND } : {}}
+                } ${isEdit && (formData.fileId || formData.fileUrl) ? "opacity-50 cursor-not-allowed" : ""}`}
+                style={
+                  inputMode === "url" &&
+                  !(isEdit && (formData.fileId || formData.fileUrl))
+                    ? { backgroundColor: BRAND }
+                    : inputMode === "url"
+                      ? { backgroundColor: "#999" }
+                      : {}
+                }
+                title={
+                  isEdit && (formData.fileId || formData.fileUrl)
+                    ? "Material source cannot be changed"
+                    : ""
+                }
               >
                 <Link className="w-4 h-4" />
                 Enter URL
@@ -459,9 +654,13 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                     <input
                       type="file"
                       onChange={handleFileUpload}
-                      disabled={uploadingFile}
+                      disabled={
+                        uploadingFile ||
+                        (isEdit && (formData.fileId || formData.fileUrl))
+                      }
                       className="hidden"
                       id="file-upload"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip"
                     />
                     <label
                       htmlFor="file-upload"
@@ -474,7 +673,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                           : "Click to upload or drag and drop"}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        PDF, DOCX, PPTX, etc.
+                        PDF, DOCX, PPTX, XLSX, ZIP, etc.
                       </p>
                     </label>
                   </div>
@@ -497,18 +696,27 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                           <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                             {uploadedFile.name}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            ID: {uploadedFile.id?.substring(0, 8)}...
-                          </p>
+                          {isEdit && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              🔒(cannot be changed)
+                            </p>
+                          )}
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          setUploadedFile(null);
-                          setFormData((prev) => ({ ...prev, fileId: "" }));
-                        }}
-                        className="ml-2 text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium flex-shrink-0"
+                        onClick={handleRemoveFile}
+                        disabled={isEdit}
+                        className={`ml-2 text-xs sm:text-sm font-medium flex-shrink-0 ${
+                          isEdit
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-red-600 hover:text-red-800"
+                        }`}
+                        title={
+                          isEdit
+                            ? "Cannot remove file in edit mode"
+                            : "Remove file"
+                        }
                       >
                         Remove
                       </button>
@@ -528,22 +736,42 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                     name="fileUrl"
                     value={formData.fileUrl}
                     onChange={handleChange}
+                    disabled={isEdit && formData.fileUrl}
                     placeholder="https://example.com/file.pdf"
                     className={`w-full pl-9 pr-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
                       urlError
                         ? "border-red-400 focus:ring-red-300"
                         : "border-gray-300"
-                    }`}
+                    } ${isEdit && formData.fileUrl ? "bg-gray-100 cursor-not-allowed" : ""}`}
                     style={!urlError ? { "--tw-ring-color": BRAND } : {}}
+                    title={
+                      isEdit && formData.fileUrl
+                        ? "URL cannot be changed in edit mode"
+                        : ""
+                    }
                   />
                 </div>
+                {isEdit && formData.fileUrl && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    🔒(cannot be changed)
+                  </p>
+                )}
                 {urlError && (
                   <p className="text-xs text-red-500 mt-1">{urlError}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  Only https:// URLs are accepted
-                </p>
+                {!formData.fileUrl && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Only https:// URLs are accepted
+                  </p>
+                )}
               </div>
+            )}
+
+            {/* Material Source error message */}
+            {fieldErrors.materialSource && (
+              <p className="text-xs text-red-500 mt-1">
+                {fieldErrors.materialSource}
+              </p>
             )}
           </div>
 
@@ -551,6 +779,9 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Semester - First selector */}
             <div>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                Semester <span className="text-red-500">*</span>
+              </label>
               <CustomDropdown
                 options={[
                   { id: "", name: "Select semester…" },
@@ -560,9 +791,10 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                   })),
                 ]}
                 value={formData.semesterId}
-                onChange={(val) =>
-                  setFormData((prev) => ({ ...prev, semesterId: val }))
-                }
+                onChange={(val) => {
+                  setFormData((prev) => ({ ...prev, semesterId: val }));
+                  setFieldErrors((prev) => ({ ...prev, semesterId: "" }));
+                }}
                 placeholder={loadingDropdowns ? "Loading…" : "Select semester…"}
                 isSmallScreen={false}
                 BRAND={BRAND}
@@ -570,10 +802,18 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                 dropdownDirection="up"
                 dropdownAlign="right"
               />
+              {fieldErrors.semesterId && (
+                <p className="text-xs text-red-500 mt-1">
+                  {fieldErrors.semesterId}
+                </p>
+              )}
             </div>
 
             {/* Course - Second selector (depends on semester) */}
             <div>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                Course <span className="text-red-500">*</span>
+              </label>
               <CustomDropdown
                 options={[
                   {
@@ -588,9 +828,10 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                   })),
                 ]}
                 value={formData.courseId}
-                onChange={(val) =>
-                  setFormData((prev) => ({ ...prev, courseId: val }))
-                }
+                onChange={(val) => {
+                  setFormData((prev) => ({ ...prev, courseId: val }));
+                  setFieldErrors((prev) => ({ ...prev, courseId: "" }));
+                }}
                 placeholder={
                   !formData.semesterId
                     ? "Select semester first"
@@ -602,10 +843,18 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                 dropdownDirection="up"
                 dropdownAlign="right"
               />
+              {fieldErrors.courseId && (
+                <p className="text-xs text-red-500 mt-1">
+                  {fieldErrors.courseId}
+                </p>
+              )}
             </div>
 
             {/* Section - Third selector (depends on course) */}
             <div>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                Section <span className="text-red-500">*</span>
+              </label>
               <CustomDropdown
                 options={[
                   {
@@ -620,9 +869,10 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                   })),
                 ]}
                 value={formData.sectionId}
-                onChange={(val) =>
-                  setFormData((prev) => ({ ...prev, sectionId: val }))
-                }
+                onChange={(val) => {
+                  setFormData((prev) => ({ ...prev, sectionId: val }));
+                  setFieldErrors((prev) => ({ ...prev, sectionId: "" }));
+                }}
                 placeholder={
                   !formData.courseId ? "Select course first" : "Select section…"
                 }
@@ -631,25 +881,49 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                 disabled={!formData.courseId || loadingDropdowns}
                 dropdownDirection="up"
               />
+              {fieldErrors.sectionId && (
+                <p className="text-xs text-red-500 mt-1">
+                  {fieldErrors.sectionId}
+                </p>
+              )}
             </div>
 
-            {/* Course Module - Fourth selector (optional, depends on course) */}
+            {/* Course Module - Fourth selector (required, depends on course) */}
             <div>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                Course Module <span className="text-red-500">*</span>
+              </label>
               <CustomDropdown
                 options={[
-                  { id: "", name: courseModules.length === 0 ? (!formData.courseId ? "Select course first" : "No modules available") : "Select module (optional)…" },
+                  {
+                    id: "",
+                    name:
+                      courseModules.length === 0
+                        ? !formData.courseId
+                          ? "Select course first"
+                          : "No modules available"
+                        : "Select module…",
+                  },
                   ...courseModules.map((m) => ({ id: m.id, name: m.name })),
                 ]}
                 value={formData.courseModuleId}
-                onChange={(val) =>
-                  setFormData((prev) => ({ ...prev, courseModuleId: val }))
+                onChange={(val) => {
+                  setFormData((prev) => ({ ...prev, courseModuleId: val }));
+                  setFieldErrors((prev) => ({ ...prev, courseModuleId: "" }));
+                }}
+                placeholder={
+                  !formData.courseId ? "Select course first" : "Select module…"
                 }
-                placeholder={!formData.courseId ? "Select course first" : "Select module (optional)…"}
                 isSmallScreen={false}
                 BRAND={BRAND}
                 disabled={!formData.courseId || courseModules.length === 0}
                 dropdownDirection="up"
               />
+              {fieldErrors.courseModuleId && (
+                <p className="text-xs text-red-500 mt-1">
+                  {fieldErrors.courseModuleId}
+                </p>
+              )}
             </div>
           </div>
         </form>
@@ -684,7 +958,13 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
             ) : (
               <Link className="w-4 h-4" />
             )}
-            <span>{loading ? "Saving..." : "Add Material"}</span>
+            <span>
+              {loading
+                ? "Saving..."
+                : isEdit
+                  ? "Edit Material"
+                  : "Add Material"}
+            </span>
           </button>
         </div>
       </div>

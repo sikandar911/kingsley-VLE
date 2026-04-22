@@ -131,7 +131,7 @@ export default function TeacherCourseProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Course Header (Teacher Variant) ── */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 sticky top-0 z-30">
+      <div className="bg-[#601935] border-b border-blue-800 sticky top-0 z-30">
         <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5">
           {/* Back button */}
           <button

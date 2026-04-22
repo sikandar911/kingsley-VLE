@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, Link, Video } from "lucide-react";
 import { classRecordsApi } from "../../../features/classRecords/api/classRecords.api";
 import { teacherClassRecordsApi } from "../api/classRecords/teacherClassRecords.api";
+import { courseModulesApi } from "../../../features/courseModules/api/courseModules.api";
 import CustomDropdown from "../../../features/classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1d3e";
@@ -17,22 +18,21 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     semesterId: "",
     courseId: "",
     sectionId: "",
+    courseModuleId: "",
   });
   const [loading, setLoading] = useState(false);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState("");
-  const [urlError, setUrlError] = useState("");
-  const [titleError, setTitleError] = useState("");
-  const [courseError, setCourseError] = useState("");
+  const [errors, setErrors] = useState({});
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [courseModules, setCourseModules] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const prevSemesterIdRef = useRef(null);
   const prevCourseIdRef = useRef(null);
+  const prevCourseIdForModulesRef = useRef("");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -46,11 +46,11 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         semesterId: record.semesterId || "",
         courseId: record.courseId || "",
         sectionId: record.sectionId || "",
+        courseModuleId: record.courseModule?.id || record.courseModuleId || "",
       });
       // Initialize refs with the existing values so they don't get cleared
       prevSemesterIdRef.current = record.semesterId || "";
       prevCourseIdRef.current = record.courseId || "";
-      setInputMode("url");
     }
 
     const fetchDropdowns = async () => {
@@ -121,6 +121,21 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         console.log("Course section map:", cxSecMap);
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
+
+        // If editing, fetch course modules for the record's course
+        if (record && record.courseId) {
+          try {
+            const modulesRes = await courseModulesApi.list({
+              courseId: record.courseId,
+              ...(record.sectionId ? { sectionId: record.sectionId } : {}),
+              status: "active",
+            });
+            setCourseModules(modulesRes.data?.modules || []);
+          } catch (err) {
+            console.error("Error fetching course modules:", err);
+            setCourseModules([]);
+          }
+        }
       } catch (err) {
         console.error("Error fetching dropdowns:", err);
       } finally {
@@ -173,6 +188,31 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     prevCourseIdRef.current = formData.courseId;
   }, [formData.courseId, courseSectionMap]);
 
+  // Fetch active course modules when courseId or sectionId changes
+  useEffect(() => {
+    if (formData.courseId) {
+      courseModulesApi
+        .list({
+          courseId: formData.courseId,
+          ...(formData.sectionId ? { sectionId: formData.sectionId } : {}),
+          status: "active",
+        })
+        .then((res) => setCourseModules(res.data?.modules || []))
+        .catch(() => setCourseModules([]));
+    } else {
+      setCourseModules([]);
+    }
+
+    // Only reset courseModuleId if course actually changed (not on initial load during edit)
+    if (
+      prevCourseIdForModulesRef.current !== "" &&
+      prevCourseIdForModulesRef.current !== formData.courseId
+    ) {
+      setFormData((prev) => ({ ...prev, courseModuleId: "" }));
+    }
+    prevCourseIdForModulesRef.current = formData.courseId;
+  }, [formData.courseId, formData.sectionId]);
+
   const getFilteredSections = () => {
     if (formData.courseId && courseSectionMap[formData.courseId]) {
       const sectionIds = courseSectionMap[formData.courseId];
@@ -183,34 +223,12 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "url") setUrlError("");
-    if (name === "title") setTitleError("");
+    // Clear error for this field when user starts typing/selecting
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleModeSwitch = (mode) => {
-    setInputMode(mode);
-    setUrlError("");
-    setFormData((prev) => ({ ...prev, url: "" }));
-    setUploadedFileName("");
-  };
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      setUploadingFile(true);
-      const res = await classRecordsApi.uploadFile(file);
-      const fileData = res.data;
-      setFormData((prev) => ({ ...prev, url: fileData.fileUrl }));
-      setUploadedFileName(fileData.name || file.name);
-      setUrlError("");
-    } catch (err) {
-      console.error("Error uploading file:", err);
-      alert("Failed to upload file. Please try again.");
-    } finally {
-      setUploadingFile(false);
-    }
   };
 
   const validateUrl = (url) => {
@@ -227,30 +245,38 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+    const newErrors = {};
 
-    let hasError = false;
-
+    // Validate all required fields
     if (!formData.title.trim()) {
-      setTitleError("Title is required");
-      hasError = true;
-    } else {
-      setTitleError("");
+      newErrors.title = "Title is required";
     }
-
+    if (!formData.semesterId) {
+      newErrors.semesterId = "Please select a Semester";
+    }
     if (!formData.courseId) {
-      setCourseError("Please select a Course");
-      hasError = true;
-    } else {
-      setCourseError("");
+      newErrors.courseId = "Please select a Course";
     }
-
-    if (hasError) return;
+    if (!formData.sectionId) {
+      newErrors.sectionId = "Please select a Section";
+    }
+    if (!formData.courseModuleId) {
+      newErrors.courseModuleId = "Please select a Course Module";
+    }
 
     const urlErr = validateUrl(formData.url);
     if (urlErr) {
-      setUrlError(urlErr);
+      newErrors.url = urlErr;
+    }
+
+    // If there are errors, set them and return
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
+    // Clear errors if validation passes
+    setErrors({});
 
     try {
       setLoading(true);
@@ -261,12 +287,16 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         semesterId: formData.semesterId || undefined,
         courseId: formData.courseId,
         sectionId: formData.sectionId || undefined,
+        courseModuleId: formData.courseModuleId,
       };
       await onSubmit(payload);
       handleClose();
     } catch (err) {
       console.error("Error submitting:", err);
-      alert(err?.response?.data?.error || "Failed to save. Please try again.");
+      setErrors({
+        submit:
+          err?.response?.data?.error || "Failed to save. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -280,12 +310,10 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
       semesterId: "",
       courseId: "",
       sectionId: "",
+      courseModuleId: "",
     });
-    setUrlError("");
-    setTitleError("");
-    setCourseError("");
-    setUploadedFileName("");
-    setInputMode("url");
+    setErrors({});
+    prevCourseIdForModulesRef.current = "";
     onClose();
   };
 
@@ -328,12 +356,12 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
               onChange={handleChange}
               placeholder="e.g. Lecture 01 - Introduction to Algorithms"
               className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
-                titleError ? "border-red-400" : "border-gray-300"
+                errors.title ? "border-red-400" : "border-gray-300"
               }`}
-              style={{ "--tw-ring-color": BRAND }}
+              style={!errors.title ? { "--tw-ring-color": BRAND } : {}}
             />
-            {titleError && (
-              <p className="text-xs text-red-500 mt-1">{titleError}</p>
+            {errors.title && (
+              <p className="text-xs text-red-500 mt-1">{errors.title}</p>
             )}
           </div>
 
@@ -354,131 +382,27 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
             />
           </div>
 
-          {/* URL / File toggle */}
+          {/* Recording URL */}
           <div>
             <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
-              Recording Source <span className="text-red-500">*</span>
+              Recording URL <span className="text-red-500">*</span>
             </label>
-
-            <div className="flex rounded-lg border border-gray-300 overflow-hidden mb-3">
-              <button
-                type="button"
-                onClick={() => handleModeSwitch("url")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition ${
-                  inputMode === "url"
-                    ? "text-white"
-                    : "text-gray-600 bg-white hover:bg-gray-50"
+            <div className="relative">
+              <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                name="url"
+                value={formData.url}
+                onChange={handleChange}
+                placeholder="https://drive.google.com/... or https://youtube.com/..."
+                className={`w-full pl-9 pr-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
+                  errors.url ? "border-red-400" : "border-gray-300"
                 }`}
-                style={inputMode === "url" ? { backgroundColor: BRAND } : {}}
-              >
-                <Link className="w-4 h-4" />
-                Enter URL
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeSwitch("file")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs sm:text-sm font-medium transition border-l border-gray-300 ${
-                  inputMode === "file"
-                    ? "text-white"
-                    : "text-gray-600 bg-white hover:bg-gray-50"
-                }`}
-                style={inputMode === "file" ? { backgroundColor: BRAND } : {}}
-              >
-                <Upload className="w-4 h-4" />
-                Upload File
-              </button>
+                style={!errors.url ? { "--tw-ring-color": BRAND } : {}}
+              />
             </div>
-
-            {/* URL Input */}
-            {inputMode === "url" && (
-              <div>
-                <div className="relative">
-                  <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    name="url"
-                    value={formData.url}
-                    onChange={handleChange}
-                    placeholder="https://drive.google.com/... or https://youtube.com/..."
-                    className={`w-full pl-9 pr-4 py-2 sm:py-2.5 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 placeholder-gray-400 ${
-                      urlError ? "border-red-400" : "border-gray-300"
-                    }`}
-                    style={!urlError ? { "--tw-ring-color": BRAND } : {}}
-                  />
-                </div>
-                {urlError && (
-                  <p className="text-xs text-red-500 mt-1">{urlError}</p>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  Only https:// URLs are accepted
-                </p>
-              </div>
-            )}
-
-            {/* File Upload */}
-            {inputMode === "file" && (
-              <div>
-                {!uploadedFileName ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center hover:border-gray-400 transition cursor-pointer bg-gray-50 hover:bg-gray-100">
-                    <input
-                      type="file"
-                      accept="video/*,.mp4,.mov,.avi,.mkv,.webm"
-                      onChange={handleFileUpload}
-                      disabled={uploadingFile}
-                      className="hidden"
-                      id="record-file-upload"
-                    />
-                    <label
-                      htmlFor="record-file-upload"
-                      className="cursor-pointer block"
-                    >
-                      <Video className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-gray-400" />
-                      <p className="text-xs sm:text-sm font-medium text-gray-700">
-                        {uploadingFile
-                          ? "Uploading..."
-                          : "Click to upload video file"}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        MP4, MOV, AVI, MKV, etc.
-                      </p>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="border border-green-300 bg-green-50 rounded-lg p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <svg
-                          className="w-5 h-5 text-green-600 flex-shrink-0"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                          {uploadedFileName}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUploadedFileName("");
-                          setFormData((prev) => ({ ...prev, url: "" }));
-                        }}
-                        className="ml-2 text-red-600 hover:text-red-800 text-xs font-medium flex-shrink-0"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {urlError && (
-                  <p className="text-xs text-red-500 mt-1">{urlError}</p>
-                )}
-              </div>
+            {errors.url && (
+              <p className="text-xs text-red-500 mt-1">{errors.url}</p>
             )}
           </div>
 
@@ -498,46 +422,73 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
             )}
 
             {/* Semester and Course Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Semester */}
               <div>
+                <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                  Semester <span className="text-red-500">*</span>
+                </label>
                 <CustomDropdown
-                  options={semesters.map((s) => ({
-                    id: s.id,
-                    name: s.name || "Untitled Semester",
-                  }))}
+                  options={[
+                    { id: "", name: "Select Semester" },
+                    ...semesters.map((s) => ({
+                      id: s.id,
+                      name: `${s.name || "Untitled Semester"} ${s.year ? `(${s.year})` : ""}`,
+                    })),
+                  ]}
                   value={formData.semesterId}
-                  onChange={(val) =>
+                  onChange={(val) => {
+                    setErrors((prev) => ({
+                      ...prev,
+                      semesterId: "",
+                    }));
                     setFormData((prev) => ({
                       ...prev,
                       semesterId: val,
-                    }))
-                  }
+                    }));
+                  }}
                   placeholder="Select Semester"
-                  label="Semester"
                   isSmallScreen={false}
                   BRAND={BRAND}
                   disabled={loadingDropdowns}
                 />
+                {errors.semesterId && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.semesterId}
+                  </p>
+                )}
               </div>
 
               {/* Course */}
               <div>
+                <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                  Course <span className="text-red-500">*</span>
+                </label>
                 <CustomDropdown
-                  options={filteredCourses.map((c) => ({
-                    id: c.id,
-                    name: c.title || "Untitled Course",
-                  }))}
+                  options={[
+                    {
+                      id: "",
+                      name: formData.semesterId
+                        ? `Select Course (${filteredCourses.length})`
+                        : "Select Semester First",
+                    },
+                    ...filteredCourses.map((c) => ({
+                      id: c.id,
+                      name: c.title || "Untitled Course",
+                    })),
+                  ]}
                   value={formData.courseId}
                   onChange={(val) => {
-                    setCourseError("");
+                    setErrors((prev) => ({
+                      ...prev,
+                      courseId: "",
+                    }));
                     setFormData((prev) => ({
                       ...prev,
                       courseId: val,
                     }));
                   }}
                   placeholder="Select Course"
-                  label="Course"
                   isSmallScreen={false}
                   BRAND={BRAND}
                   disabled={loadingDropdowns || !formData.semesterId}
@@ -550,32 +501,96 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                     </p>
                   </div>
                 ) : (
-                  courseError && (
-                    <p className="text-xs text-red-500 mt-1">{courseError}</p>
+                  errors.courseId && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.courseId}
+                    </p>
                   )
                 )}
               </div>
+            </div>
 
+            {/* Section and Course Module Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Section */}
               <div>
+                <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                  Section <span className="text-red-500">*</span>
+                </label>
                 <CustomDropdown
-                  options={getFilteredSections().map((s) => ({
-                    id: s.id,
-                    name: s.name || "Untitled Section",
-                  }))}
+                  options={[
+                    {
+                      id: "",
+                      name: formData.courseId
+                        ? `Select Section (${getFilteredSections().length})`
+                        : "Select Course First",
+                    },
+                    ...getFilteredSections().map((s) => ({
+                      id: s.id,
+                      name: s.name || "Untitled Section",
+                    })),
+                  ]}
                   value={formData.sectionId}
-                  onChange={(val) =>
+                  onChange={(val) => {
+                    setErrors((prev) => ({
+                      ...prev,
+                      sectionId: "",
+                    }));
                     setFormData((prev) => ({
                       ...prev,
                       sectionId: val,
-                    }))
-                  }
+                    }));
+                  }}
                   placeholder="Select Section"
-                  label="Section"
                   isSmallScreen={false}
                   BRAND={BRAND}
                   disabled={loadingDropdowns || !formData.courseId}
                 />
+                {errors.sectionId && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.sectionId}
+                  </p>
+                )}
+              </div>
+
+              {/* Course Module */}
+              <div>
+                <label className="block text-xs sm:text-sm font-semibold text-gray-900 mb-2">
+                  Course Module <span className="text-red-500">*</span>
+                </label>
+                <CustomDropdown
+                  options={[
+                    {
+                      id: "",
+                      name: !formData.courseId
+                        ? "Select course first"
+                        : courseModules.length === 0
+                          ? "No modules available"
+                          : "Select module…",
+                    },
+                    ...courseModules.map((m) => ({ id: m.id, name: m.name })),
+                  ]}
+                  value={formData.courseModuleId}
+                  onChange={(val) => {
+                    setErrors((prev) => ({
+                      ...prev,
+                      courseModuleId: "",
+                    }));
+                    setFormData((prev) => ({
+                      ...prev,
+                      courseModuleId: val,
+                    }));
+                  }}
+                  placeholder="Select module"
+                  isSmallScreen={false}
+                  BRAND={BRAND}
+                  disabled={!formData.courseId || courseModules.length === 0}
+                />
+                {errors.courseModuleId && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.courseModuleId}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -594,17 +609,11 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={
-              loading ||
-              uploadingFile ||
-              loadingDropdowns ||
-              courses.length === 0
-            }
+            disabled={loading || loadingDropdowns || courses.length === 0}
             className="px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white rounded-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: BRAND }}
             onMouseEnter={(e) =>
               !loading &&
-              !uploadingFile &&
               !loadingDropdowns &&
               courses.length > 0 &&
               (e.currentTarget.style.backgroundColor = BRAND_DARK)
