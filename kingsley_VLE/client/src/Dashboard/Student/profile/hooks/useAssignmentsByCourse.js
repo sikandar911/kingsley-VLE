@@ -24,12 +24,12 @@ export const useAssignmentsByCourse = (courseId, sectionId, currentPage = 1) => 
         return
       }
 
-      console.log('[useAssignmentsByCourse] Fetching assignments for courseId:', courseId)
+      // console.log('[useAssignmentsByCourse] Fetching assignments for courseId:', courseId)
       const res = await assignmentsApi.list({ courseId })
-      console.log('[useAssignmentsByCourse] API Response:', res)
+      // console.log('[useAssignmentsByCourse] API Response:', res)
       
       const all = Array.isArray(res.data) ? res.data : []
-      console.log('[useAssignmentsByCourse] Total assignments fetched:', all.length)
+      // console.log('[useAssignmentsByCourse] Total assignments fetched:', all.length)
 
       // Verify data belongs to this course/section (safety check)
       const filtered = all.filter((a) => {
@@ -38,7 +38,7 @@ export const useAssignmentsByCourse = (courseId, sectionId, currentPage = 1) => 
         return false
       })
 
-      console.log('[useAssignmentsByCourse] Filtered assignments:', filtered.length)
+      // console.log('[useAssignmentsByCourse] Filtered assignments:', filtered.length)
 
       // Check which are already submitted (based on backend submissions in response)
       const submittedSet = new Set()

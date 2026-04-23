@@ -69,18 +69,18 @@ const TeacherClassRecords = () => {
         if (enrollments && Array.isArray(enrollments)) {
           const currentTeacherId = user?.teacherProfile?.id;
 
-          console.log("Current Teacher ID:", currentTeacherId);
-          console.log("All Enrollments:", enrollments);
+          // console.log("Current Teacher ID:", currentTeacherId);
+          // console.log("All Enrollments:", enrollments);
 
           // Filter to only this teacher's enrollments
           const currentTeacherEnrollments = enrollments.filter(
             (enrollment) => enrollment.teacher?.id === currentTeacherId,
           );
 
-          console.log(
-            "Current Teacher Enrollments:",
-            currentTeacherEnrollments,
-          );
+          // console.log(
+          //   "Current Teacher Enrollments:",
+          //   currentTeacherEnrollments,
+          // );
 
           teacherCourseIds = currentTeacherEnrollments
             .map((enrollment) => enrollment.course?.id)
@@ -118,10 +118,10 @@ const TeacherClassRecords = () => {
           ? sectionsRes.data
           : sectionsRes || [];
 
-        console.log("All Courses:", allCourses);
-        console.log("Teacher Courses:", coursesList);
-        console.log("Semesters:", semestersData);
-        console.log("Sections:", sectionsData);
+        // console.log("All Courses:", allCourses);
+        // console.log("Teacher Courses:", coursesList);
+        // console.log("Semesters:", semestersData);
+        // console.log("Sections:", sectionsData);
 
         setCourses(coursesList);
         setSemesters(semestersData);
@@ -154,8 +154,8 @@ const TeacherClassRecords = () => {
           }
         });
 
-        console.log("Semester course map:", semCxMap);
-        console.log("Course section map:", cxSecMap);
+        // console.log("Semester course map:", semCxMap);
+        // console.log("Course section map:", cxSecMap);
 
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
@@ -185,20 +185,20 @@ const TeacherClassRecords = () => {
       if (semesterCourseMap[selectedSemester]) {
         // Semester exists in map - show its courses (only teacher's courses)
         const courseIds = semesterCourseMap[selectedSemester];
-        console.log(
-          "Filtering courses for semester:",
-          selectedSemester,
-          courseIds,
-        );
+        // console.log(
+        //   "Filtering courses for semester:",
+        //   selectedSemester,
+        //   courseIds,
+        // );
         setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
       } else {
         // Semester selected but has no courses - show empty
-        console.log("Semester selected but has no courses for this teacher");
+        // console.log("Semester selected but has no courses for this teacher");
         setFilteredCourses([]);
       }
     } else {
       // No semester selected - show all teacher's courses
-      console.log("No semester selected - showing all teacher courses");
+      // console.log("No semester selected - showing all teacher courses");
       setFilteredCourses(courses);
     }
     // Reset course and section when semester changes
@@ -213,20 +213,20 @@ const TeacherClassRecords = () => {
       if (courseSectionMap[selectedCourse]) {
         // Course exists in map - show its sections
         const sectionIds = courseSectionMap[selectedCourse];
-        console.log(
-          "Filtering sections for course:",
-          selectedCourse,
-          sectionIds,
-        );
+        // console.log(
+        //   "Filtering sections for course:",
+        //   selectedCourse,
+        //   sectionIds,
+        // );
         setFilteredSections(sections.filter((s) => sectionIds.includes(s.id)));
       } else {
         // Course selected but has no sections - show empty
-        console.log("Course selected but has no sections");
+        // console.log("Course selected but has no sections");
         setFilteredSections([]);
       }
     } else {
       // No course selected - show all sections
-      console.log("No course selected - showing all sections");
+      // console.log("No course selected - showing all sections");
       setFilteredSections(sections);
     }
     // Reset section when course changes
@@ -261,8 +261,8 @@ const TeacherClassRecords = () => {
           );
         }
 
-        console.log("Teacher Course IDs:", teacherCourseIds);
-        console.log("Fetched Records:", data);
+        // console.log("Teacher Course IDs:", teacherCourseIds);
+        // console.log("Fetched Records:", data);
 
         // Client-side search filter
         setRecords(

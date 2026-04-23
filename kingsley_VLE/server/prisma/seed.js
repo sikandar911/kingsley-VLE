@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('Seeding admin accounts...')
+  // console.log('Seeding admin accounts...')
 
   const adminPassword = await bcrypt.hash('Admin@123456', 10)
   const backupPassword = await bcrypt.hash('BackupAdmin@123456', 10)
@@ -75,12 +75,12 @@ async function main() {
     include: { teacherProfile: true },
   })
 
-  console.log('Admin accounts seeded:')
-  console.log(`  ✓ ${admin1.email} / Admin@123456`)
-  console.log(`  ✓ ${admin2.email} / BackupAdmin@123456`)
-  console.log('Test accounts seeded:')
-  console.log(`  ✓ ${student.email} / Student@123456`)
-  console.log(`  ✓ ${teacher.email} / Teacher@123456`)
+  // console.log('Admin accounts seeded:')
+  // console.log(`  ✓ ${admin1.email} / Admin@123456`)
+  // console.log(`  ✓ ${admin2.email} / BackupAdmin@123456`)
+  // console.log('Test accounts seeded:')
+  // console.log(`  ✓ ${student.email} / Student@123456`)
+  // console.log(`  ✓ ${teacher.email} / Teacher@123456`)
 }
 
 main()

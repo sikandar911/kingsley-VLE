@@ -86,7 +86,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
     }
   }, [editMaterial, isEdit, isOpen]);
 
-  console.log("Edit Material:", editMaterial);
+  // console.log("Edit Material:", editMaterial);
 
   const [loading, setLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);

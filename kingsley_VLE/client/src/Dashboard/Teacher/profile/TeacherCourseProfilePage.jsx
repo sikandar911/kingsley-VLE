@@ -133,8 +133,7 @@ export default function TeacherCourseProfilePage() {
       {/* ── Course Header (Teacher Variant) ── */}
       <div className="bg-[#601935] border-b border-blue-800 sticky top-0 z-30">
         <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5">
-          {/* Back button */}
-          <button
+          {/* Back button */}          <button
             onClick={() => navigate('/teacher/courses')}
             className="p-1.5 rounded-lg hover:bg-blue-500 transition text-white flex-shrink-0"
             aria-label="Go back"
@@ -167,7 +166,7 @@ export default function TeacherCourseProfilePage() {
           </div>
 
           {/* Right icons */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          {/* <div className="flex items-center gap-1 flex-shrink-0">
             <button className="p-1.5 rounded-lg hover:bg-blue-500 transition text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -178,7 +177,7 @@ export default function TeacherCourseProfilePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
               </svg>
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Tab Navigation (Teacher blue variant) */}
@@ -209,7 +208,7 @@ export default function TeacherCourseProfilePage() {
 
       {/* ── Tab Content ── */}
       {activeTab === 'general' ? (
-        <CourseChatTab courseId={courseId} sectionId={null} />
+        <CourseChatTab courseId={courseId} sectionId={sectionId} />
       ) : activeTab === 'modules' ? (
         <CourseModulesTab
           courseId={courseId}

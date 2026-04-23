@@ -25,14 +25,29 @@ const INITIAL = {
   endTime: "",
 };
 
+// Generate hour options (00-23)
+const HOURS = Array.from({ length: 24 }, (_, i) => ({
+  id: String(i).padStart(2, "0"),
+  name: String(i).padStart(2, "0"),
+}));
+
+// Generate minute options (00-59)
+const MINUTES = Array.from({ length: 60 }, (_, i) => ({
+  id: String(i).padStart(2, "0"),
+  name: String(i).padStart(2, "0"),
+}));
+
 export default function SectionFormModal({ onClose, onSaved, editSection }) {
   const isEdit = Boolean(editSection);
-  
+
   // Parse daysOfWeek - can be array, comma-separated string, or single day string
   const parseDaysOfWeek = (data) => {
-    if (Array.isArray(data)) return data.filter(d => d);
+    if (Array.isArray(data)) return data.filter((d) => d);
     if (typeof data === "string" && data) {
-      return data.split(",").map(d => d.trim()).filter(d => d);
+      return data
+        .split(",")
+        .map((d) => d.trim())
+        .filter((d) => d);
     }
     return [];
   };
@@ -92,6 +107,22 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
     });
   };
 
+  const handleTimeChange = (type, value) => {
+    if (type === "startHour") {
+      const minute = form.startTime.split(":")[1] || "00";
+      setForm((prev) => ({ ...prev, startTime: `${value}:${minute}` }));
+    } else if (type === "startMinute") {
+      const hour = form.startTime.split(":")[0] || "00";
+      setForm((prev) => ({ ...prev, startTime: `${hour}:${value}` }));
+    } else if (type === "endHour") {
+      const minute = form.endTime.split(":")[1] || "00";
+      setForm((prev) => ({ ...prev, endTime: `${value}:${minute}` }));
+    } else if (type === "endMinute") {
+      const hour = form.endTime.split(":")[0] || "00";
+      setForm((prev) => ({ ...prev, endTime: `${hour}:${value}` }));
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -102,19 +133,9 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
       setError("Please select a course");
       return;
     }
-    // Validate time format if provided
-    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-    if (form.startTime && !timeRegex.test(form.startTime)) {
-      setError("Start time must be in HH:mm format (e.g., 09:00)");
-      return;
-    }
-    if (form.endTime && !timeRegex.test(form.endTime)) {
-      setError("End time must be in HH:mm format (e.g., 10:30)");
-      return;
-    }
-    // If both start and end times are provided, validate time logic
+    // Validate time logic: end time must be after start time
     if (form.startTime && form.endTime && form.startTime >= form.endTime) {
-      setError("Start time must be before end time");
+      setError("End time must be after start time");
       return;
     }
     setError("");
@@ -255,33 +276,57 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="mt-4 space-y-3">
+              {/* Start Time */}
               <div className="form-group">
-                <label className="form-label">Start Time</label>
-                <input
-                  type="text"
-                  name="startTime"
-                  value={form.startTime}
-                  onChange={handleChange}
-                  placeholder="e.g. 09:00"
-                  className="form-input"
-                  disabled={metaLoading}
-                />
-                <p className="text-xs text-gray-500 mt-1">Format: HH:mm (24-hour)</p>
+                <label className="form-label">Start Time (24-hour)</label>
+                <div className="flex items-center gap-2">
+                  <CustomDropdown
+                    options={[{ id: "", name: "HH" }, ...HOURS]}
+                    value={form.startTime.split(":")[0] || ""}
+                    onChange={(val) => handleTimeChange("startHour", val)}
+                    placeholder="HH"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={metaLoading}
+                  />
+                  <span className="text-lg font-semibold text-gray-600">:</span>
+                  <CustomDropdown
+                    options={[{ id: "", name: "MM" }, ...MINUTES]}
+                    value={form.startTime.split(":")[1] || ""}
+                    onChange={(val) => handleTimeChange("startMinute", val)}
+                    placeholder="MM"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={metaLoading}
+                  />
+                </div>
               </div>
 
+              {/* End Time */}
               <div className="form-group">
-                <label className="form-label">End Time</label>
-                <input
-                  type="text"
-                  name="endTime"
-                  value={form.endTime}
-                  onChange={handleChange}
-                  placeholder="e.g. 10:30"
-                  className="form-input"
-                  disabled={metaLoading}
-                />
-                <p className="text-xs text-gray-500 mt-1">Format: HH:mm (24-hour)</p>
+                <label className="form-label">End Time (24-hour)</label>
+                <div className="flex items-center gap-2">
+                  <CustomDropdown
+                    options={[{ id: "", name: "HH" }, ...HOURS]}
+                    value={form.endTime.split(":")[0] || ""}
+                    onChange={(val) => handleTimeChange("endHour", val)}
+                    placeholder="HH"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={metaLoading}
+                  />
+                  <span className="text-lg font-semibold text-gray-600">:</span>
+                  <CustomDropdown
+                    options={[{ id: "", name: "MM" }, ...MINUTES]}
+                    value={form.endTime.split(":")[1] || ""}
+                    onChange={(val) => handleTimeChange("endMinute", val)}
+                    placeholder="MM"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={metaLoading}
+                  />
+                </div>
               </div>
             </div>
           </div>

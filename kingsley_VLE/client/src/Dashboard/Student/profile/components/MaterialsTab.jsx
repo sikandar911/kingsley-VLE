@@ -17,7 +17,7 @@ export default function MaterialsTab({ courseId, sectionId }) {
   useEffect(() => {
     // Only fetch if both courseId and sectionId are provided
     if (!courseId || !sectionId) {
-      console.log('Missing courseId or sectionId', { courseId, sectionId })
+      // console.log('Missing courseId or sectionId', { courseId, sectionId })
       setModules([])
       setSelectedModuleId('')
       return
@@ -27,10 +27,10 @@ export default function MaterialsTab({ courseId, sectionId }) {
       try {
         setLoadingModules(true)
         setModules([]) // Clear previous modules
-        console.log('Fetching modules for course:', courseId, 'section:', sectionId)
+        // console.log('Fetching modules for course:', courseId, 'section:', sectionId)
         
         const res = await courseModulesApi.list({ courseId, sectionId })
-        console.log('Modules API response:', res.data?.modules)
+        // console.log('Modules API response:', res.data?.modules)
         
         const modulesList = res.data?.modules || []
         setModules(modulesList)

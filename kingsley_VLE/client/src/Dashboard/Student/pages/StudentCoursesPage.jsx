@@ -51,6 +51,8 @@ export default function StudentCoursesPage() {
             description: enrollment.course?.description,
             enrolledAt: enrollment.enrolledAt,
             section: enrollment.section?.name,
+            // add kora holo section id:
+            sectionId: enrollment.section?.id || null,
             daysOfWeek: enrollment.section?.daysOfWeek,
             startTime: enrollment.section?.startTime,
             endTime: enrollment.section?.endTime,
@@ -71,6 +73,8 @@ export default function StudentCoursesPage() {
 
     fetchStudentCourses()
   }, [user])
+
+  // console.log('Enrolled courses:', courses);
 
   // Loading State
   if (loading) {
@@ -249,9 +253,10 @@ export default function StudentCoursesPage() {
                   </div>
 
                   {/* Action Buttons */}
+                  {/* `/teacher/courses/${course.id}${course.sectionId ? `?sectionId=${course.sectionId}` : ""}` */}
                   <div className="pt-4 sm:pt-5 space-y-2">
                     <button
-                      onClick={() => navigate(`/student/courses/${course.id}`)}
+                      onClick={() => navigate(`/student/courses/${course.id}${course.sectionId ? `?sectionId=${course.sectionId}` : ""}`)}
                       style={{ backgroundColor: '#6b1d3e' }}
                       className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white rounded-lg hover:shadow-md transition-all duration-300 hover:opacity-90"
                     >

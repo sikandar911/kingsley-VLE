@@ -13,9 +13,9 @@ const prisma = new PrismaClient()
 
 try {
   await prisma.$connect()
-  console.log('✅ Database connected successfully')
+  // console.log('✅ Database connected successfully')
   const count = await prisma.user.count()
-  console.log(`✅ Users in DB: ${count}`)
+  // console.log(`✅ Users in DB: ${count}`)
 } catch (err) {
   console.error('❌ DB connection failed:', err.message)
 } finally {

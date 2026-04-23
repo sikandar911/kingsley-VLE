@@ -91,7 +91,7 @@ export default function TeacherAssignmentsPage() {
     setShowCreate(true);
   };
 
-  console.log("Assignments:", assignments);
+  // console.log("Assignments:", assignments);
 
   const handleStatusChange = async (assignment, newStatus) => {
     setUpdatingId(assignment.id);
@@ -106,7 +106,11 @@ export default function TeacherAssignmentsPage() {
   };
 
   const handleDelete = async (assignment) => {
-    if (!window.confirm(`Are you sure you want to delete "${assignment.title}"? This action cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${assignment.title}"? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
     setDeletingId(assignment.id);

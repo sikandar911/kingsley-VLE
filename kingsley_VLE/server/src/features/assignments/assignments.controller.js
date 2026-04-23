@@ -560,14 +560,14 @@ export const listAssignments = async (req, res) => {
 
       const { courseIds, sectionIds, semesterIds } =
         await getStudentEnrollmentScope(studentProfile.id);
-      console.log(
-        "[listAssignments] Student courseIds from enrollments:",
-        courseIds,
-      );
-      console.log(
-        "[listAssignments] Requested courseId filter:",
-        filters.courseId,
-      );
+      // console.log(
+      //   "[listAssignments] Student courseIds from enrollments:",
+      //   courseIds,
+      // );
+      // console.log(
+      //   "[listAssignments] Requested courseId filter:",
+      //   filters.courseId,
+      // );
       if (!courseIds.length) {
         return res.json([]);
       }
@@ -581,18 +581,18 @@ export const listAssignments = async (req, res) => {
       if (filters.courseId) {
         // If student requested a specific course, check if they're enrolled
         const isEnrolled = courseIds.includes(filters.courseId);
-        console.log(
-          "[listAssignments] Is student enrolled in requested course?",
-          isEnrolled,
-        );
+        // console.log(
+        //   "[listAssignments] Is student enrolled in requested course?",
+        //   isEnrolled,
+        // );
         if (isEnrolled) {
           filteredCourseIds = [filters.courseId];
         } else {
           // If not in enrollment list, still allow fetching but restrict to empty result
           // This prevents "not found" errors for legitimate requests
-          console.log(
-            "[listAssignments] Student NOT enrolled in course, returning empty array",
-          );
+          // console.log(
+          //   "[listAssignments] Student NOT enrolled in course, returning empty array",
+          // );
           return res.json([]);
         }
       }
@@ -610,16 +610,16 @@ export const listAssignments = async (req, res) => {
         sectionIds: filteredSectionIds,
         semesterIds: filteredSemesterIds,
       });
-      console.log(
-        "[listAssignments] Built where filter for student:",
-        JSON.stringify(where, null, 2),
-      );
+      // console.log(
+      //   "[listAssignments] Built where filter for student:",
+      //   JSON.stringify(where, null, 2),
+      // );
     }
 
-    console.log(
-      "[listAssignments] Final where filter:",
-      JSON.stringify(where, null, 2),
-    );
+    // console.log(
+    //   "[listAssignments] Final where filter:",
+    //   JSON.stringify(where, null, 2),
+    // );
     const assignments = await prisma.assignment.findMany({
       where,
       include: {
@@ -660,10 +660,10 @@ export const listAssignments = async (req, res) => {
       }
     }
 
-    console.log(
-      "[listAssignments] Found assignments from DB:",
-      activeAssignments.length,
-    );
+    // console.log(
+    //   "[listAssignments] Found assignments from DB:",
+    //   activeAssignments.length,
+    // );
     return res.json(activeAssignments);
   } catch (err) {
     console.error("List assignments error:", err);
