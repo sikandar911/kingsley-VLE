@@ -3,6 +3,9 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
+# Install system dependencies (required by Prisma)
+RUN apk add --no-cache openssl python3 make g++
+
 # Copy package files
 COPY package*.json ./
 
