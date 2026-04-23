@@ -10,6 +10,7 @@ const options = {
         "API documentation for Kingsley Virtual Learning Environment",
     },
     servers: [
+      { url: "https://vle.kingsleyinstitute.com", description: "Production server" },
       { url: "http://localhost:5000", description: "Development server" },
     ],
     components: {

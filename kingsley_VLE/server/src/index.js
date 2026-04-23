@@ -25,7 +25,22 @@ const app = express()
 const PORT = process.env.PORT || 5000
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+  'https://vle.kingsleyinstitute.com' // Allow self if needed
+].filter(Boolean)
+
+app.use(cors({ 
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }, 
+  credentials: true 
+}))
 app.use(express.json())
 
 // Swagger docs
@@ -67,8 +82,12 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server running at http://localhost:${PORT}`)
-  console.log(`📚 Swagger docs at http://localhost:${PORT}/api/docs\n`)
+  const apiUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://vle.kingsleyinstitute.com' 
+    : `http://localhost:${PORT}`
+    
+  console.log(`\n🚀 Server running at ${apiUrl}`)
+  console.log(`📚 Swagger docs at ${apiUrl}/api/docs\n`)
 })
 
 // Graceful shutdown

@@ -1,7 +1,8 @@
 import axios from 'axios'
 
+// Use VITE_API_URL if it exists (for production), otherwise fallback to '/api' for local dev proxy
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 })
 
 api.interceptors.request.use((config) => {
