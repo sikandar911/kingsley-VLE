@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { Search, Plus, Eye, Trash2, FileText, Link, Edit2 } from "lucide-react";
 import ClassMaterialsModal from "../components/ClassMaterialsModal";
-import SecureFileLink, { getMaterialSource } from "../components/SecureFileLink";
+import SecureFileLink, {
+  getMaterialSource,
+} from "../components/SecureFileLink";
 import { classMaterialsApi } from "../api/classMaterials.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
@@ -52,7 +54,7 @@ const ClassMaterials = () => {
       try {
         const response = await classMaterialsApi.getCourses();
         const coursesList = response.data?.data || response.data?.courses || [];
-        console.log("Courses fetched:", coursesList);
+        // console.log("Courses fetched:", coursesList);
         setCourses(coursesList);
         setFilteredCourses(coursesList);
       } catch (err) {
@@ -79,9 +81,9 @@ const ClassMaterials = () => {
           ? smRes.data
           : smRes || [];
 
-        console.log("Courses data:", coursesList);
-        console.log("Sections data:", sectionsData);
-        console.log("Semesters data:", semestersData);
+        // console.log("Courses data:", coursesList);
+        // console.log("Sections data:", sectionsData);
+        // console.log("Semesters data:", semestersData);
 
         setCourses(coursesList);
         setSections(sectionsData);
@@ -114,8 +116,8 @@ const ClassMaterials = () => {
           }
         });
 
-        console.log("Semester course map:", semCxMap);
-        console.log("Course section map:", cxSecMap);
+        // console.log("Semester course map:", semCxMap);
+        // console.log("Course section map:", cxSecMap);
 
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
@@ -145,20 +147,20 @@ const ClassMaterials = () => {
       if (semesterCourseMap[selectedSemester]) {
         // Semester exists in map - show its courses
         const courseIds = semesterCourseMap[selectedSemester];
-        console.log(
-          "Filtering courses for semester:",
-          selectedSemester,
-          courseIds,
-        );
+        // console.log(
+        //   "Filtering courses for semester:",
+        //   selectedSemester,
+        //   courseIds,
+        // );
         setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
       } else {
         // Semester selected but has no courses - show empty
-        console.log("Semester selected but has no courses");
+        // console.log("Semester selected but has no courses");
         setFilteredCourses([]);
       }
     } else {
       // No semester selected - show all courses
-      console.log("No semester selected - showing all courses");
+      // console.log("No semester selected - showing all courses");
       setFilteredCourses(courses);
     }
     // Reset course and section when semester changes
@@ -173,20 +175,20 @@ const ClassMaterials = () => {
       if (courseSectionMap[selectedCourse]) {
         // Course exists in map - show its sections
         const sectionIds = courseSectionMap[selectedCourse];
-        console.log(
-          "Filtering sections for course:",
-          selectedCourse,
-          sectionIds,
-        );
+        // console.log(
+        //   "Filtering sections for course:",
+        //   selectedCourse,
+        //   sectionIds,
+        // );
         setFilteredSections(sections.filter((s) => sectionIds.includes(s.id)));
       } else {
         // Course selected but has no sections - show empty
-        console.log("Course selected but has no sections");
+        // console.log("Course selected but has no sections");
         setFilteredSections([]);
       }
     } else {
       // No course selected - show all sections
-      console.log("No course selected - showing all sections");
+      // console.log("No course selected - showing all sections");
       setFilteredSections(sections);
     }
     // Reset section when course changes
@@ -567,9 +569,15 @@ const ClassMaterials = () => {
                               style={{ color: BRAND }}
                             >
                               {src.type === "url" ? (
-                                <><Link className="w-4 h-4" /><span>Open URL</span></>
+                                <>
+                                  <Link className="w-4 h-4" />
+                                  <span>Open URL</span>
+                                </>
                               ) : (
-                                <><FileText className="w-4 h-4" /><span>View File</span></>
+                                <>
+                                  <FileText className="w-4 h-4" />
+                                  <span>View File</span>
+                                </>
                               )}
                             </SecureFileLink>
                           ) : (

@@ -83,11 +83,11 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           teacherCourseIds.includes(c.id),
         );
 
-        console.log("Teacher Assigned Course IDs:", teacherCourseIds);
-        console.log("All Courses:", allCourses);
-        console.log("Enriched Teacher Courses:", enrichedTeacherCourses);
-        console.log("All Sections:", sectionsData);
-        console.log("All Semesters:", semestersData);
+        // console.log("Teacher Assigned Course IDs:", teacherCourseIds);
+        // console.log("All Courses:", allCourses);
+        // console.log("Enriched Teacher Courses:", enrichedTeacherCourses);
+        // console.log("All Sections:", sectionsData);
+        // console.log("All Semesters:", semestersData);
 
         setCourses(enrichedTeacherCourses);
         setSections(sectionsData);
@@ -117,8 +117,8 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           }
         });
 
-        console.log("Semester course map:", semCxMap);
-        console.log("Course section map:", cxSecMap);
+        // console.log("Semester course map:", semCxMap);
+        // console.log("Course section map:", cxSecMap);
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
 

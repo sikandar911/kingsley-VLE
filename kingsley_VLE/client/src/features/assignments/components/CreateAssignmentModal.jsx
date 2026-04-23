@@ -68,7 +68,7 @@ export default function CreateAssignmentModal({
       : INITIAL,
   );
 
-  console.log("module info(edit):", editAssignment);
+  // console.log("module info(edit):", editAssignment);
 
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -115,8 +115,8 @@ export default function CreateAssignmentModal({
           ? semestersRes.data
           : semestersRes.data?.data || [];
 
-        console.log("All courses fetched:", fullCourseList);
-        console.log("All semesters fetched:", semestersList);
+        // console.log("All courses fetched:", fullCourseList);
+        // console.log("All semesters fetched:", semestersList);
 
         // Track teacher's assigned course IDs and semesters for filtering
         let teacherAssignedCourseIds = [];
@@ -127,16 +127,16 @@ export default function CreateAssignmentModal({
           const teacherId = user.teacherProfile.id;
           const allEnrollments =
             responses[2].data?.data || responses[2].data || [];
-          console.log("All enrollments fetched:", allEnrollments);
+          // console.log("All enrollments fetched:", allEnrollments);
 
           const teacherEnrollments = allEnrollments.filter(
             (enrollment) => enrollment.teacher?.id === teacherId,
           );
 
-          console.log("Teacher enrollments:", teacherEnrollments);
+          // console.log("Teacher enrollments:", teacherEnrollments);
 
           teacherAssignedCourseIds = teacherEnrollments.map((e) => e.courseId);
-          console.log("Teacher assigned course IDs:", teacherAssignedCourseIds);
+          // console.log("Teacher assigned course IDs:", teacherAssignedCourseIds);
 
           // Build set of semesters that have teacher's courses
           fullCourseList.forEach((course) => {
@@ -144,10 +144,10 @@ export default function CreateAssignmentModal({
               teacherAssignedSemesterIds.add(course.semesterId);
             }
           });
-          console.log(
-            "Teacher assigned semester IDs:",
-            Array.from(teacherAssignedSemesterIds),
-          );
+          // console.log(
+          //   "Teacher assigned semester IDs:",
+          //   Array.from(teacherAssignedSemesterIds),
+          // );
         }
 
         // Build semester -> courses map from ALL courses
@@ -170,8 +170,8 @@ export default function CreateAssignmentModal({
           }
         });
 
-        console.log("Full semester course map:", semCxMap);
-        console.log("Full course section map:", cxSecMap);
+        // console.log("Full semester course map:", semCxMap);
+        // console.log("Full course section map:", cxSecMap);
 
         // For filtering, determine which courses to show
         let displayCourseList = fullCourseList;
@@ -179,7 +179,7 @@ export default function CreateAssignmentModal({
           displayCourseList = fullCourseList.filter((course) =>
             teacherAssignedCourseIds.includes(course.id),
           );
-          console.log("Courses for teacher display:", displayCourseList);
+          // console.log("Courses for teacher display:", displayCourseList);
         }
 
         // For filtering, determine which semesters to show
@@ -188,7 +188,7 @@ export default function CreateAssignmentModal({
           displaySemestersList = semestersList.filter((sem) =>
             teacherAssignedSemesterIds.has(sem.id),
           );
-          console.log("Semesters for teacher display:", displaySemestersList);
+          // console.log("Semesters for teacher display:", displaySemestersList);
         }
 
         setCourses(displayCourseList);
@@ -215,24 +215,24 @@ export default function CreateAssignmentModal({
 
   // Filter courses based on selected semester
   useEffect(() => {
-    console.log("Semester filter effect triggered:");
-    console.log("- form.semesterId:", form.semesterId);
-    console.log("- semesterCourseMap:", semesterCourseMap);
-    console.log("- courses:", courses);
+    // console.log("Semester filter effect triggered:");
+    // console.log("- form.semesterId:", form.semesterId);
+    // console.log("- semesterCourseMap:", semesterCourseMap);
+    // console.log("- courses:", courses);
 
     if (form.semesterId) {
       if (semesterCourseMap[form.semesterId]) {
         const courseIds = semesterCourseMap[form.semesterId];
-        console.log("- Found courseIds for semester:", courseIds);
+        // console.log("- Found courseIds for semester:", courseIds);
         const filtered = courses.filter((c) => courseIds.includes(c.id));
-        console.log("- Filtered courses:", filtered);
+        // console.log("- Filtered courses:", filtered);
         setFilteredCourses(filtered);
       } else {
-        console.log("- Semester not found in map, showing empty");
+        // console.log("- Semester not found in map, showing empty");
         setFilteredCourses([]);
       }
     } else {
-      console.log("- No semester selected, showing all courses");
+      // console.log("- No semester selected, showing all courses");
       setFilteredCourses(courses);
     }
     // Reset course and section when semester changes (but not if editing and course was pre-set)
@@ -270,19 +270,19 @@ export default function CreateAssignmentModal({
   // For teachers, automatically set their ID
   useEffect(() => {
     if (isAdmin && form.courseId) {
-      console.log("Fetching teachers for courseId:", form.courseId);
+      // console.log("Fetching teachers for courseId:", form.courseId);
       enrollmentsApi.teachers
         .list({ courseId: form.courseId })
         .then((res) => {
-          console.log("Teachers API response:", res);
-          console.log("Teachers data:", res.data);
+          // console.log("Teachers API response:", res);
+          // console.log("Teachers data:", res.data);
           const teachersList = res.data?.data || res.data || [];
-          console.log("Teachers list:", teachersList);
+          // console.log("Teachers list:", teachersList);
 
           // Debug: Log first teacher object to see structure
           if (teachersList.length > 0) {
-            console.log("First teacher object:", teachersList[0]);
-            console.log("Teacher object keys:", Object.keys(teachersList[0]));
+            // console.log("First teacher object:", teachersList[0]);
+            // console.log("Teacher object keys:", Object.keys(teachersList[0]));
           }
 
           setFilteredTeachers(teachersList);

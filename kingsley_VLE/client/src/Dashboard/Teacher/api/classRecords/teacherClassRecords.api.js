@@ -33,9 +33,9 @@ export const teacherClassRecordsApi = {
         course: enrollment.course,
       }));
 
-      console.log("Teacher:", teacher);
-      console.log("Teacher Enrollments:", teacherEnrollments);
-      console.log("Teacher Courses:", courses);
+      // console.log("Teacher:", teacher);
+      // console.log("Teacher Enrollments:", teacherEnrollments);
+      // console.log("Teacher Courses:", courses);
 
       return {
         teacher,

@@ -105,10 +105,10 @@ const Attendance = () => {
       coursesData.forEach((course) => {
         // Try to get semesterId - it might be direct or nested in semester object
         const semId = course.semesterId || course.semester?.id;
-        console.log(
-          `Course: ${course.id}, title: ${course.title || course.name}, semesterId: ${semId}, full object:`,
-          course,
-        );
+        // console.log(
+        //   `Course: ${course.id}, title: ${course.title || course.name}, semesterId: ${semId}, full object:`,
+        //   course,
+        // );
         if (semId) {
           if (!semToCourse[semId]) semToCourse[semId] = [];
           if (!semToCourse[semId].includes(course.id)) {
@@ -129,14 +129,14 @@ const Attendance = () => {
       });
 
       // Debug logs
-      console.log("===== ATTENDANCE FILTER DEBUG =====");
-      console.log("Sessions:", sessionsData);
-      console.log("Semesters:", semestersData);
-      console.log("Courses:", coursesData);
-      console.log("Sections:", sectionsData);
-      console.log("sessionSemesterMap:", sessToSem);
-      console.log("semesterCourseMap:", semToCourse);
-      console.log("courseSectionMap:", courseToSec);
+      // console.log("===== ATTENDANCE FILTER DEBUG =====");
+      // console.log("Sessions:", sessionsData);
+      // console.log("Semesters:", semestersData);
+      // console.log("Courses:", coursesData);
+      // console.log("Sections:", sectionsData);
+      // console.log("sessionSemesterMap:", sessToSem);
+      // console.log("semesterCourseMap:", semToCourse);
+      // console.log("courseSectionMap:", courseToSec);
 
       setSessionSemesterMap(sessToSem);
       setSemesterCourseMap(semToCourse);
@@ -184,12 +184,12 @@ const Attendance = () => {
       if (selectedCourse) enrollParams.courseId = selectedCourse;
       if (selectedSection) enrollParams.sectionId = selectedSection;
 
-      console.log("Fetching enrollments with params:", enrollParams);
+      // console.log("Fetching enrollments with params:", enrollParams);
 
       // Get ALL enrollments (students)
       const enrollRes = await attendanceApi.getEnrollments(enrollParams);
 
-      console.log("Enrollments response:", enrollRes.data);
+      // console.log("Enrollments response:", enrollRes.data);
 
       // Now fetch attendance records FOR A SPECIFIC DATE (if date is selected)
       // This will only return records that have attendance on that date
@@ -211,10 +211,10 @@ const Attendance = () => {
         });
       }
 
-      console.log(
-        `Attendance records for date ${dateFilter || "today"}:`,
-        attendanceMap,
-      );
+      // console.log(
+      //   `Attendance records for date ${dateFilter || "today"}:`,
+      //   attendanceMap,
+      // );
 
       // Merge: Show ALL students, but status from that specific date if exists
       const enrollmentRecords = (enrollRes.data || []).map((enrollment) => ({
@@ -263,23 +263,23 @@ const Attendance = () => {
 
   // Auto-update filtered courses when semester changes or maps are built
   useEffect(() => {
-    console.log("=== COURSE FILTER EFFECT ===");
-    console.log("selectedSemester:", selectedSemester);
-    console.log("semesterCourseMap:", semesterCourseMap);
-    console.log("courses array:", courses);
+    // console.log("=== COURSE FILTER EFFECT ===");
+    // console.log("selectedSemester:", selectedSemester);
+    // console.log("semesterCourseMap:", semesterCourseMap);
+    // console.log("courses array:", courses);
 
     if (selectedSemester && semesterCourseMap[selectedSemester]) {
       const courseIds = semesterCourseMap[selectedSemester];
-      console.log("Found courseIds for semester:", courseIds);
+      // console.log("Found courseIds for semester:", courseIds);
       const filtered = courses.filter((c) => courseIds.includes(c.id));
-      console.log("Filtered courses:", filtered);
+      // console.log("Filtered courses:", filtered);
       setFilteredCourses(filtered);
       // DO NOT auto-select - user will select manually
     } else {
-      console.log(
-        "No courseIds found - semesterCourseMap has keys:",
-        Object.keys(semesterCourseMap),
-      );
+      // console.log(
+      //   "No courseIds found - semesterCourseMap has keys:",
+      //   Object.keys(semesterCourseMap),
+      // );
       setFilteredCourses([]);
     }
   }, [selectedSemester, semesterCourseMap, courses]);
@@ -385,12 +385,12 @@ const Attendance = () => {
         })),
       };
 
-      console.log("Posting bulk attendance:", bulkData);
+      // console.log("Posting bulk attendance:", bulkData);
 
       // POST to bulk endpoint
       const res = await attendanceApi.createBulk(bulkData);
 
-      console.log("Bulk attendance response:", res.data);
+      // console.log("Bulk attendance response:", res.data);
 
       // Clear selections and refresh
       setSelectedStatuses({});

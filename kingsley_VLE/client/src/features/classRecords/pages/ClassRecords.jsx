@@ -61,7 +61,7 @@ const ClassRecords = () => {
       try {
         const res = await classRecordsApi.getCourses();
         const coursesList = res.data?.data || res.data?.courses || [];
-        console.log("Courses fetched:", coursesList);
+        // console.log("Courses fetched:", coursesList);
         setCourses(coursesList);
         setFilteredCourses(coursesList);
       } catch (err) {
@@ -88,9 +88,9 @@ const ClassRecords = () => {
           ? smRes.data
           : smRes || [];
 
-        console.log("Courses data:", coursesList);
-        console.log("Sections data:", sectionsData);
-        console.log("Semesters data:", semestersData);
+        // console.log("Courses data:", coursesList);
+        // console.log("Sections data:", sectionsData);
+        // console.log("Semesters data:", semestersData);
 
         setCourses(coursesList);
         setSections(sectionsData);
@@ -123,8 +123,8 @@ const ClassRecords = () => {
           }
         });
 
-        console.log("Semester course map:", semCxMap);
-        console.log("Course section map:", cxSecMap);
+        // console.log("Semester course map:", semCxMap);
+        // console.log("Course section map:", cxSecMap);
 
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
@@ -153,20 +153,20 @@ const ClassRecords = () => {
       if (semesterCourseMap[selectedSemester]) {
         // Semester exists in map - show its courses
         const courseIds = semesterCourseMap[selectedSemester];
-        console.log(
-          "Filtering courses for semester:",
-          selectedSemester,
-          courseIds,
-        );
+        // console.log(
+        //   "Filtering courses for semester:",
+        //   selectedSemester,
+        //   courseIds,
+        // );
         setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
       } else {
         // Semester selected but has no courses - show empty
-        console.log("Semester selected but has no courses");
+        // console.log("Semester selected but has no courses");
         setFilteredCourses([]);
       }
     } else {
       // No semester selected - show all courses
-      console.log("No semester selected - showing all courses");
+      // console.log("No semester selected - showing all courses");
       setFilteredCourses(courses);
     }
     // Reset course and section when semester changes
@@ -181,20 +181,20 @@ const ClassRecords = () => {
       if (courseSectionMap[selectedCourse]) {
         // Course exists in map - show its sections
         const sectionIds = courseSectionMap[selectedCourse];
-        console.log(
-          "Filtering sections for course:",
-          selectedCourse,
-          sectionIds,
-        );
+        // console.log(
+        //   "Filtering sections for course:",
+        //   selectedCourse,
+        //   sectionIds,
+        // );
         setFilteredSections(sections.filter((s) => sectionIds.includes(s.id)));
       } else {
         // Course selected but has no sections - show empty
-        console.log("Course selected but has no sections");
+        // console.log("Course selected but has no sections");
         setFilteredSections([]);
       }
     } else {
       // No course selected - show all sections
-      console.log("No course selected - showing all sections");
+      // console.log("No course selected - showing all sections");
       setFilteredSections(sections);
     }
     // Reset section when course changes

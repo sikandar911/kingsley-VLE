@@ -59,16 +59,16 @@ export default function CreateEventModal({
         .list({ limit: 500 })
         .then((res) => {
           const courseList = res.data?.data || res.data || [];
-          console.log(
-            "[Modal] Loaded all courses:",
-            courseList.length,
-            "First course:",
-            courseList[0],
-          );
+          // console.log(
+          //   "[Modal] Loaded all courses:",
+          //   courseList.length,
+          //   "First course:",
+          //   courseList[0],
+          // );
           setAllCourses(Array.isArray(courseList) ? courseList : []);
         })
         .catch((err) => {
-          console.log("[Modal] Error loading courses:", err);
+          // console.log("[Modal] Error loading courses:", err);
           setAllCourses([]);
         });
 
@@ -81,14 +81,14 @@ export default function CreateEventModal({
         .catch(() => setAllSections([]));
 
       if (editEvent) {
-        console.log("[Modal] Edit Event data:", {
-          type: editEvent.type,
-          semesterId: editEvent.semesterId,
-          courseId: editEvent.courseId,
-          sectionId: editEvent.sectionId,
-          course: editEvent.course,
-          section: editEvent.section,
-        });
+        // console.log("[Modal] Edit Event data:", {
+        //   type: editEvent.type,
+        //   semesterId: editEvent.semesterId,
+        //   courseId: editEvent.courseId,
+        //   sectionId: editEvent.sectionId,
+        //   course: editEvent.course,
+        //   section: editEvent.section,
+        // });
 
         // Helper to convert UTC ISO string to local datetime-local format
         const convertUTCToLocal = (utcDateStr) => {
@@ -155,18 +155,18 @@ export default function CreateEventModal({
         const coursesSemesterId = c.semesterId || c.semester?.id;
         return coursesSemesterId === formData.semesterId;
       });
-      console.log("[FilterCourses] Semester:", formData.semesterId);
-      console.log("[FilterCourses] Looking for courseId:", formData.courseId);
-      console.log(
-        "[FilterCourses] Available courses:",
-        filtered.map((c) => ({ id: c.id, title: c.title })),
-      );
-      console.log(
-        "[FilterCourses] Filtered:",
-        filtered.length,
-        "All:",
-        allCourses.length,
-      );
+      // console.log("[FilterCourses] Semester:", formData.semesterId);
+      // console.log("[FilterCourses] Looking for courseId:", formData.courseId);
+      // console.log(
+      //   "[FilterCourses] Available courses:",
+      //   filtered.map((c) => ({ id: c.id, title: c.title })),
+      // );
+      // console.log(
+      //   "[FilterCourses] Filtered:",
+      //   filtered.length,
+      //   "All:",
+      //   allCourses.length,
+      // );
       setCourses(filtered);
 
       // Only clear courseId if user manually changed semester (not initial load)
@@ -174,14 +174,14 @@ export default function CreateEventModal({
         prevSemesterRef.current &&
         prevSemesterRef.current !== formData.semesterId;
       if (semesterChanged) {
-        console.log("[FilterCourses] User changed semester, clearing courseId");
+        // console.log("[FilterCourses] User changed semester, clearing courseId");
         setFormData((prev) => ({ ...prev, courseId: "", sectionId: "" }));
         setSections([]);
       } else if (isInitialLoadRef.current) {
-        console.log(
-          "[FilterCourses] Initial load, keeping courseId:",
-          formData.courseId,
-        );
+        // console.log(
+        //   "[FilterCourses] Initial load, keeping courseId:",
+        //   formData.courseId,
+        // );
         isInitialLoadRef.current = false;
       }
       prevSemesterRef.current = formData.semesterId;
@@ -199,28 +199,28 @@ export default function CreateEventModal({
       const filtered = allSections.filter(
         (s) => s.courseId === formData.courseId,
       );
-      console.log("[FilterSections] Course:", formData.courseId);
-      console.log(
-        "[FilterSections] Looking for sectionId:",
-        formData.sectionId,
-      );
-      console.log(
-        "[FilterSections] Available sections:",
-        filtered.map((s) => ({ id: s.id, name: s.name })),
-      );
+      // console.log("[FilterSections] Course:", formData.courseId);
+      // console.log(
+      //   "[FilterSections] Looking for sectionId:",
+      //   formData.sectionId,
+      // );
+      // console.log(
+      //   "[FilterSections] Available sections:",
+      //   filtered.map((s) => ({ id: s.id, name: s.name })),
+      // );
       setSections(filtered);
 
       // Only clear sectionId if user manually changed course (not initial load)
       const courseChanged =
         prevCourseRef.current && prevCourseRef.current !== formData.courseId;
       if (courseChanged) {
-        console.log("[FilterSections] Course changed, clearing sectionId");
+        // console.log("[FilterSections] Course changed, clearing sectionId");
         setFormData((prev) => ({ ...prev, sectionId: "" }));
       } else {
-        console.log(
-          "[FilterSections] Initial load or same course, keeping sectionId:",
-          formData.sectionId,
-        );
+        // console.log(
+        //   "[FilterSections] Initial load or same course, keeping sectionId:",
+        //   formData.sectionId,
+        // );
       }
       prevCourseRef.current = formData.courseId;
     } else {
@@ -291,13 +291,13 @@ export default function CreateEventModal({
         endTime: convertToUTC(formData.endTime),
       };
 
-      console.log("[CreateEventModal] Payload to send:", payload);
+      // console.log("[CreateEventModal] Payload to send:", payload);
 
       if (editEvent) {
-        console.log("[CreateEventModal] Updating event:", editEvent.id);
+        // console.log("[CreateEventModal] Updating event:", editEvent.id);
         await eventsApi.update(editEvent.id, payload);
       } else {
-        console.log("[CreateEventModal] Creating new event");
+        // console.log("[CreateEventModal] Creating new event");
         await eventsApi.create(payload);
       }
 

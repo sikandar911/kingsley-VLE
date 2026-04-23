@@ -36,8 +36,8 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
           ? semestersRes.data
           : semestersRes.data?.data || [];
 
-        console.log("Courses fetched:", courseList);
-        console.log("Semesters fetched:", semestersList);
+        // console.log("Courses fetched:", courseList);
+        // console.log("Semesters fetched:", semestersList);
 
         setCourses(courseList);
         setSemesters(semestersList);
@@ -66,8 +66,8 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
           }
         });
 
-        console.log("Semester course map:", semCxMap);
-        console.log("Course section map:", cxSecMap);
+        // console.log("Semester course map:", semCxMap);
+        // console.log("Course section map:", cxSecMap);
 
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
@@ -258,7 +258,7 @@ export default function EnrollmentFormModal({ onClose, onSaved }) {
 
           {/* Section - Third selector (depends on course) */}
           <div className="form-group ">
-              <label className="form-label">Section *</label>
+            <label className="form-label">Section *</label>
             <CustomDropdown
               options={[
                 {

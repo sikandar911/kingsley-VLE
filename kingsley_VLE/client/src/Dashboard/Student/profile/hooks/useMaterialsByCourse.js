@@ -23,7 +23,7 @@ export const useMaterialsByCourse = (courseId, sectionId, currentPage = 1) => {
         }
 
         const res = await classMaterialsApi.list({ courseId })
-        console.log('[useMaterialsByCourse] API Response:', res)
+        // console.log('[useMaterialsByCourse] API Response:', res)
 
         // Handle multiple response structures
         let all = []
@@ -39,7 +39,7 @@ export const useMaterialsByCourse = (courseId, sectionId, currentPage = 1) => {
             all = res.data.data
           }
         }
-        console.log('[useMaterialsByCourse] Total materials fetched:', all.length)
+        // console.log('[useMaterialsByCourse] Total materials fetched:', all.length)
 
         // Filter to only materials belonging to this course/section
         const filtered = all.filter((m) => {
@@ -47,7 +47,7 @@ export const useMaterialsByCourse = (courseId, sectionId, currentPage = 1) => {
           if (sectionId && m.sectionId === sectionId) return true
           return false
         })
-        console.log('[useMaterialsByCourse] Filtered materials:', filtered.length)
+        // console.log('[useMaterialsByCourse] Filtered materials:', filtered.length)
 
         // Set total count and paginate
         setTotalCount(filtered.length)

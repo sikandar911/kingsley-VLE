@@ -125,7 +125,7 @@ export default function TeacherEventsPage() {
       .finally(() => setLoading(false));
   }, [filterType, user?.id, user?.teacherProfile?.id]);
 
-  console.log("events", events);
+  // console.log("events", events);
 
   useEffect(() => {
     load();

@@ -23,7 +23,7 @@ export const useRecordingsByCourse = (courseId, sectionId, currentPage = 1) => {
         }
 
         const res = await classRecordsApi.list({ courseId })
-        console.log('[useRecordingsByCourse] API Response:', res)
+        // console.log('[useRecordingsByCourse] API Response:', res)
 
         // Handle both wrapped and direct response
         let all = []
@@ -37,7 +37,7 @@ export const useRecordingsByCourse = (courseId, sectionId, currentPage = 1) => {
             all = res.data.data
           }
         }
-        console.log('[useRecordingsByCourse] Total recordings fetched:', all.length)
+        // console.log('[useRecordingsByCourse] Total recordings fetched:', all.length)
 
         // Filter to only records belonging to this course/section
         const filtered = all.filter((r) => {
@@ -45,7 +45,7 @@ export const useRecordingsByCourse = (courseId, sectionId, currentPage = 1) => {
           if (sectionId && r.sectionId === sectionId) return true
           return false
         })
-        console.log('[useRecordingsByCourse] Filtered recordings:', filtered.length)
+        // console.log('[useRecordingsByCourse] Filtered recordings:', filtered.length)
 
         // Set total count and paginate
         setTotalCount(filtered.length)

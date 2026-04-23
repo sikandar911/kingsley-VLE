@@ -1,68 +1,84 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../../context/AuthContext'
-import { enrollmentsApi } from '../../../features/enrollments/api/enrollments.api'
-import AssignmentsTab from './components/AssignmentsTab'
-import MaterialsTab from './components/MaterialsTab'
-import CourseChatTab from '../../../features/courseChat/components/CourseChatTab'
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
+import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.api";
+import AssignmentsTab from "./components/AssignmentsTab";
+import MaterialsTab from "./components/MaterialsTab";
+import CourseChatTab from "../../../features/courseChat/components/CourseChatTab";
 
 // ── Tab IDs ────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'general', label: 'General' },
-  { id: 'assignments', label: 'Assignments' },
-  { id: 'materials', label: 'Materials' },
-]
+  { id: "general", label: "General" },
+  { id: "assignments", label: "Assignments" },
+  { id: "materials", label: "Materials" },
+];
 
 // ── Main CourseProfilePage ─────────────────────────────────────────────────
 export default function CourseProfilePage() {
-  const { courseId } = useParams()
-  const navigate = useNavigate()
-  const { user } = useAuth()
+  const { courseId } = useParams();
+  const [searchParams] = useSearchParams();
+  const sectionIdParam = searchParams.get("sectionId");
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('general')
-  const [course, setCourse] = useState(null)
-  const [enrollment, setEnrollment] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState("general");
+  const [course, setCourse] = useState(null);
+  const [enrollment, setEnrollment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadCourseInfo = async () => {
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
-        if (!user?.id) return
+        if (!user?.id) return;
 
-        const res = await enrollmentsApi.listByUser(user.id)
-        const enrollments = Array.isArray(res.data) ? res.data : []
-        const found = enrollments.find((e) => e.courseId === courseId || e.course?.id === courseId)
+        const res = await enrollmentsApi.listByUser(user.id);
+        const enrollments = Array.isArray(res.data) ? res.data : [];
 
-        if (!found) {
-          setError('Course not found in your enrollments.')
-          return
+        // If sectionId provided in query params, use it; otherwise find first matching course
+        let found;
+        if (sectionIdParam) {
+          found = enrollments.find(
+            (e) =>
+              (e.courseId === courseId || e.course?.id === courseId) &&
+              (e.section?.id === sectionIdParam ||
+                e.sectionId === sectionIdParam),
+          );
+        } else {
+          found = enrollments.find(
+            (e) => e.courseId === courseId || e.course?.id === courseId,
+          );
         }
 
-        setEnrollment(found)
-        setCourse(found.course || { id: courseId, title: 'Course' })
+        if (!found) {
+          setError("Course not found in your enrollments.");
+          return;
+        }
+
+        setEnrollment(found);
+        setCourse(found.course || { id: courseId, title: "Course" });
       } catch (err) {
-        console.error('Error loading course:', err)
-        setError('Failed to load course information.')
+        console.error("Error loading course:", err);
+        setError("Failed to load course information.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadCourseInfo()
-  }, [courseId, user])
+    loadCourseInfo();
+  }, [courseId, sectionIdParam, user]);
 
-  const courseTitle = course?.title || 'Course'
-  const sectionName = enrollment?.section?.name || ''
-  const semester = enrollment?.semester
+  const courseTitle = course?.title || "Course";
+  const sectionName = enrollment?.section?.name || "";
+  const semester = enrollment?.semester;
   const semesterDisplay = semester
-    ? `${semester.year || new Date().getFullYear()}-${semester.name || ''}`
-    : ''
-  const avatarLetter = courseTitle.charAt(0).toUpperCase()
-  const sectionId = enrollment?.sectionId || enrollment?.section?.id || null
+    ? `${semester.year || new Date().getFullYear()}-${semester.name || ""}`
+    : "";
+  const avatarLetter = courseTitle.charAt(0).toUpperCase();
+  const sectionId = enrollment?.sectionId || enrollment?.section?.id || null;
 
   // Loading skeleton for header
   if (loading) {
@@ -82,7 +98,7 @@ export default function CourseProfilePage() {
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -92,15 +108,15 @@ export default function CourseProfilePage() {
           <div className="text-4xl mb-3">⚠️</div>
           <p className="text-gray-700 font-medium mb-4">{error}</p>
           <button
-            onClick={() => navigate('/student/courses')}
-            style={{ backgroundColor: '#6b1d3e' }}
+            onClick={() => navigate("/student/courses")}
+            style={{ backgroundColor: "#6b1d3e" }}
             className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition"
           >
             ← Back to My Courses
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -110,18 +126,28 @@ export default function CourseProfilePage() {
         <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5">
           {/* Back button */}
           <button
-            onClick={() => navigate('/student/courses')}
+            onClick={() => navigate("/student/courses")}
             className="p-1.5 rounded-lg hover:bg-gray-100 transition text-gray-500 flex-shrink-0"
             aria-label="Go back"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
 
           {/* Course Avatar */}
           <div
-            style={{ backgroundColor: '#6b1d3e' }}
+            style={{ backgroundColor: "#6b1d3e" }}
             className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base flex-shrink-0"
           >
             {avatarLetter}
@@ -134,10 +160,14 @@ export default function CourseProfilePage() {
             </h1>
             <div className="flex flex-col gap-0.5">
               {sectionName && (
-                <p className="text-xs text-gray-500 leading-tight">Section {sectionName}</p>
+                <p className="text-xs text-gray-500 leading-tight">
+                  Section {sectionName}
+                </p>
               )}
               {semesterDisplay && (
-                <p className="text-xs text-gray-400 leading-tight">{semesterDisplay}</p>
+                <p className="text-xs text-gray-400 leading-tight">
+                  {semesterDisplay}
+                </p>
               )}
             </div>
           </div>
@@ -165,8 +195,8 @@ export default function CourseProfilePage() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition border-b-2 ${
                 activeTab === tab.id
-                  ? 'border-[#6b1d3e] text-[#6b1d3e]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? "border-[#6b1d3e] text-[#6b1d3e]"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               {tab.label}
@@ -184,18 +214,18 @@ export default function CourseProfilePage() {
       </div>
 
       {/* ── Tab Content ── */}
-      {activeTab === 'general' ? (
+      {activeTab === "general" ? (
         <CourseChatTab courseId={courseId} sectionId={sectionId} />
       ) : (
         <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
-          {activeTab === 'assignments' && (
+          {activeTab === "assignments" && (
             <AssignmentsTab courseId={courseId} sectionId={sectionId} />
           )}
-          {activeTab === 'materials' && (
+          {activeTab === "materials" && (
             <MaterialsTab courseId={courseId} sectionId={sectionId} />
           )}
         </div>
       )}
     </div>
-  )
+  );
 }
