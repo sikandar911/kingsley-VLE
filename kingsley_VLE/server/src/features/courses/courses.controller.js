@@ -1,5 +1,5 @@
-import prisma from '../../config/prisma.js'
-import { deleteFromAzure } from '../../config/azure.storage.js'
+import prisma from "../../config/prisma.js";
+import { deleteFromAzure } from "../../config/azure.storage.js";
 
 /**
  * @swagger
@@ -36,16 +36,16 @@ import { deleteFromAzure } from '../../config/azure.storage.js'
  *               $ref: '#/components/schemas/CourseListResponse'
  */
 export const listCourses = async (req, res) => {
-  const { search, page = 1, limit = 20 } = req.query
-  const skip = (Number(page) - 1) * Number(limit)
+  const { search, page = 1, limit = 20 } = req.query;
+  const skip = (Number(page) - 1) * Number(limit);
   const where = search
     ? {
         OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
+          { title: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
         ],
       }
-    : {}
+    : {};
 
   try {
     const [courses, total] = await Promise.all([
@@ -53,7 +53,7 @@ export const listCourses = async (req, res) => {
         where,
         skip,
         take: Number(limit),
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: {
           semester: { select: { id: true, name: true, year: true } },
           sections: {
@@ -61,23 +61,32 @@ export const listCourses = async (req, res) => {
           },
           teacherAssignments: {
             include: {
-              teacher: { select: { id: true, fullName: true, teacherId: true } },
+              teacher: {
+                select: { id: true, fullName: true, teacherId: true },
+              },
             },
           },
-          _count: { select: { enrollments: true, assignments: true, sections: true } },
+          _count: {
+            select: { enrollments: true, assignments: true, sections: true },
+          },
         },
       }),
       prisma.course.count({ where }),
-    ])
+    ]);
     return res.json({
       data: courses,
-      meta: { total, page: Number(page), limit: Number(limit), pages: Math.ceil(total / Number(limit)) },
-    })
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
   } catch (err) {
-    console.error('listCourses error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("listCourses error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -111,29 +120,51 @@ export const getCourse = async (req, res) => {
     const course = await prisma.course.findUnique({
       where: { id: req.params.id },
       include: {
-        semester: { select: { id: true, name: true, year: true, session: { select: { id: true, name: true } } } },
+        semester: {
+          select: {
+            id: true,
+            name: true,
+            year: true,
+            session: { select: { id: true, name: true } },
+          },
+        },
         sections: {
           include: {
-            assignedTeacher: { select: { id: true, fullName: true, teacherId: true } },
             semester: { select: { id: true, name: true } },
+            teacherAssignments: {
+              include: {
+                teacher: {
+                  select: { id: true, fullName: true, teacherId: true },
+                },
+              },
+            },
             _count: { select: { enrollments: true } },
           },
         },
         teacherAssignments: {
           include: {
-            teacher: { select: { id: true, fullName: true, teacherId: true, user: { select: { email: true } } } },
+            teacher: {
+              select: {
+                id: true,
+                fullName: true,
+                teacherId: true,
+                user: { select: { email: true } },
+              },
+            },
           },
         },
-        _count: { select: { enrollments: true, assignments: true, sections: true } },
+        _count: {
+          select: { enrollments: true, assignments: true, sections: true },
+        },
       },
-    })
-    if (!course) return res.status(404).json({ error: 'Course not found' })
-    return res.json(course)
+    });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    return res.json(course);
   } catch (err) {
-    console.error('getCourse error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("getCourse error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -170,13 +201,18 @@ export const getCourse = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const createCourse = async (req, res) => {
-  const { title, description, semesterId } = req.body
-  if (!title?.trim()) return res.status(400).json({ error: 'Course title is required' })
-  if (!semesterId) return res.status(400).json({ error: 'semesterId is required' })
+  const { title, description, semesterId } = req.body;
+  if (!title?.trim())
+    return res.status(400).json({ error: "Course title is required" });
+  if (!semesterId)
+    return res.status(400).json({ error: "semesterId is required" });
 
   try {
-    const semesterExists = await prisma.semester.findUnique({ where: { id: semesterId } })
-    if (!semesterExists) return res.status(400).json({ error: 'Selected semester not found' })
+    const semesterExists = await prisma.semester.findUnique({
+      where: { id: semesterId },
+    });
+    if (!semesterExists)
+      return res.status(400).json({ error: "Selected semester not found" });
 
     const course = await prisma.course.create({
       data: {
@@ -185,13 +221,13 @@ export const createCourse = async (req, res) => {
         semesterId,
         createdBy: req.user.id,
       },
-    })
-    return res.status(201).json(course)
+    });
+    return res.status(201).json(course);
   } catch (err) {
-    console.error('createCourse error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("createCourse error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -232,30 +268,37 @@ export const createCourse = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateCourse = async (req, res) => {
-  const { title, description, semesterId } = req.body
+  const { title, description, semesterId } = req.body;
   try {
-    const existing = await prisma.course.findUnique({ where: { id: req.params.id } })
-    if (!existing) return res.status(404).json({ error: 'Course not found' })
+    const existing = await prisma.course.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Course not found" });
 
     if (semesterId) {
-      const semesterExists = await prisma.semester.findUnique({ where: { id: semesterId } })
-      if (!semesterExists) return res.status(400).json({ error: 'Selected semester not found' })
+      const semesterExists = await prisma.semester.findUnique({
+        where: { id: semesterId },
+      });
+      if (!semesterExists)
+        return res.status(400).json({ error: "Selected semester not found" });
     }
 
     const course = await prisma.course.update({
       where: { id: req.params.id },
       data: {
         ...(title?.trim() ? { title: title.trim() } : {}),
-        ...(description !== undefined ? { description: description || null } : {}),
+        ...(description !== undefined
+          ? { description: description || null }
+          : {}),
         ...(semesterId !== undefined ? { semesterId: semesterId || null } : {}),
       },
-    })
-    return res.json(course)
+    });
+    return res.json(course);
   } catch (err) {
-    console.error('updateCourse error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("updateCourse error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 /**
  * @swagger
@@ -286,29 +329,33 @@ export const updateCourse = async (req, res) => {
  */
 export const deleteCourse = async (req, res) => {
   try {
-    const existing = await prisma.course.findUnique({ where: { id: req.params.id } })
-    if (!existing) return res.status(404).json({ error: 'Course not found' })
+    const existing = await prisma.course.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Course not found" });
 
     // Clean up class materials: delete Azure blobs + File records before course delete
     const materials = await prisma.classMaterial.findMany({
       where: { courseId: req.params.id },
       include: { file: true },
-    })
+    });
     for (const material of materials) {
-      if (material.file?.slug) await deleteFromAzure(material.file.slug)
+      if (material.file?.slug) await deleteFromAzure(material.file.slug);
     }
-    const fileIds = materials.map((m) => m.fileId).filter(Boolean)
+    const fileIds = materials.map((m) => m.fileId).filter(Boolean);
     if (fileIds.length > 0) {
       // Unlink before delete to avoid FK constraint on classMaterial
-      await prisma.classMaterial.deleteMany({ where: { courseId: req.params.id } })
-      await prisma.file.deleteMany({ where: { id: { in: fileIds } } })
+      await prisma.classMaterial.deleteMany({
+        where: { courseId: req.params.id },
+      });
+      await prisma.file.deleteMany({ where: { id: { in: fileIds } } });
     }
 
     // Delete the course — ClassRecords cascade via onDelete:Cascade in schema
-    await prisma.course.delete({ where: { id: req.params.id } })
-    return res.json({ message: 'Course deleted successfully' })
+    await prisma.course.delete({ where: { id: req.params.id } });
+    return res.json({ message: "Course deleted successfully" });
   } catch (err) {
-    console.error('deleteCourse error:', err)
-    return res.status(500).json({ error: 'Server error' })
+    console.error("deleteCourse error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-}
+};

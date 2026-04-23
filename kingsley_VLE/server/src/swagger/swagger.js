@@ -202,13 +202,22 @@ const options = {
                 year: { type: "integer", nullable: true },
               },
             },
-            assignedTeacher: {
-              type: "object",
-              nullable: true,
-              properties: {
-                id: { type: "string" },
-                fullName: { type: "string" },
-                teacherId: { type: "string" },
+            teacherAssignments: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  teacherId: { type: "string" },
+                  teacher: {
+                    type: "object",
+                    properties: {
+                      id: { type: "string" },
+                      fullName: { type: "string" },
+                      teacherId: { type: "string" },
+                    },
+                  },
+                },
               },
             },
           },

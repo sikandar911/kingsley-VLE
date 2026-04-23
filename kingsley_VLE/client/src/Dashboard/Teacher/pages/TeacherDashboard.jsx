@@ -145,32 +145,40 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Profile Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3.5 mb-8 md:mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3.5 mb-8 md:mb-12">
           {[
             {
               label: "Teacher ID",
               value: profile?.teacherId || "—",
-              icon: "🪪",
+              icon: "/teacher-id-icon.png",
             },
             {
               label: "Specialization",
               value: profile?.specialization || "—",
-              icon: "🎯",
+              icon: "/teacher-Specialization-icon.png",
             },
+            // {
+            //   label: "Experience",
+            //   value: profile?.experienceYears
+            //     ? `${profile.experienceYears} yrs`
+            //     : "—",
+            //   icon: "📅",
+            // },
             {
-              label: "Experience",
-              value: profile?.experienceYears
-                ? `${profile.experienceYears} yrs`
-                : "—",
-              icon: "📅",
+              label: "Dept.",
+              value: profile?.department || "—",
+              icon: "/teacher-department-icon.png",
             },
-            { label: "Dept.", value: profile?.department || "—", icon: "🏢" },
           ].map((s) => (
             <div
               key={s.label}
               className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
-              <span className="text-lg sm:text-xl">{s.icon}</span>
+              <img
+                src={s.icon}
+                alt={s.label}
+                className="w-7 h-7 sm:w-9 lg:w-10 sm:h-9 lg:h-10 object-contain"
+              />
               <p className="text-xs text-gray-500 mt-1 sm:mt-2">{s.label}</p>
               <p className="font-semibold text-gray-900 text-xs sm:text-sm mt-0.5">
                 {s.value}
@@ -205,29 +213,27 @@ export default function TeacherDashboard() {
 
                   {/* title,count,arrow */}
                   <div>
-                      {/* Title */}
-                  <h3 className="text-sm sm:text-base font-semibold text-gray-700 mb-1 sm:mb-2">
-                    {card.title}
-                  </h3>
+                    {/* Title */}
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-700 mb-1 sm:mb-2">
+                      {card.title}
+                    </h3>
 
-                  {/* Count */}
-                  <div className="text-2xl sm:text-3xl font-bold text-gray-900">
-                    {loading ? (
-                      <span className="inline-block w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-lg animate-pulse"></span>
-                    ) : (
-                      card.count
-                    )}
-                  </div>
+                    {/* Count */}
+                    <div className="text-2xl sm:text-3xl font-bold text-gray-900">
+                      {loading ? (
+                        <span className="inline-block w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-lg animate-pulse"></span>
+                      ) : (
+                        card.count
+                      )}
+                    </div>
 
-                  {/* Hover Arrow */}
-                  <div
-                    className={`absolute bottom-4 sm:bottom-6 md:bottom-1 xl:bottom-[2px] right-4 sm:right-6 text-2xl opacity-20 group-hover:opacity-100 transform group-hover:translate-x-1 transition-all duration-300`}
-                  >
-                    →
+                    {/* Hover Arrow */}
+                    <div
+                      className={`absolute bottom-4 sm:bottom-6 md:bottom-1 xl:bottom-[2px] right-4 sm:right-6 text-2xl opacity-20 group-hover:opacity-100 transform group-hover:translate-x-1 transition-all duration-300`}
+                    >
+                      →
+                    </div>
                   </div>
-                  </div>
-
-              
                 </div>
 
                 {/* Decorative Elements */}
