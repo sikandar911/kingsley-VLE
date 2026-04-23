@@ -9,3 +9,20 @@ services:
       - "5000:5000"
     env_file:
       - prod.env
+    networks:
+      - kingsley-network
+    environment:
+      - NODE_ENV=production
+    # Optional: Add resource limits
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+networks:
+  kingsley-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
