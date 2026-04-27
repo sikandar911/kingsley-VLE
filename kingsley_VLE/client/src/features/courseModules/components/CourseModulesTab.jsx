@@ -324,7 +324,7 @@ export default function CourseModulesTab({ courseId, sectionId, semesterId }) {
   return (
     <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-5 gap-3 lg:gap-0">
         <div>
           <h2 className="text-base font-bold text-gray-900">Course Modules</h2>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -337,7 +337,7 @@ export default function CourseModulesTab({ courseId, sectionId, semesterId }) {
             setEditModule(null);
             setShowForm(true);
           }}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-white bg-[#7e244a] rounded-lg hover:bg-[#681d3c] transition"
+          className="w-fit flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-white bg-[#7e244a] rounded-lg hover:bg-[#681d3c] transition"
         >
           <svg
             className="w-4 h-4"

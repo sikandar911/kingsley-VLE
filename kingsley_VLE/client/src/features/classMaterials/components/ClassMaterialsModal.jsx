@@ -103,6 +103,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [loadingCourseModules, setLoadingCourseModules] = useState(false);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
@@ -222,25 +223,33 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
     setFilteredSemesters(semesters);
   }, [semesters]);
 
-  // Fetch active course modules when courseId or sectionId changes
+  // Fetch course modules only when semester, course, and section are selected
   useEffect(() => {
-    if (formData.courseId) {
+    if (formData.semesterId && formData.courseId && formData.sectionId) {
+      setLoadingCourseModules(true);
       courseModulesApi
         .list({
+          semesterId: formData.semesterId,
           courseId: formData.courseId,
-          ...(formData.sectionId ? { sectionId: formData.sectionId } : {}),
-          status: "active",
+          sectionId: formData.sectionId,
         })
-        .then((res) => setCourseModules(res.data?.modules || []))
-        .catch(() => setCourseModules([]));
+        .then((res) => {
+          setCourseModules(res.data?.modules || []);
+          setLoadingCourseModules(false);
+        })
+        .catch(() => {
+          setCourseModules([]);
+          setLoadingCourseModules(false);
+        });
     } else {
       setCourseModules([]);
+      setLoadingCourseModules(false);
     }
     // Only reset courseModuleId when creating new material
     if (!isEdit) {
       setFormData((prev) => ({ ...prev, courseModuleId: "" }));
     }
-  }, [formData.courseId, formData.sectionId, isEdit]);
+  }, [formData.semesterId, formData.courseId, formData.sectionId, isEdit]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -526,9 +535,9 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg sm:max-w-[635px] max-h-[90vh] overflow-y-auto shadow-lg">
+      <div className="bg-white rounded-lg w-full max-w-lg sm:max-w-[635px] max-h-[90vh] shadow-lg flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white flex-shrink-0">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">
             {isEdit ? "Edit Class Material" : "Add New Class Material"}
           </h2>
@@ -542,7 +551,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
 
         <form
           onSubmit={handleSubmit}
-          className="p-4 sm:p-6 space-y-4 sm:space-y-5"
+          className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto"
         >
           {/* Title */}
           <div>
@@ -897,11 +906,16 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                 options={[
                   {
                     id: "",
-                    name:
-                      courseModules.length === 0
-                        ? !formData.courseId
-                          ? "Select course first"
-                          : "No modules available"
+                    name: loadingCourseModules
+                      ? "Loading…"
+                      : courseModules.length === 0
+                        ? !formData.semesterId
+                          ? "Select semester first"
+                          : !formData.courseId
+                            ? "Select course first"
+                            : !formData.sectionId
+                              ? "Select section first"
+                              : "No modules available"
                         : "Select module…",
                   },
                   ...courseModules.map((m) => ({ id: m.id, name: m.name })),
@@ -912,11 +926,24 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
                   setFieldErrors((prev) => ({ ...prev, courseModuleId: "" }));
                 }}
                 placeholder={
-                  !formData.courseId ? "Select course first" : "Select module…"
+                  loadingCourseModules
+                    ? "Loading…"
+                    : !formData.semesterId
+                      ? "Select semester first"
+                      : !formData.courseId
+                        ? "Select course first"
+                        : !formData.sectionId
+                          ? "Select section first"
+                          : "Select module…"
                 }
                 isSmallScreen={false}
                 BRAND={BRAND}
-                disabled={!formData.courseId || courseModules.length === 0}
+                disabled={
+                  loadingCourseModules ||
+                  !formData.semesterId ||
+                  !formData.courseId ||
+                  !formData.sectionId
+                }
                 dropdownDirection="up"
               />
               {fieldErrors.courseModuleId && (
@@ -929,7 +956,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
         </form>
 
         {/* Footer */}
-        <div className="sticky bottom-0 flex gap-3 sm:gap-4 justify-end p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
+        <div className="flex gap-3 sm:gap-4 justify-end p-4 sm:p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <button
             type="button"
             onClick={handleClose}

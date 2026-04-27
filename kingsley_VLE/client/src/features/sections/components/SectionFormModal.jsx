@@ -70,6 +70,10 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const filteredCourses = form.semesterId
+    ? courses.filter((course) => course.semesterId === form.semesterId)
+    : [];
+
   useEffect(() => {
     Promise.all([coursesApi.list({ limit: 200 }), academicApi.semesters.list()])
       .then(([coursesRes, semestersRes]) => {
@@ -82,16 +86,6 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "courseId") {
-      // Auto-populate semester from the selected course
-      const course = courses.find((c) => c.id === value);
-      setForm((prev) => ({
-        ...prev,
-        courseId: value,
-        semesterId: course?.semesterId || prev.semesterId || "",
-      }));
-      return;
-    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -133,6 +127,10 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
       setError("Please select a course");
       return;
     }
+    if (!form.semesterId) {
+      setError("Please select a semester");
+      return;
+    }
     // Validate time logic: end time must be after start time
     if (form.startTime && form.endTime && form.startTime >= form.endTime) {
       setError("End time must be after start time");
@@ -163,8 +161,8 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
   };
 
   return (
-    <div className="modal-overlay ">
-      <div className="modal overflow-visible">
+    <div className="modal-overlay items-start overflow-y-auto py-6">
+      <div className="modal overflow-visible max-h-none">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">
             {isEdit ? "Edit Section" : "Create Section"}
@@ -196,35 +194,8 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
             />
           </div>
 
-          <div className="form-group ">
-            <label className="form-label">Course *</label>
-            <CustomDropdown
-              options={[
-                { id: "", name: metaLoading ? "Loading…" : "Select course…" },
-                ...courses.map((c) => ({
-                  id: c.id,
-                  name: c.title,
-                })),
-              ]}
-              value={form.courseId}
-              onChange={(val) => {
-                const course = courses.find((c) => c.id === val);
-                setForm((prev) => ({
-                  ...prev,
-                  courseId: val,
-                  semesterId: course?.semesterId || prev.semesterId || "",
-                }));
-              }}
-              placeholder={metaLoading ? "Loading…" : "Select course…"}
-              isSmallScreen={false}
-              BRAND={BRAND}
-              disabled={metaLoading}
-              dropdownDirection="up"
-            />
-          </div>
-
           <div className="form-group">
-            <label className="form-label">Semester</label>
+            <label className="form-label">Semester *</label>
             <CustomDropdown
               options={[
                 { id: "", name: "No semester selected" },
@@ -235,13 +206,46 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
               ]}
               value={form.semesterId}
               onChange={(val) =>
-                setForm((prev) => ({ ...prev, semesterId: val }))
+                setForm((prev) => ({
+                  ...prev,
+                  semesterId: val,
+                  courseId: "",
+                }))
               }
               placeholder="No semester selected"
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={metaLoading}
-              dropdownDirection="up"
+              dropdownDirection="down"
+            />
+          </div>
+
+          <div className="form-group ">
+            <label className="form-label">Course *</label>
+            <CustomDropdown
+              options={[
+                {
+                  id: "",
+                  name: !form.semesterId
+                    ? "Select a semester first…"
+                    : filteredCourses.length === 0
+                      ? "No courses available"
+                      : "Select course…",
+                },
+                ...filteredCourses.map((c) => ({
+                  id: c.id,
+                  name: c.title,
+                })),
+              ]}
+              value={form.courseId}
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, courseId: val }))
+              }
+              placeholder={metaLoading ? "Loading…" : "Select course…"}
+              isSmallScreen={false}
+              BRAND={BRAND}
+              disabled={metaLoading || !form.semesterId}
+              dropdownDirection="down"
             />
           </div>
 
@@ -289,6 +293,8 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={metaLoading}
+                    dropdownAlign="right"
+                    dropdownDirection="up"
                   />
                   <span className="text-lg font-semibold text-gray-600">:</span>
                   <CustomDropdown
@@ -299,6 +305,7 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={metaLoading}
+                    dropdownDirection="up"
                   />
                 </div>
               </div>
@@ -315,6 +322,8 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={metaLoading}
+                    dropdownAlign="right"
+                    dropdownDirection="up"
                   />
                   <span className="text-lg font-semibold text-gray-600">:</span>
                   <CustomDropdown
@@ -325,6 +334,7 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={metaLoading}
+                    dropdownDirection="up"
                   />
                 </div>
               </div>

@@ -3,7 +3,7 @@ import { useTeacherAssignmentsByCourse } from '../hooks'
 import { fmt, isOverdue } from '../utils/helpers'
 
 const STATUS_COLORS = {
-  published: 'bg-green-100 text-green-700',
+  published: 'bg-[#6b1d3e] text-white',
   draft: 'bg-gray-100 text-gray-600',
   archived: 'bg-yellow-100 text-yellow-700',
 }

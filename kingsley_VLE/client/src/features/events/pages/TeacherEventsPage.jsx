@@ -185,14 +185,14 @@ export default function TeacherEventsPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="bg-white rounded-xl p-4 md:p-5 flex items-center gap-3 md:gap-4 shadow-sm border border-gray-200"
+            className="bg-white rounded-xl p-4 md:p-5 flex flex-col md:flex-row items-center gap-3 md:gap-4 shadow-sm border border-gray-200"
           >
             <div
               className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center text-xl md:text-2xl flex-shrink-0`}
             >
               {s.icon}
             </div>
-            <div>
+            <div className=" flex-col text-center md:text-left md:flex-row">
               <p className="text-xs text-gray-500">{s.label}</p>
               <p className="text-2xl font-bold text-gray-900">{s.value}</p>
             </div>

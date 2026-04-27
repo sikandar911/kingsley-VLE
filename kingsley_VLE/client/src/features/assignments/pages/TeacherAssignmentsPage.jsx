@@ -148,18 +148,18 @@ export default function TeacherAssignmentsPage() {
       </div>
 
       {/* Stats */}
-      <div className="px-4 py-4 lg:px-8 lg:py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 lg:gap-5">
+      <div className="px-4 py-4 lg:px-8 lg:py-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 lg:gap-5">
         {stats.map((s) => (
           <div
             key={s.label}
-            className="bg-white rounded-xl p-5 flex items-center gap-4 shadow-sm border border-gray-200"
+            className="bg-white rounded-xl p-5 flex flex-col md:flex-row items-center gap-4 shadow-sm border border-gray-200"
           >
             <div
               className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center text-2xl flex-shrink-0`}
             >
               {s.icon}
             </div>
-            <div>
+            <div className=" flex-col text-center md:text-left md:flex-row">
               <p className="text-xs text-gray-500">{s.label}</p>
               <p className="text-2xl font-bold text-gray-900">{s.value}</p>
             </div>

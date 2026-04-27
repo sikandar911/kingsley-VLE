@@ -70,8 +70,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
-  // console.log(`\n🚀 Server running at http://localhost:${PORT}`)
-  // console.log(`📚 Swagger docs at http://localhost:${PORT}/api/docs\n`)
+  console.log(`\n🚀 Server running at http://localhost:${PORT}`)
+  console.log(`📚 Swagger docs at http://localhost:${PORT}/api/docs\n`)
 });
 
 // Graceful shutdown

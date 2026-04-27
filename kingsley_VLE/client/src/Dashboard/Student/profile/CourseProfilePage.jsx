@@ -80,6 +80,10 @@ export default function CourseProfilePage() {
   const avatarLetter = courseTitle.charAt(0).toUpperCase();
   const sectionId = enrollment?.sectionId || enrollment?.section?.id || null;
 
+  const openCalendarModal = () => {
+    window.dispatchEvent(new Event("open-calendar-modal"));
+  };
+
   // Loading skeleton for header
   if (loading) {
     return (
@@ -171,6 +175,41 @@ export default function CourseProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Calendar button */}
+          <button
+            onClick={openCalendarModal}
+            className="inline-flex items-center justify-center gap-2 w-9 h-9 md:w-9 md:h-9 lg:w-auto lg:h-11 lg:px-4 rounded-full lg:rounded-xl bg-gray-100 md:bg-gray-100 lg:bg-[#6b1d3e] hover:bg-gray-200 lg:hover:bg-[#5a1630] text-gray-700 lg:text-white border border-gray-300 lg:border-[#6b1d3e] transition flex-shrink-0"
+            aria-label="Open calendar"
+            title="Open Academic Calendar"
+          >
+            <svg
+              className="w-4 h-4 text-gray-700 lg:text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <rect
+                x="3"
+                y="4"
+                width="18"
+                height="17"
+                rx="2"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M16 2v4M8 2v4M3 10h18"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="hidden lg:inline text-sm font-medium leading-none">
+              Calendar
+            </span>
+          </button>
 
           {/* Right icons */}
           {/* <div className="flex items-center gap-1 flex-shrink-0">
