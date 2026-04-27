@@ -9,6 +9,7 @@ import prisma from "../../config/prisma.js";
 
 const attendanceInclude = {
   student: { select: { id: true, studentId: true, fullName: true } },
+  course: { select: { id: true, title: true } },
   section: { select: { id: true, name: true } },
   semester: { select: { id: true, name: true, year: true } },
 };
@@ -22,6 +23,9 @@ const attendanceInclude = {
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: courseId
+ *         schema: { type: string }
  *       - in: query
  *         name: studentId
  *         schema: { type: string }
@@ -62,6 +66,7 @@ const attendanceInclude = {
  */
 export const listAttendance = async (req, res) => {
   const {
+    courseId,
     studentId,
     sectionId,
     semesterId,
@@ -75,6 +80,7 @@ export const listAttendance = async (req, res) => {
   const skip = (Number(page) - 1) * Number(limit);
 
   const where = {};
+  if (courseId) where.courseId = courseId;
   if (sectionId) where.sectionId = sectionId;
   if (semesterId) where.semesterId = semesterId;
   if (status) where.status = status;
@@ -192,9 +198,11 @@ export const getAttendance = async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [studentId, sectionId, semesterId, date, status]
+ *             required: [studentId, courseId, sectionId, semesterId, date, status]
  *             properties:
  *               studentId:
+ *                 type: string
+ *               courseId:
  *                 type: string
  *               sectionId:
  *                 type: string
@@ -221,11 +229,11 @@ export const getAttendance = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const markAttendance = async (req, res) => {
-  const { studentId, sectionId, semesterId, date, status } = req.body;
+  const { studentId, courseId, sectionId, semesterId, date, status } = req.body;
 
-  if (!studentId || !sectionId || !semesterId || !date || !status) {
+  if (!studentId || !courseId || !sectionId || !semesterId || !date || !status) {
     return res.status(400).json({
-      error: "studentId, sectionId, semesterId, date and status are required",
+      error: "studentId, courseId, sectionId, semesterId, date and status are required",
     });
   }
 
@@ -253,7 +261,7 @@ export const markAttendance = async (req, res) => {
       // Update existing record
       record = await prisma.attendance.update({
         where: { id: existing.id },
-        data: { status },
+        data: { status, courseId },
         include: attendanceInclude,
       });
     } else {
@@ -261,6 +269,7 @@ export const markAttendance = async (req, res) => {
       record = await prisma.attendance.create({
         data: {
           studentId,
+          courseId,
           sectionId,
           semesterId,
           date: attendanceDate,
@@ -291,8 +300,10 @@ export const markAttendance = async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [sectionId, semesterId, date, records]
+ *             required: [courseId, sectionId, semesterId, date, records]
  *             properties:
+ *               courseId:
+ *                 type: string
  *               sectionId:
  *                 type: string
  *               semesterId:
@@ -320,9 +331,10 @@ export const markAttendance = async (req, res) => {
  *               $ref: '#/components/schemas/BulkAttendanceResponse'
  */
 export const markBulkAttendance = async (req, res) => {
-  const { sectionId, semesterId, date, records } = req.body;
+  const { courseId, sectionId, semesterId, date, records } = req.body;
 
   if (
+    !courseId ||
     !sectionId ||
     !semesterId ||
     !date ||
@@ -330,7 +342,7 @@ export const markBulkAttendance = async (req, res) => {
     records.length === 0
   ) {
     return res.status(400).json({
-      error: "sectionId, semesterId, date and records[] are required",
+      error: "courseId, sectionId, semesterId, date and records[] are required",
     });
   }
 
@@ -361,6 +373,7 @@ export const markBulkAttendance = async (req, res) => {
       return res.status(201).json({
         message: "0 attendance records saved (all records had empty status)",
         date: attendanceDate,
+        courseId,
         sectionId,
       });
     }
@@ -373,6 +386,7 @@ export const markBulkAttendance = async (req, res) => {
       const existing = await prisma.attendance.findFirst({
         where: {
           studentId: r.studentId,
+          courseId,
           sectionId,
           date: attendanceDate,
         },
@@ -390,6 +404,7 @@ export const markBulkAttendance = async (req, res) => {
         await prisma.attendance.create({
           data: {
             studentId: r.studentId,
+            courseId,
             sectionId,
             semesterId,
             date: attendanceDate,
@@ -403,6 +418,7 @@ export const markBulkAttendance = async (req, res) => {
     return res.status(201).json({
       message: `${createdCount} attendance records created, ${updatedCount} updated`,
       date: attendanceDate,
+      courseId,
       sectionId,
       created: createdCount,
       updated: updatedCount,

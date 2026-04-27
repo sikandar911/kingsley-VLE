@@ -23,6 +23,3 @@ services:
 networks:
   kingsley-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16

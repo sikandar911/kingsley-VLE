@@ -4,6 +4,7 @@ import { enrollmentsApi } from '../../../features/enrollments/api/enrollments.ap
 import { authApi } from '../../../Auth/api/auth.api'
 import TeacherAssignmentsTab from './components/TeacherAssignmentsTab'
 import TeacherMaterialsTab from './components/TeacherMaterialsTab'
+import TeacherGradePerformanceTab from './components/TeacherGradePerformanceTab'
 import CourseChatTab from '../../../features/courseChat/components/CourseChatTab'
 import CourseModulesTab from '../../../features/courseModules/components/CourseModulesTab'
 
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'assignments', label: 'Assignments' },
   { id: 'materials', label: 'Materials' },
   { id: 'modules', label: 'Modules' },
+  { id: 'grade', label: 'Grade & Performance' },
 ]
 
 // ── Main TeacherCourseProfilePage ──────────────────────────────────────────
@@ -195,14 +197,7 @@ export default function TeacherCourseProfilePage() {
               {tab.label}
             </button>
           ))}
-          {/* Grade & Performance - coming soon */}
-          <button
-            className="px-5 py-3 text-sm font-medium whitespace-nowrap border-b-2 border-transparent text-gray-400 cursor-not-allowed"
-            title="Coming soon"
-            disabled
-          >
-            Grade &amp; Performance
-          </button>
+
         </div>
       </div>
 
@@ -222,6 +217,16 @@ export default function TeacherCourseProfilePage() {
           )}
           {activeTab === 'materials' && (
             <TeacherMaterialsTab courseId={courseId} sectionId={sectionId} />
+          )}
+          {activeTab === 'grade' && (
+            <TeacherGradePerformanceTab
+              courseId={courseId}
+              sectionId={sectionId}
+              semesterId={enrollment?.semester?.id || null}
+              teacher={enrollment?.teacher || null}
+              course={course}
+              section={section}
+            />
           )}
         </div>
       )}

@@ -376,6 +376,7 @@ const Attendance = () => {
 
       // Post ALL students - with selected status or null if not selected
       const bulkData = {
+        courseId: selectedCourse,
         sectionId: selectedSection,
         semesterId: selectedSemester,
         date: dateFilter,

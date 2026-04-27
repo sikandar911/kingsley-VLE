@@ -5,12 +5,14 @@ import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.ap
 import AssignmentsTab from "./components/AssignmentsTab";
 import MaterialsTab from "./components/MaterialsTab";
 import CourseChatTab from "../../../features/courseChat/components/CourseChatTab";
+import GradePerformanceTab from "./components/GradePerformanceTab";
 
 // ── Tab IDs ────────────────────────────────────────────────────────────────
 const TABS = [
   { id: "general", label: "General" },
   { id: "assignments", label: "Assignments" },
   { id: "materials", label: "Materials" },
+  { id: "grade", label: "Grade & Performance" },
 ];
 
 // ── Main CourseProfilePage ─────────────────────────────────────────────────
@@ -202,14 +204,6 @@ export default function CourseProfilePage() {
               {tab.label}
             </button>
           ))}
-          {/* Grade & Performance - placeholder / coming soon */}
-          <button
-            className="px-5 py-3 text-sm font-medium whitespace-nowrap border-b-2 border-transparent text-gray-300 cursor-not-allowed"
-            title="Coming soon"
-            disabled
-          >
-            Grade &amp; Performance
-          </button>
         </div>
       </div>
 
@@ -223,6 +217,13 @@ export default function CourseProfilePage() {
           )}
           {activeTab === "materials" && (
             <MaterialsTab courseId={courseId} sectionId={sectionId} />
+          )}
+          {activeTab === "grade" && (
+            <GradePerformanceTab
+              courseId={courseId}
+              sectionId={sectionId}
+              enrollment={enrollment}
+            />
           )}
         </div>
       )}

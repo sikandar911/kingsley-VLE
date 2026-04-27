@@ -226,6 +226,7 @@ model Course {
   calendarReminders CalendarReminder[]
   courseMessages CourseMessage[]
   courseModules CourseModule[]
+  attendances Attendance[]
 
   @@map("courses")
 }
@@ -524,6 +525,9 @@ model Attendance {
 
   studentId String
   student StudentProfile @relation(fields: [studentId], references: [id])
+
+  courseId String?
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
 
   sectionId String
   section Section @relation(fields: [sectionId], references: [id])
