@@ -18,6 +18,19 @@ RUN npm run build
 # ── Stage 2: Serve ──────────────────────────────────────────────────────────
 FROM nginx:1.25-alpine
 
+# Build arguments for versioning
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=1.0.0
+
+# Labels for metadata
+LABEL org.opencontainers.image.created="${BUILD_DATE}" \
+  org.opencontainers.image.source="https://github.com/kingsley-vle" \
+  org.opencontainers.image.revision="${VCS_REF}" \
+  org.opencontainers.image.version="${VERSION}" \
+  org.opencontainers.image.title="Kingsley VLE Frontend" \
+  org.opencontainers.image.description="Frontend service for Kingsley Virtual Learning Environment"
+
 # Copy built app from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 

@@ -25,11 +25,23 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-const allowedOrigins = [
-  'http://localhost:5173',
+const configuredOrigins = [
   process.env.FRONTEND_URL,
-  'https://classroom.kingsleyinstitute.com' // Production frontend
-].filter(Boolean)
+  process.env.CORS_ORIGINS,
+]
+  .filter(Boolean)
+  .flatMap((value) => value.split(","))
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://classroom.kingsleyinstitute.com',
+  ...configuredOrigins,
+];
 
 app.use(cors({ 
   origin: function(origin, callback) {
