@@ -19,40 +19,42 @@ const TABS = [
 
 // ── Main TeacherCourseProfilePage ──────────────────────────────────────────
 export default function TeacherCourseProfilePage() {
-  const { courseId } = useParams()
-  const [searchParams] = useSearchParams()
-  const sectionIdParam = searchParams.get('sectionId')
-  const navigate = useNavigate()
+  const { courseId } = useParams();
+  const [searchParams] = useSearchParams();
+  const sectionIdParam = searchParams.get("sectionId");
+  const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState('general')
-  const [course, setCourse] = useState(null)
-  const [section, setSection] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [enrollment, setEnrollment] = useState(null)
-  const [error, setError] = useState(null)
-  const semester = enrollment?.semester
+  const [activeTab, setActiveTab] = useState("general");
+  const [course, setCourse] = useState(null);
+  const [section, setSection] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [enrollment, setEnrollment] = useState(null);
+  const [error, setError] = useState(null);
+  const semester = enrollment?.semester;
   const semesterDisplay = semester
-    ? `${semester.year || new Date().getFullYear()}-${semester.name || ''}`
-    : ''
+    ? `${semester.year || new Date().getFullYear()}-${semester.name || ""}`
+    : "";
 
   useEffect(() => {
     const loadCourseInfo = async () => {
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
         // Get the logged-in teacher's profile ID
-        const meRes = await authApi.getMe()
-        const teacherProfileId = meRes.data?.teacherProfile?.id
+        const meRes = await authApi.getMe();
+        const teacherProfileId = meRes.data?.teacherProfile?.id;
 
         if (!teacherProfileId) {
-          setError('Teacher profile not found.')
-          return
+          setError("Teacher profile not found.");
+          return;
         }
 
         // Get teacher course enrollments filtered by teacher ID
-        const res = await enrollmentsApi.teachers.list({ teacherId: teacherProfileId })
-        const enrollments = Array.isArray(res.data) ? res.data : []
+        const res = await enrollmentsApi.teachers.list({
+          teacherId: teacherProfileId,
+        });
+        const enrollments = Array.isArray(res.data) ? res.data : [];
 
         // Match by courseId and optionally sectionId
         let found = sectionIdParam
@@ -61,35 +63,40 @@ export default function TeacherCourseProfilePage() {
                 (e.courseId === courseId || e.course?.id === courseId) &&
                 e.section?.id === sectionIdParam,
             )
-          : null
+          : null;
 
         // Fall back to any enrollment for this course
         if (!found) {
-          found = enrollments.find((e) => e.courseId === courseId || e.course?.id === courseId)
+          found = enrollments.find(
+            (e) => e.courseId === courseId || e.course?.id === courseId,
+          );
         }
 
         if (!found) {
-          setError('Course not found in your assigned courses.')
-          return
+          setError("Course not found in your assigned courses.");
+          return;
         }
 
-        setCourse(found.course || { id: courseId, title: 'Course' })
-        setSection(found.section || null)
-        setEnrollment(found || null)
+        setCourse(found.course || { id: courseId, title: "Course" });
+        setSection(found.section || null);
+        setEnrollment(found || null);
       } catch (err) {
-        console.error('Error loading course:', err)
-        setError('Failed to load course information.')
+        console.error("Error loading course:", err);
+        setError("Failed to load course information.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadCourseInfo()
-  }, [courseId, sectionIdParam])
+    loadCourseInfo();
+  }, [courseId, sectionIdParam]);
 
-  const courseTitle = course?.title || 'Course'
-  const avatarLetter = courseTitle.charAt(0).toUpperCase()
-  const sectionId = sectionIdParam || section?.id || null
+  const courseTitle = course?.title || "Course";
+  const avatarLetter = courseTitle.charAt(0).toUpperCase();
+  const sectionId = sectionIdParam || section?.id || null;
+  const openCalendarModal = () => {
+    window.dispatchEvent(new Event("open-calendar-modal"));
+  };
 
   // Loading skeleton
   if (loading) {
@@ -109,7 +116,7 @@ export default function TeacherCourseProfilePage() {
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -119,54 +126,95 @@ export default function TeacherCourseProfilePage() {
           <div className="text-4xl mb-3">⚠️</div>
           <p className="text-gray-700 font-medium mb-4">{error}</p>
           <button
-            onClick={() => navigate('/teacher/courses')}
-            style={{ backgroundColor: '#6b1d3e' }}
+            onClick={() => navigate("/teacher/courses")}
+            style={{ backgroundColor: "#6b1d3e" }}
             className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition"
           >
             ← Back to My Courses
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Course Header (Teacher Variant) ── */}
       <div className="bg-[#601935] border-b border-blue-800 sticky top-0 z-30">
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5">
-          {/* Back button */}          <button
-            onClick={() => navigate('/teacher/courses')}
-            className="p-1.5 rounded-lg hover:bg-blue-500 transition text-white flex-shrink-0"
+        <div className="flex items-center gap-1 md:gap-3 px-2 md:px-4 sm:px-6 py-3.5">
+          {/* Back button */}{" "}
+          <button
+            onClick={() => navigate("/teacher/courses")}
+            className="p-1.5 rounded-lg hover:bg-white transition hover:text-[#601935] text-white flex-shrink-0"
             aria-label="Go back"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
-
           {/* Course Avatar (Different style for teacher) */}
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-base flex-shrink-0 bg-blue-500"
-          >
+          {/* avatar div */}
+          <div className="hidden md:flex w-9 h-9 lg:w-10 lg:h-10 rounded-lg items-center justify-center text-[#601935] font-bold text-base flex-shrink-0 bg-white">
             {avatarLetter}
           </div>
-
           {/* Course name */}
           <div className="flex-1 min-w-0">
             <h1 className="text-sm sm:text-base font-bold text-white truncate leading-tight">
               {courseTitle}
             </h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-blue-100">
-                {section?.name ? `Section: ${section.name}` : 'All Sections'}
+            <div className="mt-0.5 flex items-center gap-1.5 md:gap-2 lg:gap-1.5">
+              <span className="text-xs font-semibold text-white">
+                {section?.name ? `Section: ${section.name}` : "All Sections"}
               </span>
-              <span className="inline-block px-2 py-0.5 bg-blue-500 text-white text-xs font-semibold rounded-full">
+              <span className="inline-block w-fit px-2 py-0.5 bg-white text-[#601935] text-xs font-semibold rounded-full">
                 Teacher
               </span>
-            </div>  
+            </div>
           </div>
-
+          {/* calender div */}
+          <button
+            onClick={openCalendarModal}
+            className="inline-flex items-center justify-center gap-2 w-9 h-9 md:w-9 md:h-9 lg:w-auto lg:h-11 lg:px-4 rounded-full lg:rounded-xl bg-white/10 md:bg-white/10 lg:bg-white hover:bg-white/20 lg:hover:bg-gray-50 text-white lg:text-[#1f3556] border border-white/20 lg:border-gray-200 transition flex-shrink-0"
+            aria-label="Open calendar"
+            title="Open Academic Calendar"
+          >
+            <svg
+              className="w-4 h-4 text-white lg:text-[#6b1d3e]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <rect
+                x="3"
+                y="4"
+                width="18"
+                height="17"
+                rx="2"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M16 2v4M8 2v4M3 10h18"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="hidden lg:inline text-sm font-medium leading-none">
+              Calendar
+            </span>
+          </button>
           {/* Right icons */}
           {/* <div className="flex items-center gap-1 flex-shrink-0">
             <button className="p-1.5 rounded-lg hover:bg-blue-500 transition text-white">
@@ -190,8 +238,8 @@ export default function TeacherCourseProfilePage() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition border-b-2 ${
                 activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600 bg-white'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-blue-100'
+                  ? "border-blue-600 text-blue-600 bg-white"
+                  : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-blue-100"
               }`}
             >
               {tab.label}
@@ -202,9 +250,9 @@ export default function TeacherCourseProfilePage() {
       </div>
 
       {/* ── Tab Content ── */}
-      {activeTab === 'general' ? (
+      {activeTab === "general" ? (
         <CourseChatTab courseId={courseId} sectionId={sectionId} />
-      ) : activeTab === 'modules' ? (
+      ) : activeTab === "modules" ? (
         <CourseModulesTab
           courseId={courseId}
           sectionId={sectionId}
@@ -212,10 +260,10 @@ export default function TeacherCourseProfilePage() {
         />
       ) : (
         <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
-          {activeTab === 'assignments' && (
+          {activeTab === "assignments" && (
             <TeacherAssignmentsTab courseId={courseId} sectionId={sectionId} />
           )}
-          {activeTab === 'materials' && (
+          {activeTab === "materials" && (
             <TeacherMaterialsTab courseId={courseId} sectionId={sectionId} />
           )}
           {activeTab === 'grade' && (
@@ -231,5 +279,5 @@ export default function TeacherCourseProfilePage() {
         </div>
       )}
     </div>
-  )
+  );
 }

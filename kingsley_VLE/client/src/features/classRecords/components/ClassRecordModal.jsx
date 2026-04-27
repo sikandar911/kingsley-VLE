@@ -33,6 +33,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [loadingCourseModules, setLoadingCourseModules] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -94,11 +95,17 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         setCourseSectionMap(cxSecMap);
 
         // If editing, fetch course modules for the record's course
-        if (record && record.courseId) {
+        if (
+          record &&
+          record.semesterId &&
+          record.courseId &&
+          record.sectionId
+        ) {
           try {
             const modulesRes = await courseModulesApi.list({
+              semesterId: record.semesterId,
               courseId: record.courseId,
-              ...(record.sectionId ? { sectionId: record.sectionId } : {}),
+              sectionId: record.sectionId,
               status: "active",
             });
             setCourseModules(modulesRes.data?.modules || []);
@@ -161,19 +168,28 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     prevCourseIdRef.current = formData.courseId;
   }, [formData.courseId, courseSectionMap, sections]);
 
-  // Fetch active course modules when courseId or sectionId changes
+  // Fetch active course modules when semesterId, courseId, or sectionId changes
   useEffect(() => {
-    if (formData.courseId) {
+    if (formData.semesterId && formData.courseId && formData.sectionId) {
+      setLoadingCourseModules(true);
       courseModulesApi
         .list({
+          semesterId: formData.semesterId,
           courseId: formData.courseId,
-          ...(formData.sectionId ? { sectionId: formData.sectionId } : {}),
+          sectionId: formData.sectionId,
           status: "active",
         })
-        .then((res) => setCourseModules(res.data?.modules || []))
-        .catch(() => setCourseModules([]));
+        .then((res) => {
+          setCourseModules(res.data?.modules || []);
+          setLoadingCourseModules(false);
+        })
+        .catch(() => {
+          setCourseModules([]);
+          setLoadingCourseModules(false);
+        });
     } else {
       setCourseModules([]);
+      setLoadingCourseModules(false);
     }
 
     // Only reset courseModuleId if course actually changed (not on initial load during edit)
@@ -184,7 +200,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
       setFormData((prev) => ({ ...prev, courseModuleId: "" }));
     }
     prevCourseIdForModulesRef.current = formData.courseId;
-  }, [formData.courseId, formData.sectionId]);
+  }, [formData.semesterId, formData.courseId, formData.sectionId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -288,9 +304,9 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg sm:max-w-[630px] max-h-[90vh] overflow-y-auto shadow-lg">
+      <div className="bg-white rounded-lg w-full max-w-lg sm:max-w-[630px] max-h-[90vh] shadow-lg flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white flex-shrink-0">
           <div className="flex items-center gap-2">
             <Video className="w-5 h-5" style={{ color: BRAND }} />
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">
@@ -307,7 +323,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
 
         <form
           onSubmit={handleSubmit}
-          className="p-4 sm:p-6 space-y-4 sm:space-y-5"
+          className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto"
         >
           {/* Title */}
           <div>
@@ -472,11 +488,17 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                 options={[
                   {
                     id: "",
-                    name: !formData.courseId
-                      ? "Select course first"
-                      : courseModules.length === 0
-                        ? "No modules available"
-                        : "Select module…",
+                    name: loadingCourseModules
+                      ? "Loading…"
+                      : !formData.semesterId
+                        ? "Select semester first"
+                        : !formData.courseId
+                          ? "Select course first"
+                          : !formData.sectionId
+                            ? "Select section first"
+                            : courseModules.length === 0
+                              ? "No modules available"
+                              : "Select module…",
                   },
                   ...courseModules.map((m) => ({ id: m.id, name: m.name })),
                 ]}
@@ -489,7 +511,13 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                 placeholder="Select module"
                 isSmallScreen={false}
                 BRAND={BRAND}
-                disabled={!formData.courseId || courseModules.length === 0}
+                disabled={
+                  loadingCourseModules ||
+                  !formData.semesterId ||
+                  !formData.courseId ||
+                  !formData.sectionId ||
+                  courseModules.length === 0
+                }
                 dropdownDirection="up"
               />
               {errors.courseModuleId && (
@@ -502,7 +530,7 @@ const ClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         </form>
 
         {/* Footer */}
-        <div className="sticky bottom-0 flex gap-3 sm:gap-4 justify-end p-4 sm:p-3 border-t border-gray-200 bg-gray-50">
+        <div className="flex gap-3 sm:gap-4 justify-end p-4 sm:p-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <button
             type="button"
             onClick={handleClose}

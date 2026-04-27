@@ -8,10 +8,10 @@ const BRAND = "#6b1142";
 
 const formatSchedule = (section) => {
   if (!section.daysOfWeek) return <span className="text-gray-300">—</span>;
-  
+
   // Already comes as comma-separated string (e.g., "Monday, Wednesday, Friday")
   let schedule = section.daysOfWeek;
-  
+
   if (section.startTime && section.endTime) {
     schedule += ` ${section.startTime}-${section.endTime}`;
   } else if (section.startTime) {
@@ -19,7 +19,7 @@ const formatSchedule = (section) => {
   } else if (section.endTime) {
     schedule += ` (ends ${section.endTime})`;
   }
-  
+
   return schedule;
 };
 
@@ -97,7 +97,7 @@ export default function AdminSectionsPage() {
       <div className="panel overflow-visible">
         <div className="panel-header overflow-visible">
           {/* Filter by course */}
-          <div className="w-full sm:w-auto sm:min-w-[280px] relative z-50">
+          <div className="w-auto sm:w-auto sm:min-w-[280px] relative z-10">
             <CustomDropdown
               options={[
                 { id: "", name: "All Courses" },
@@ -111,6 +111,7 @@ export default function AdminSectionsPage() {
               placeholder="Select course…"
               isSmallScreen={false}
               BRAND={BRAND}
+              dropdownAlign="right"
             />
           </div>
           <span className="text-sm text-gray-500">

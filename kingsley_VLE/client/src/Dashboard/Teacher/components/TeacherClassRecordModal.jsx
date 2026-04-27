@@ -30,6 +30,7 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [loadingCourseModules, setLoadingCourseModules] = useState(false);
   const prevSemesterIdRef = useRef(null);
   const prevCourseIdRef = useRef(null);
   const prevCourseIdForModulesRef = useRef("");
@@ -125,7 +126,9 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
         // If editing, fetch course modules for the record's course
         if (record && record.courseId) {
           try {
+            setLoadingCourseModules(true);
             const modulesRes = await courseModulesApi.list({
+              semesterId: record.semesterId,
               courseId: record.courseId,
               ...(record.sectionId ? { sectionId: record.sectionId } : {}),
               status: "active",
@@ -134,6 +137,8 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
           } catch (err) {
             console.error("Error fetching course modules:", err);
             setCourseModules([]);
+          } finally {
+            setLoadingCourseModules(false);
           }
         }
       } catch (err) {
@@ -188,17 +193,20 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     prevCourseIdRef.current = formData.courseId;
   }, [formData.courseId, courseSectionMap]);
 
-  // Fetch active course modules when courseId or sectionId changes
+  // Fetch active course modules when semesterId, courseId or sectionId changes
   useEffect(() => {
-    if (formData.courseId) {
+    if (formData.semesterId && formData.courseId) {
+      setLoadingCourseModules(true);
       courseModulesApi
         .list({
+          semesterId: formData.semesterId,
           courseId: formData.courseId,
           ...(formData.sectionId ? { sectionId: formData.sectionId } : {}),
           status: "active",
         })
         .then((res) => setCourseModules(res.data?.modules || []))
-        .catch(() => setCourseModules([]));
+        .catch(() => setCourseModules([]))
+        .finally(() => setLoadingCourseModules(false));
     } else {
       setCourseModules([]);
     }
@@ -451,6 +459,8 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                   isSmallScreen={false}
                   BRAND={BRAND}
                   disabled={loadingDropdowns}
+                  dropdownDirection="up"
+                  dropdownAlign="right"
                 />
                 {errors.semesterId && (
                   <p className="text-xs text-red-500 mt-1">
@@ -492,10 +502,14 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                   isSmallScreen={false}
                   BRAND={BRAND}
                   disabled={loadingDropdowns || !formData.semesterId}
+                  dropdownDirection="up"
+                  dropdownAlign="left"
                 />
-                {formData.semesterId && filteredCourses.length === 0 ? (
+                {formData.semesterId &&
+                filteredCourses.length === 0 &&
+                !loadingDropdowns ? (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 mt-2">
-                    <p className="text-xs sm:text-sm text-blue-800 font-medium">
+                    <p className="text-xs sm:text-sm text-red-500 font-medium">
                       No courses assigned to you. Please contact the
                       administrator.
                     </p>
@@ -545,6 +559,8 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                   isSmallScreen={false}
                   BRAND={BRAND}
                   disabled={loadingDropdowns || !formData.courseId}
+                  dropdownDirection="up"
+                  dropdownAlign="right"
                 />
                 {errors.sectionId && (
                   <p className="text-xs text-red-500 mt-1">
@@ -562,11 +578,17 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                   options={[
                     {
                       id: "",
-                      name: !formData.courseId
-                        ? "Select course first"
-                        : courseModules.length === 0
-                          ? "No modules available"
-                          : "Select module…",
+                      name: loadingCourseModules
+                        ? "Loading…"
+                        : !formData.semesterId
+                          ? "Select semester first"
+                          : !formData.courseId
+                            ? "Select course first"
+                            : !formData.sectionId
+                              ? "Select section first"
+                              : courseModules.length === 0
+                                ? "No modules available"
+                                : "Select module…",
                     },
                     ...courseModules.map((m) => ({ id: m.id, name: m.name })),
                   ]}
@@ -584,7 +606,15 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
                   placeholder="Select module"
                   isSmallScreen={false}
                   BRAND={BRAND}
-                  disabled={!formData.courseId || courseModules.length === 0}
+                  disabled={
+                    loadingCourseModules ||
+                    !formData.semesterId ||
+                    !formData.courseId ||
+                    !formData.sectionId ||
+                    courseModules.length === 0
+                  }
+                  dropdownDirection="up"
+                  dropdownAlign="left"
                 />
                 {errors.courseModuleId && (
                   <p className="text-xs text-red-500 mt-1">

@@ -7,6 +7,7 @@ import { fmt } from "../utils/helpers";
 import { classMaterialsApi } from "../../../../features/classMaterials/api/classMaterials.api";
 import { classRecordsApi } from "../../../../features/classRecords/api/classRecords.api";
 import { courseModulesApi } from "../../../../features/courseModules/api/courseModules.api";
+import CustomDropdown from "../../../../features/classRecords/components/CustomDropdown";
 import SecureFileLink, {
   getMaterialSource,
 } from "../../../../features/classMaterials/components/SecureFileLink";
@@ -218,21 +219,23 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex gap-3 items-center flex-wrap">
           {/* Module Filter */}
-          <select
-            value={selectedModuleId}
-            onChange={(e) => setSelectedModuleId(e.target.value)}
-            disabled={loadingModules}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <option value="">
-              {loadingModules ? "Loading modules..." : "All Modules"}
-            </option>
-            {modules.map((module) => (
-              <option key={module.id} value={module.id}>
-                {module.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-56">
+            <CustomDropdown
+              options={modules.map((module) => ({
+                id: module.id,
+                name: module.name,
+              }))}
+              value={selectedModuleId}
+              onChange={(val) => setSelectedModuleId(val)}
+              placeholder={
+                loadingModules ? "Loading modules..." : "All Modules"
+              }
+              isSmallScreen={false}
+              BRAND="#6b1d3e"
+              disabled={loadingModules}
+              dropdownAlign="right"
+            />
+          </div>
         </div>
 
         {/* Search Input */}
@@ -242,7 +245,7 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
             placeholder={`Search ${activeSwitch === "materials" ? "materials" : "recordings"}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-64 px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full sm:w-64 px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6b1d3e]"
           />
           <svg
             className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
