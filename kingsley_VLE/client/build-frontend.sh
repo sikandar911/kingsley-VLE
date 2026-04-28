@@ -13,7 +13,6 @@ VERSION=${1:-latest}
 IMAGE_NAME="kingsley-vle-frontend"
 FULL_IMAGE="$IMAGE_NAME:$VERSION"
 FRONTEND_URL="https://classroom.kingsleyinstitute.com"
-BACKEND_API_URL="https://vle.kingsleyinstitute.com/api"
 BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 VCS_REF="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
@@ -29,12 +28,12 @@ fi
 
 if ! grep -q '^VITE_API_URL=https://vle\.kingsleyinstitute\.com/api$' .env.production; then
 	echo "Warning: .env.production does not match the expected production API URL."
-	echo "Expected: VITE_API_URL=$BACKEND_API_URL"
+	echo "Expected: VITE_API_URL=https://vle.kingsleyinstitute.com/api"
 fi
 
 echo "Building Kingsley VLE Frontend"
 echo "Frontend URL: $FRONTEND_URL"
-echo "Backend API:   $BACKEND_API_URL"
+echo "Backend API:   from .env.production"
 echo "Image:         $FULL_IMAGE"
 
 echo "Building Docker image..."
@@ -42,7 +41,6 @@ docker build \
 	--build-arg BUILD_DATE="$BUILD_DATE" \
 	--build-arg VCS_REF="$VCS_REF" \
 	--build-arg VERSION="$VERSION" \
-	--build-arg VITE_API_URL="$BACKEND_API_URL" \
 	-t "$FULL_IMAGE" \
 	.
 
