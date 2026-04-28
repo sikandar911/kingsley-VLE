@@ -1,44 +1,9 @@
 import axios from 'axios'
 
-const fallbackApiUrl = import.meta.env.VITE_API_URL || '/api'
-
+// Use VITE_API_URL if it exists (for production), otherwise fallback to '/api' for local dev proxy
 const api = axios.create({
-  baseURL: fallbackApiUrl,
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 })
-
-export async function initializeApiBaseUrl() {
-  const runtimeConfigPaths = ['/api/config']
-
-  if (import.meta.env.VITE_API_URL) {
-    runtimeConfigPaths.push(`${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/config`)
-  }
-
-  for (const configUrl of runtimeConfigPaths) {
-    try {
-      const response = await fetch(configUrl, {
-        headers: {
-          Accept: 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        continue
-      }
-
-      const config = await response.json()
-
-      if (config?.apiUrl) {
-        api.defaults.baseURL = config.apiUrl
-        return config.apiUrl
-      }
-    } catch {
-      // Fall through to the next runtime config source or the env fallback.
-    }
-  }
-
-  api.defaults.baseURL = fallbackApiUrl
-  return fallbackApiUrl
-}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('vle_token')
