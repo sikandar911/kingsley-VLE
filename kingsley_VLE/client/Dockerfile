@@ -3,6 +3,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Production API URL is injected at build time so the Vite bundle is deterministic.
+ARG VITE_API_URL=https://vle.kingsleyinstitute.com/api
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Copy package files
 COPY package.json package-lock.json ./
 

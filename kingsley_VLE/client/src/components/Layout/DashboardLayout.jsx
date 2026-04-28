@@ -16,6 +16,9 @@ export default function DashboardLayout() {
   const { user } = useAuth();
   const location = useLocation();
   const title = portalTitle[user?.role] || "VLE Portal";
+  const isStudentCourseProfilePage = /^\/student\/courses\/[^/]+$/.test(
+    location.pathname,
+  );
   const isTeacherCourseProfilePage = /^\/teacher\/courses\/[^/]+$/.test(
     location.pathname,
   );
@@ -102,7 +105,7 @@ export default function DashboardLayout() {
         {/* Main Content */}
         <main className="md:ml-[230px] flex-1 min-h-screen overflow-y-auto">
           {/* Desktop top bar with calendar button */}
-          {!isTeacherCourseProfilePage && (
+          {!isTeacherCourseProfilePage && !isStudentCourseProfilePage && (
             <div className="hidden md:flex items-center justify-end px-6 py-3 bg-white border-b border-gray-200 sticky top-0 z-30">
               <button
                 onClick={() => setCalendarOpen(true)}

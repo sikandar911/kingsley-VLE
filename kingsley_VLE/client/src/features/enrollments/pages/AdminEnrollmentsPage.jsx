@@ -103,7 +103,7 @@ export default function AdminEnrollmentsPage() {
         <div>
           <h1 className="page-title">Enrollments</h1>
           <p className="page-subtitle">
-            Manage student enrollments and teacher <br /> assignments
+            Manage student enrollments and teacher <br /> enrollments
           </p>
         </div>
         {tab === "students" ? (
@@ -135,7 +135,7 @@ export default function AdminEnrollmentsPage() {
         <div className="stat-card">
           <div className="stat-icon stat-icon--blue">👨‍🏫</div>
           <div>
-            <p className="stat-label">Teacher Assignments</p>
+            <p className="stat-label">Teacher Enrollments</p>
             <p className="stat-value">{teacherCourses.length}</p>
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function AdminEnrollmentsPage() {
             </div>
           ) : teacherCourses.length === 0 ? (
             <p className="table-empty">
-              No teacher assignments. Assign teachers to courses.
+              No teacher Enrollments. Assign teachers to courses.
             </p>
           ) : (
             <div className="table-wrapper">

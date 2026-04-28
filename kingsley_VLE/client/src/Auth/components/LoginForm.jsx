@@ -33,7 +33,7 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit}>
       <div className="mb-7 text-center">
-        <h1 className="text-3xl font-extrabold text-brand-700">Kingsley VLE</h1>
+        <h1 className="text-3xl font-extrabold text-brand-700">Kingsley Institute of Management - VLE</h1>
         <p className="text-gray-500 text-sm mt-1.5">Sign in to your account</p>
       </div>
 
