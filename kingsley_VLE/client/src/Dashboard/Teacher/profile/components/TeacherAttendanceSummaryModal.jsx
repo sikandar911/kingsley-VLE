@@ -81,7 +81,7 @@ export default function TeacherAttendanceSummaryModal({ courseId, sectionId, cou
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4 py-6">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
 
         {/* ── Header ── */}
@@ -201,7 +201,7 @@ export default function TeacherAttendanceSummaryModal({ courseId, sectionId, cou
                 })}
 
                 {/* ── Totals row ── */}
-                <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold">
+                {/* <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold">
                   <td className="px-5 py-3.5 text-sm text-gray-700">
                     Section Total
                   </td>
@@ -215,7 +215,7 @@ export default function TeacherAttendanceSummaryModal({ courseId, sectionId, cou
                       {totals.total > 0 ? Math.round((totals.present / totals.total) * 100) : 0}%
                     </span>
                   </td>
-                </tr>
+                </tr> */}
               </tbody>
             </table>
           </div>
