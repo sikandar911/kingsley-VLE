@@ -15,10 +15,21 @@
 **File**: `client/.env.production`
 
 ```env
-VITE_API_URL=https://vle.kingsleyinstitute.com/api
+VITE_API_URL=/api
 ```
 
-This is the only environment variable needed for frontend. It tells the browser where to fetch API data from.
+`VITE_API_URL` is now only a fallback. In production, the frontend first requests `/api/config`, and nginx proxies that request to the backend runtime config endpoint.
+
+### Runtime Config Flow
+
+1. Browser loads the frontend bundle.
+2. Frontend requests `/api/config` from the same origin.
+3. Frontend nginx proxies `/api/config` to `${BACKEND_ORIGIN}/api/config`.
+4. Backend returns public runtime config:
+   - `apiUrl`: backend API base URL
+5. Frontend configures Axios with that `apiUrl` before rendering the app.
+
+If `/api/config` is unavailable, the frontend falls back to `VITE_API_URL`, which should remain `/api` for local/dev-style proxying.
 
 ### Build and Push Docker Image
 
@@ -65,6 +76,13 @@ docker run -d \
 docker-compose -f docker-compose.prod.yml up -d frontend
 ```
 
+Set the backend origin for the frontend container at deploy time:
+
+```bash
+export BACKEND_ORIGIN=https://vle.kingsleyinstitute.com
+docker-compose -f docker-compose.prod.yml up -d frontend
+```
+
 **Via Kubernetes:**
 ```bash
 kubectl apply -f k8s-frontend-deployment.yaml
@@ -78,6 +96,9 @@ The backend is already running at:
 - **API URL**: `https://vle.kingsleyinstitute.com/api`
 - **Health Check**: `GET https://vle.kingsleyinstitute.com/api/health`
 
+It should also expose:
+- **Runtime Config**: `GET https://vle.kingsleyinstitute.com/api/config`
+
 ### CORS Configuration
 
 Backend already configured for frontend domain:
@@ -85,32 +106,45 @@ Backend already configured for frontend domain:
 Access-Control-Allow-Origin: https://classroom.kingsleyinstitute.com
 ```
 
+### Backend Runtime Config Endpoint
+
+Backend now serves a public runtime config payload from `/api/config`:
+
+```json
+{
+   "apiUrl": "https://vle.kingsleyinstitute.com/api"
+}
+```
+
+Do not place secrets in this endpoint. It is intended only for public browser-safe config.
+
 ---
 
 ## Nginx Configuration Details
 
-**File**: `client/nginx.conf`
+**File**: `client/nginx.conf.template`
 
 ### Key Features:
 
-1. **SPA Routing** - All unmatched routes redirect to `index.html`
+1. **Runtime Config Proxy** - `/api/config` is proxied to the backend using `BACKEND_ORIGIN`
+   ```nginx
+   location = /api/config {
+       proxy_pass ${BACKEND_ORIGIN}/api/config;
+   }
+   ```
+
+2. **SPA Routing** - All unmatched routes redirect to `index.html`
    ```nginx
    location / {
        try_files $uri $uri/ /index.html;
    }
    ```
 
-2. **Static Asset Caching** - Long-lived cache for JS/CSS/Images
+3. **Static Asset Caching** - Long-lived cache for JS/CSS/Images
    ```nginx
    location ~* \.(js|css|png|jpg)$ {
        expires 1y;
    }
-   ```
-
-3. **Gzip Compression** - Reduces bandwidth usage
-   ```nginx
-   gzip on;
-   gzip_types text/plain text/css application/javascript;
    ```
 
 4. **Health Check** - Container orchestration can verify status
@@ -148,8 +182,10 @@ Access-Control-Allow-Origin: https://classroom.kingsleyinstitute.com
 
 ### Pre-Deployment
 - [ ] Test locally: `npm run build && npm run preview`
-- [ ] Verify `.env.production` has correct API URL
+- [ ] Verify `.env.production` keeps `VITE_API_URL=/api`
+- [ ] Verify `BACKEND_ORIGIN` is set for the frontend container
 - [ ] Check backend is accessible: `curl https://vle.kingsleyinstitute.com/api/health`
+- [ ] Check backend runtime config: `curl https://vle.kingsleyinstitute.com/api/config`
 - [ ] Review Nginx configuration for your domain
 
 ### Deployment
@@ -176,7 +212,8 @@ Access-Control-Allow-Origin: https://classroom.kingsleyinstitute.com
 ### API Connection Timeout
 **Problem**: Frontend can't reach backend API  
 **Solution**: 
-- Check `VITE_API_URL` in `.env.production`
+- Check `GET /api/config` from the frontend domain
+- Verify `BACKEND_ORIGIN` is set correctly for the frontend container
 - Verify backend is running at `https://vle.kingsleyinstitute.com`
 - Check security group/firewall rules
 

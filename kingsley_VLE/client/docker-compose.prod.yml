@@ -15,6 +15,7 @@ services:
       - "3000:80"
     environment:
       - NODE_ENV=production
+      - BACKEND_ORIGIN=${BACKEND_ORIGIN:-https://vle.kingsleyinstitute.com}
     restart: unless-stopped
     networks:
       - kingsley-network

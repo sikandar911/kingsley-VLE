@@ -250,7 +250,7 @@ export default function CourseProfilePage() {
       {activeTab === "general" ? (
         <CourseChatTab courseId={courseId} sectionId={sectionId} />
       ) : (
-        <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
+        <div className="px-4 sm:px-6 py-6 max-w-4xl mx-auto">
           {activeTab === "assignments" && (
             <AssignmentsTab courseId={courseId} sectionId={sectionId} />
           )}

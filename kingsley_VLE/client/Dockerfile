@@ -33,6 +33,7 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 
 # Copy built app from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Expose port
 EXPOSE 80

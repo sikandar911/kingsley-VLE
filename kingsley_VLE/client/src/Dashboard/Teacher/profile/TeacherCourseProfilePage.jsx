@@ -259,7 +259,7 @@ export default function TeacherCourseProfilePage() {
           semesterId={enrollment?.semester?.id || null}
         />
       ) : (
-        <div className="px-4 sm:px-6 py-6 max-w-3xl mx-auto">
+        <div className="px-4 sm:px-6 py-6 max-w-6xl mx-auto">
           {activeTab === "assignments" && (
             <TeacherAssignmentsTab courseId={courseId} sectionId={sectionId} />
           )}

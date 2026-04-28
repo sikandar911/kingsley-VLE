@@ -58,6 +58,14 @@ app.use(express.json())
 // Swagger docs
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+app.get("/api/config", (req, res) => {
+  const backendOrigin = process.env.BACKEND_URL || `${req.protocol}://${req.get("host")}`;
+
+  res.json({
+    apiUrl: `${backendOrigin.replace(/\/$/, "")}/api`,
+  });
+});
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
