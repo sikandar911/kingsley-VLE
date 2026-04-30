@@ -412,7 +412,7 @@ model Assignment {
 
   dueDate DateTime?
 
-  totalMarks Int @default(100) @map("total_marks")
+  totalMarks Int? @map("total_marks")
 
   passingMarks Int? @map("passing_marks")
 
