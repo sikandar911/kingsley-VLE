@@ -21,8 +21,8 @@ const INITIAL = {
   description: "",
   teacherInstruction: "",
   dueDate: "",
-  totalMarks: 100,
-  passingMarks: 40,
+  totalMarks: "",
+  passingMarks: "",
   allowLateSubmission: false,
   status: "draft",
 };
@@ -60,8 +60,8 @@ export default function CreateAssignmentModal({
           description: editAssignment.description || "",
           teacherInstruction: editAssignment.teacherInstruction || "",
           dueDate: toLocalDt(editAssignment.dueDate),
-          totalMarks: editAssignment.totalMarks ?? 100,
-          passingMarks: editAssignment.passingMarks ?? 40,
+          totalMarks: editAssignment.totalMarks ?? "",
+          passingMarks: editAssignment.passingMarks ?? "",
           allowLateSubmission: Boolean(editAssignment.allowLateSubmission),
           status: editAssignment.status || "draft",
         }
@@ -398,16 +398,21 @@ export default function CreateAssignmentModal({
     if (!form.courseModuleId) return "Please select a module";
     if (!form.teacherId) return "Please select a teacher";
     if (!form.dueDate) return "Please select a submission deadline";
-    const total = Number(form.totalMarks);
 
-    if (!total) return "Please add total marks";
-    if (total <= 0) return "Total marks must be a positive number";
+    // Validate marks only if provided
+    if (form.totalMarks !== "") {
+      const total = Number(form.totalMarks);
+      if (total <= 0) return "Total marks must be a positive number";
 
-    if (form.passingMarks === "") return "Please add passing marks";
-    const passing = Number(form.passingMarks);
-    if (passing <= 0) return "Passing marks must be a positive number";
-    if (passing > total)
-      return `Passing marks cannot exceed total marks (${total})`;
+      // If total marks is provided, passing marks can be optional
+      if (form.passingMarks !== "") {
+        const passing = Number(form.passingMarks);
+        if (passing <= 0) return "Passing marks must be a positive number";
+        if (passing > total)
+          return `Passing marks cannot exceed total marks (${total})`;
+      }
+    }
+
     return null;
   };
 
@@ -429,7 +434,7 @@ export default function CreateAssignmentModal({
         semesterId: form.semesterId || null,
         courseModuleId: form.courseModuleId || null,
         dueDate: form.dueDate || null,
-        totalMarks: Number(form.totalMarks),
+        totalMarks: form.totalMarks !== "" ? Number(form.totalMarks) : null,
         passingMarks:
           form.passingMarks !== "" ? Number(form.passingMarks) : null,
         allowLateSubmission: Boolean(form.allowLateSubmission),
@@ -730,7 +735,7 @@ export default function CreateAssignmentModal({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-600 mb-1.5">
-                        Total Marks *
+                        Total Marks
                       </label>
                       <input
                         type="number"
@@ -738,6 +743,7 @@ export default function CreateAssignmentModal({
                         value={form.totalMarks}
                         onChange={handleChange}
                         min={1}
+                        placeholder="Optional"
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                       />
                     </div>
@@ -751,7 +757,8 @@ export default function CreateAssignmentModal({
                         value={form.passingMarks}
                         onChange={handleChange}
                         min={0}
-                        max={form.totalMarks}
+                        max={form.totalMarks || undefined}
+                        placeholder="Optional"
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                       />
                     </div>

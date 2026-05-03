@@ -33,6 +33,9 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
 # Copy built app from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Copy custom nginx config with SPA routing for React Router
+COPY nginx.conf /etc/nginx/nginx.conf
+
 # Expose port
 EXPOSE 80
 
