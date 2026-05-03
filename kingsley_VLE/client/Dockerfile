@@ -12,9 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the Vite app with production env
-RUN npm run build
-
+# Load the production environment file directly so Vite builds from one source of truth.
+RUN set -a && . ./.env.production && set +a && npm run build
 # ── Stage 2: Serve ──────────────────────────────────────────────────────────
 FROM nginx:1.25-alpine
 
