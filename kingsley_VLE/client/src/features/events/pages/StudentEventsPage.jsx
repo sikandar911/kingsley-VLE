@@ -141,20 +141,20 @@ export default function StudentEventsPage() {
     {
       label: "Total Events",
       value: events.length,
-      icon: "📅",
-      bg: "bg-blue-50",
+      icon: "/icon-events.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Institution",
       value: events.filter((e) => e.type === "institution").length,
-      icon: "🏛️",
-      bg: "bg-purple-50",
+      icon: "/institution-icon.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Course",
       value: events.filter((e) => e.type === "course").length,
-      icon: "📚",
-      bg: "bg-indigo-50",
+      icon: "/allcourses-icon.png",
+      bg: "bg-orange-50",
     },
   ];
 
@@ -171,16 +171,21 @@ export default function StudentEventsPage() {
       </div>
 
       {/* Stats */}
-      <div className="px-4 py-4 lg:px-8 lg:py-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 lg:gap-5">
+      <div className="px-4 py-4 lg:px-8 lg:py-6 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-3.5 lg:gap-5">
         {stats.map((s) => (
           <div
             key={s.label}
-            className="bg-white rounded-xl p-4 md:p-5 flex items-center gap-3 md:gap-4 shadow-sm border border-gray-200"
+            className="bg-white rounded-xl p-4 flex flex-col sm:flex-row items-center sm:items-start gap-3 text-center sm:text-left
+ shadow-sm border border-gray-200"
           >
             <div
-              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center text-xl md:text-2xl flex-shrink-0`}
+              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0`}
             >
-              {s.icon}
+              <img
+                src={s.icon}
+                alt={s.label}
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
+              />
             </div>
             <div>
               <p className="text-xs text-gray-500">{s.label}</p>

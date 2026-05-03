@@ -6,8 +6,6 @@ import CreateUserModal from "../components/CreateUserModal";
 import BulkCreateModal from "../components/BulkCreateModal";
 import UserTable from "../components/UserTable";
 
-
-
 export default function AdminUserManagement() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -90,13 +88,22 @@ export default function AdminUserManagement() {
               <button
                 key={r}
                 onClick={() => setTab(r)}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition border-0 cursor-pointer ${
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition border-0 cursor-pointer flex items-center gap-2 ${
                   tab === r
                     ? "bg-white text-brand-700 shadow-sm font-semibold"
                     : "bg-transparent text-gray-600 hover:text-gray-900"
                 }`}
               >
-                {r === "student" ? "🎓 Students" : "👨‍🏫 Teachers"}
+                <img
+                  src={
+                    r === "student"
+                      ? "/icon-students.png"
+                      : "/icon-teachers.png"
+                  }
+                  alt={r}
+                  className="w-5 h-5"
+                />
+                {r === "student" ? "Students" : "Teachers"}
               </button>
             ))}
           </div>
@@ -111,10 +118,23 @@ export default function AdminUserManagement() {
             <div className="flex gap-2 mt-3 md:mt-0">
               {tab === "student" && (
                 <button
-                  className="px-4 py-2 text-sm font-medium text-brand-700 border border-brand-300 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer"
+                  className="px-4 py-2 text-sm font-medium text-brand-700 border border-brand-300 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer flex items-center gap-2"
                   onClick={() => setShowBulkModal(true)}
                 >
-                  📋 Bulk
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Bulk
                 </button>
               )}
               <button className="btn-primary" onClick={handleCreate}>

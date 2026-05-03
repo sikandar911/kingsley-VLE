@@ -417,7 +417,16 @@ const Attendance = () => {
           </p>
         </div>
 
-        <div className="flex gap-2"></div>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-[#611936] text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#7e2347] transition flex items-center gap-2 whitespace-nowrap"
+            title="View monthly attendance report"
+          >
+            <span>📅</span>
+            <span className="hidden sm:inline">Monthly Attendance</span>
+            <span className="sm:hidden">Monthly</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter - DEPENDENT DROPDOWNS */}

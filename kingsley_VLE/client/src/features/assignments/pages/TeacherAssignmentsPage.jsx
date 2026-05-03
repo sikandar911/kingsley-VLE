@@ -72,17 +72,27 @@ export default function TeacherAssignmentsPage() {
     {
       label: "Total Assignments",
       value: assignments.length,
-      icon: "📋",
-      bg: "bg-blue-50",
+      icon: "/assignment-icon.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Submissions",
       value: totalSubmissions,
-      icon: "📥",
-      bg: "bg-green-50",
+      icon: "/submission-icon.png",
+      bg: "bg-orange-50",
     },
-    { label: "Published", value: published, icon: "✅", bg: "bg-purple-50" },
-    { label: "Drafts", value: draft, icon: "📝", bg: "bg-orange-50" },
+    {
+      label: "Published",
+      value: published,
+      icon: "/published-icon.png",
+      bg: "bg-orange-50",
+    },
+    {
+      label: "Drafts",
+      value: draft,
+      icon: "/draft-icon.png",
+      bg: "bg-orange-50",
+    },
   ];
 
   const handleEdit = (assignment) => {
@@ -155,9 +165,13 @@ export default function TeacherAssignmentsPage() {
             className="bg-white rounded-xl p-5 flex flex-col md:flex-row items-center gap-4 shadow-sm border border-gray-200"
           >
             <div
-              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center text-2xl flex-shrink-0`}
+              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0`}
             >
-              {s.icon}
+              <img
+                src={s.icon}
+                alt={s.label}
+                className="w-8 h-8 sm:w-9 sm:h-9"
+              />
             </div>
             <div className=" flex-col text-center md:text-left md:flex-row">
               <p className="text-xs text-gray-500">{s.label}</p>
@@ -296,21 +310,20 @@ export default function TeacherAssignmentsPage() {
                               title="Preview"
                             >
                               <svg
-                                className="w-5 h-5 text-gray-500"
+                                className="w-5 h-5"
                                 fill="none"
-                                stroke="currentColor"
+                                stroke="#6b1d3e"
+                                strokeWidth="2"
                                 viewBox="0 0 24 24"
                               >
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  strokeWidth={2}
                                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                                 />
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  strokeWidth={2}
                                   d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                 />
                               </svg>
@@ -319,19 +332,48 @@ export default function TeacherAssignmentsPage() {
                             {/* Edit */}
                             <button
                               onClick={() => handleEdit(a)}
-                              className="p-1.5 hover:bg-gray-100 rounded transition text-base"
+                              className="p-1.5 hover:bg-gray-100 rounded transition"
                               title="Edit"
                             >
-                              ✏️
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="#6b1d3e"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                                />
+                              </svg>
                             </button>
 
                             {/* View Submissions */}
                             <button
                               onClick={() => setViewSubmissions(a)}
-                              className="p-1.5 hover:bg-blue-50 rounded transition text-base"
+                              className="p-1.5 hover:bg-blue-50 rounded transition"
                               title="View Submissions"
                             >
-                              📋
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="#6b1d3e"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3"
+                                />
+                              </svg>
                             </button>
 
                             {/* Publish (only if draft) */}
@@ -372,14 +414,35 @@ export default function TeacherAssignmentsPage() {
                             <button
                               onClick={() => handleDelete(a)}
                               disabled={deletingId === a.id}
-                              className={`p-1.5 rounded transition text-base ${
+                              className={`p-1.5 rounded transition ${
                                 deletingId === a.id
                                   ? "animate-spin"
                                   : "hover:bg-red-100"
                               }`}
                               title="Delete Assignment"
                             >
-                              {deletingId === a.id ? "⏳" : "🗑️"}
+                              {deletingId === a.id ? (
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="#fbbf24"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M12 1C6.48 1 2 5.48 2 11s4.48 10 10 10 10-4.48 10-10S17.52 1 12 1zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 6 15.5 6 14 6.67 14 7.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 6 8.5 6 7 6.67 7 7.5 7.67 9 8.5 9z" />
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  stroke="#6b1d3e"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                              )}
                             </button>
                           </div>
                         </td>

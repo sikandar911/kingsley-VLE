@@ -100,26 +100,26 @@ export default function AdminEventsPage() {
     {
       label: "Total Events",
       value: events.length,
-      icon: "📅",
-      bg: "bg-blue-50",
+      icon: "/icon-events.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Institution",
       value: events.filter((e) => e.type === "institution").length,
-      icon: "🏛️",
-      bg: "bg-purple-50",
+      icon: "/institution-icon.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Course",
       value: events.filter((e) => e.type === "course").length,
-      icon: "📚",
-      bg: "bg-indigo-50",
+      icon: "/allcourses-icon.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Section",
       value: events.filter((e) => e.type === "section").length,
-      icon: "🏫",
-      bg: "bg-green-50",
+      icon: "/total-section-icon.png",
+      bg: "bg-orange-50",
     },
   ];
 
@@ -166,12 +166,16 @@ export default function AdminEventsPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="bg-white rounded-xl p-4 md:p-5 flex items-center gap-3 md:gap-4 shadow-sm border border-gray-200"
+            className="bg-white rounded-xl p-4 flex flex-col sm:flex-row items-center sm:items-start gap-3 text-center sm:text-left shadow-sm border border-gray-200"
           >
             <div
-              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center text-xl md:text-2xl flex-shrink-0`}
+              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0`}
             >
-              {s.icon}
+              <img
+                src={s.icon}
+                alt={s.label}
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
+              />
             </div>
             <div>
               <p className="text-xs text-gray-500">{s.label}</p>
@@ -270,18 +274,46 @@ export default function AdminEventsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                         {event.location || "—"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <td className="px-6 py-4 whitespace-nowrap text-center flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleEdit(event)}
-                          className="text-blue-600 hover:text-blue-800 font-medium text-xs mr-3"
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Edit"
                         >
-                          Edit
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#6b1d3e"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
                         </button>
                         <button
                           onClick={() => setDeleteConfirm(event)}
-                          className="text-red-600 hover:text-red-800 font-medium text-xs"
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Delete"
                         >
-                          Delete
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#6b1d3e"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
                         </button>
                       </td>
                     </tr>

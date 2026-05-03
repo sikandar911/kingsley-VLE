@@ -66,17 +66,35 @@ export default function AdminCoursesPage() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="py-4 md:py-0 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-2 lg:gap-4 mb-3 md:mb-8">
-        <div className="stat-card">
-          <div className="stat-icon stat-icon--blue">📚</div>
+      {/* Stats div*/}
+      <div className="py-4 md:py-0 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-2 lg:gap-4 mb-3 md:mb-8">
+        <div
+          className="stat-card flex flex-col sm:flex-row items-center sm:items-start gap-3 text-center sm:text-left
+"
+        >
+          <div className="stat-icon bg-orange-50">
+            <img
+              src="/allcourses-icon.png"
+              alt="Total Courses"
+              className="w-8 h-8 sm:w-9 sm:h-9"
+            />
+          </div>
           <div>
             <p className="stat-label">Total Courses</p>
             <p className="stat-value">{total}</p>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon stat-icon--green">🏫</div>
+        <div
+          className="stat-card flex flex-col sm:flex-row items-center sm:items-start gap-3 text-center sm:text-left
+"
+        >
+          <div className="stat-icon bg-orange-50">
+            <img
+              src="/total-section-icon.png"
+              alt="Total Sections"
+              className="w-8 h-8 sm:w-9 sm:h-9"
+            />
+          </div>
           <div>
             <p className="stat-label">Total Sections</p>
             <p className="stat-value">
@@ -84,8 +102,17 @@ export default function AdminCoursesPage() {
             </p>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon stat-icon--orange">🎓</div>
+        <div
+          className="stat-card flex flex-col sm:flex-row items-center sm:items-start gap-3 text-center sm:text-left
+"
+        >
+          <div className="stat-icon bg-orange-50">
+            <img
+              src="/total-enrollment.png"
+              alt="Total Enrollments"
+              className="w-8 h-8 sm:w-9 sm:h-9"
+            />
+          </div>
           <div>
             <p className="stat-label">Total Enrollments</p>
             <p className="stat-value">
@@ -175,17 +202,43 @@ export default function AdminCoursesPage() {
                       <div className="td-actions">
                         <button
                           onClick={() => handleEdit(course)}
-                          className="btn-icon text-blue-600 hover:bg-blue-50"
+                          className="btn-icon hover:bg-blue-50"
                           title="Edit"
                         >
-                          ✏️
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#6b1d3e"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
                         </button>
                         <button
                           onClick={() => setDeleteId(course.id)}
-                          className="btn-icon text-red-500 hover:bg-red-50"
+                          className="btn-icon hover:bg-red-50"
                           title="Delete"
                         >
-                          🗑️
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#6b1d3e"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
                         </button>
                       </div>
                     </td>

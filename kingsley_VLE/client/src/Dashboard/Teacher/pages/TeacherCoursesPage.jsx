@@ -155,7 +155,7 @@ export default function TeacherCoursesPage() {
           <div>
             {/* Course Count Badge */}
             <div className="mb-4 sm:mb-6">
-              <span className="inline-flex items-center px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium bg-blue-100 text-blue-800">
+              <span className="inline-flex items-center px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium bg-[#6b1d3e] text-white">
                 {courses.length} {courses.length === 1 ? "Course" : "Courses"}{" "}
                 Assigned
               </span>
@@ -175,7 +175,7 @@ export default function TeacherCoursesPage() {
                           {course.title}
                         </h3>
                         {course.sectionName && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#6b1d3e] text-white">
                             {course.sectionName}
                           </span>
                         )}

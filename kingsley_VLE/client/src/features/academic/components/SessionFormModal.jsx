@@ -1,66 +1,86 @@
-import { useState } from 'react'
-import { academicApi } from '../api/academic.api'
+import { useState } from "react";
+import { academicApi } from "../api/academic.api";
 
-const INITIAL = { name: '', description: '', startDate: '', endDate: '' }
+const INITIAL = { name: "", description: "", startDate: "", endDate: "" };
 
 export default function SessionFormModal({ onClose, onSaved, editSession }) {
-  const isEdit = Boolean(editSession)
-  const toInputDate = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : '')
+  const isEdit = Boolean(editSession);
+  const toInputDate = (iso) =>
+    iso ? new Date(iso).toISOString().slice(0, 10) : "";
 
   const [form, setForm] = useState(
     isEdit
       ? {
-          name: editSession.name || '',
-          description: editSession.description || '',
+          name: editSession.name || "",
+          description: editSession.description || "",
           startDate: toInputDate(editSession.startDate),
           endDate: toInputDate(editSession.endDate),
         }
       : INITIAL,
-  )
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validateSessionName = (name) => {
+    const yearPattern = /^\d{4}-\d{4}$/;
+    if (!name.trim()) {
+      return "Session name is required";
+    }
+    if (!yearPattern.test(name.trim())) {
+      return "Session name must be in format: YYYY-YYYY (e.g., 2025-2026)";
+    }
+    const [startYear, endYear] = name.trim().split("-").map(Number);
+    if (endYear <= startYear) {
+      return "End year must be greater than start year";
+    }
+    return null;
+  };
 
   const submit = async (e) => {
-    e.preventDefault()
-    if (!form.name.trim()) {
-      setError('Session name is required')
-      return
+    e.preventDefault();
+    const nameError = validateSessionName(form.name);
+    if (nameError) {
+      setError(nameError);
+      return;
     }
-    setError('')
-    setLoading(true)
+    setError("");
+    setLoading(true);
     try {
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
         startDate: form.startDate || null,
         endDate: form.endDate || null,
-      }
+      };
       if (isEdit) {
-        await academicApi.sessions.update(editSession.id, payload)
+        await academicApi.sessions.update(editSession.id, payload);
       } else {
-        await academicApi.sessions.create(payload)
+        await academicApi.sessions.create(payload);
       }
-      onSaved()
+      onSaved();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save session')
+      setError(err.response?.data?.error || "Failed to save session");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="modal-overlay">
       <div className="modal">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">
-            {isEdit ? 'Edit Session' : 'Create Session'}
+            {isEdit ? "Edit Session" : "Create Session"}
           </h2>
-          <button onClick={onClose} className="btn-icon text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="btn-icon text-gray-400 hover:text-gray-600"
+          >
             ✕
           </button>
         </div>
@@ -78,7 +98,7 @@ export default function SessionFormModal({ onClose, onSaved, editSession }) {
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder="e.g. Academic Year 2025-2026"
+              placeholder="e.g. 2025-2026"
               className="form-input"
             />
           </div>
@@ -123,11 +143,15 @@ export default function SessionFormModal({ onClose, onSaved, editSession }) {
               Cancel
             </button>
             <button type="submit" disabled={loading} className="btn-primary">
-              {loading ? 'Saving…' : isEdit ? 'Update Session' : 'Create Session'}
+              {loading
+                ? "Saving…"
+                : isEdit
+                  ? "Update Session"
+                  : "Create Session"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
