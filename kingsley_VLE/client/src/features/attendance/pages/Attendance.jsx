@@ -407,24 +407,22 @@ const Attendance = () => {
   return (
     <div className="px-4 py-4 md:px-4 lg:px-8  lg:py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 md:mb-6 lg:mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
-            Attendance
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
-            Manage and track student attendance records.
-          </p>
-        </div>
+      <div className="mb-4 md:mb-6 lg:mb-8">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+              Attendance
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
+              Manage and track student attendance records.
+            </p>
+          </div>
 
-        <div className="flex gap-2">
           <button
-            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-[#611936] text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#7e2347] transition flex items-center gap-2 whitespace-nowrap"
+            className="w-fit px-3 py-2 sm:px-4 sm:py-2.5 md:py-2 bg-[#611936] lg:mt-[10px] text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#7e2347] transition flex items-center gap-2 whitespace-nowrap h-fit"
             title="View monthly attendance report"
           >
-            <span>📅</span>
-            <span className="hidden sm:inline">Monthly Attendance</span>
-            <span className="sm:hidden">Monthly</span>
+            <span>Monthly Attendance</span>
           </button>
         </div>
       </div>

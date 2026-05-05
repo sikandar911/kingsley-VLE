@@ -2,22 +2,28 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../../../Auth/api/auth.api";
 import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.api";
+import { formatTimeDisplay } from "../../../utils/timeFormat";
+import { BadgeCheck, ClipboardCheck, Layers } from "lucide-react";
 
 const formatSchedule = (course) => {
   if (!course.daysOfWeek) return null;
-  
-  // Already comes as comma-separated string (e.g., "Monday, Wednesday, Friday")
-  let schedule = course.daysOfWeek;
-  
+  return course.daysOfWeek;
+};
+
+const formatScheduleTime = (course) => {
+  if (!course.startTime && !course.endTime) return null;
+
   if (course.startTime && course.endTime) {
-    schedule += ` ${course.startTime}-${course.endTime}`;
+    const startDisplay = formatTimeDisplay(course.startTime);
+    const endDisplay = formatTimeDisplay(course.endTime);
+    return `${startDisplay} - ${endDisplay}`;
   } else if (course.startTime) {
-    schedule += ` ${course.startTime}`;
+    return formatTimeDisplay(course.startTime);
   } else if (course.endTime) {
-    schedule += ` (ends ${course.endTime})`;
+    return `Ends ${formatTimeDisplay(course.endTime)}`;
   }
-  
-  return schedule;
+
+  return null;
 };
 
 export default function TeacherCoursesPage() {
@@ -45,7 +51,9 @@ export default function TeacherCoursesPage() {
           return;
         }
 
-        const enrollmentsResponse = await enrollmentsApi.teachers.list({ teacherId: teacherProfileId });
+        const enrollmentsResponse = await enrollmentsApi.teachers.list({
+          teacherId: teacherProfileId,
+        });
         const enrollments = enrollmentsResponse.data;
 
         // Extract course data from enrollments
@@ -167,7 +175,9 @@ export default function TeacherCoursesPage() {
                 <div
                   key={course.id}
                   className="bg-white rounded-lg shadow-sm border-t-2 border-b-2 border-[#6b1d3e] hover:shadow-md transition-shadow duration-300 overflow-hidden p-5 sm:p-6 flex flex-col h-full min-h-65"
-                >                  {/* Course Header */}
+                >
+                  {" "}
+                  {/* Course Header */}
                   <div className="mb-4 sm:mb-5">
                     <div className="flex items-start justify-between mb-2 sm:mb-3">
                       <div className="flex-1">
@@ -180,65 +190,67 @@ export default function TeacherCoursesPage() {
                           </span>
                         )}
                       </div>
-                      {/* <div className="ml-2 flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
-                        <svg
-                          className="w-5 h-5 sm:w-6 sm:h-6 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17s4.5 10.747 10 10.747c5.5 0 10-4.998 10-10.747 0-6.002-4.5-10.747-10-10.747z"
-                          />
-                        </svg>
-                      </div> */}
+                
                     </div>
                   </div>
-
                   {/* Course Details */}
                   <div className="space-y-2 sm:space-y-3 pb-4 sm:pb-5 border-b border-[#6b1d3e] flex-grow">
                     <div className="flex items-center text-xs sm:text-sm text-gray-600">
-                      <svg
-                        className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                     
+                
+
+                       <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400" />
                       <span className="font-medium">
                         {course.specialization || "General"}
                       </span>
                     </div>
                     {course.sectionName && (
                       <div className="flex items-center text-xs sm:text-sm text-gray-600">
-                        <svg
-                          className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                          />
-                        </svg>
-                        <span>
-                          Section: <span className="font-medium">{course.sectionName}</span>
+                     
+
+                        <Layers className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400" />
+                        <span className="font-medium">
+                          {/* Section:{" "} */}
+                          <span className="font-medium">
+                            {course.sectionName}
+                          </span>
                         </span>
                       </div>
                     )}
                     {formatSchedule(course) && (
+                      <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                    
+
+                         <svg
+                          className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <rect
+                            x="3"
+                            y="4"
+                            width="18"
+                            height="18"
+                            rx="2"
+                            ry="2"
+                          ></rect>
+                          <line x1="16" y1="2" x2="16" y2="6"></line>
+                          <line x1="8" y1="2" x2="8" y2="6"></line>
+                          <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span className="font-medium">
+                          {formatSchedule(course)}
+                        </span>
+                      </div>
+                    )}
+                    {formatScheduleTime(course) && (
                       <div className="flex items-center text-xs sm:text-sm text-gray-600">
                         <svg
                           className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
@@ -253,36 +265,27 @@ export default function TeacherCoursesPage() {
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        <span className="font-medium">{formatSchedule(course)}</span>
+                        <span className="font-medium">
+                          {formatScheduleTime(course)}
+                        </span>
                       </div>
                     )}
                     <div className="flex items-center text-xs sm:text-sm text-gray-600">
-                      <svg
-                        className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <span>
+                   
+
+                      <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-400" />
+                      <span className="font-medium">
                         Assigned:{" "}
                         {new Date(course.assignedAt).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
-
                   {/* Action Button */}
                   <div className="pt-4 sm:pt-5 ">
                     <button
                       onClick={() =>
                         navigate(
-                          `/teacher/courses/${course.id}${course.sectionId ? `?sectionId=${course.sectionId}` : ""}`
+                          `/teacher/courses/${course.id}${course.sectionId ? `?sectionId=${course.sectionId}` : ""}`,
                         )
                       }
                       style={{ backgroundColor: "#6b1d3e" }}

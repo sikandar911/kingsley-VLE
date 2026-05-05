@@ -3,6 +3,7 @@ import { sectionsApi } from "../api/sections.api";
 import { coursesApi } from "../../courses/api/courses.api";
 import { academicApi } from "../../academic/api/academic.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
+import { convert24To12, convert12To24 } from "../../../utils/timeFormat";
 
 const BRAND = "#6b1142";
 
@@ -25,10 +26,10 @@ const INITIAL = {
   endTime: "",
 };
 
-// Generate hour options (00-23)
-const HOURS = Array.from({ length: 24 }, (_, i) => ({
-  id: String(i).padStart(2, "0"),
-  name: String(i).padStart(2, "0"),
+// Generate hour options (1-12 for 12-hour format)
+const HOURS = Array.from({ length: 12 }, (_, i) => ({
+  id: String(i + 1).padStart(2, "0"),
+  name: String(i + 1).padStart(2, "0"),
 }));
 
 // Generate minute options (00-59)
@@ -36,6 +37,12 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => ({
   id: String(i).padStart(2, "0"),
   name: String(i).padStart(2, "0"),
 }));
+
+// AM/PM options
+const PERIODS = [
+  { id: "AM", name: "AM" },
+  { id: "PM", name: "PM" },
+];
 
 export default function SectionFormModal({ onClose, onSaved, editSection }) {
   const isEdit = Boolean(editSection);
@@ -52,6 +59,12 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
     return [];
   };
 
+  // Helper to initialize time display in 12-hour format
+  const initializeTimeDisplay = (time24) => {
+    if (!time24) return { hour: "", minute: "", period: "AM" };
+    return convert24To12(time24);
+  };
+
   const [form, setForm] = useState(
     isEdit
       ? {
@@ -64,6 +77,17 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
         }
       : INITIAL,
   );
+
+  // Track 12-hour format display values separately
+  const [timeDisplay, setTimeDisplay] = useState({
+    startHour: initializeTimeDisplay(form.startTime).hour,
+    startMinute: initializeTimeDisplay(form.startTime).minute,
+    startPeriod: initializeTimeDisplay(form.startTime).period,
+    endHour: initializeTimeDisplay(form.endTime).hour,
+    endMinute: initializeTimeDisplay(form.endTime).minute,
+    endPeriod: initializeTimeDisplay(form.endTime).period,
+  });
+
   const [courses, setCourses] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [metaLoading, setMetaLoading] = useState(true);
@@ -73,6 +97,18 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
   const filteredCourses = form.semesterId
     ? courses.filter((course) => course.semesterId === form.semesterId)
     : [];
+
+  // Update timeDisplay whenever form times change (important for edit mode)
+  useEffect(() => {
+    setTimeDisplay({
+      startHour: initializeTimeDisplay(form.startTime).hour,
+      startMinute: initializeTimeDisplay(form.startTime).minute,
+      startPeriod: initializeTimeDisplay(form.startTime).period,
+      endHour: initializeTimeDisplay(form.endTime).hour,
+      endMinute: initializeTimeDisplay(form.endTime).minute,
+      endPeriod: initializeTimeDisplay(form.endTime).period,
+    });
+  }, [isEdit]); // Only run when entering edit mode
 
   useEffect(() => {
     Promise.all([coursesApi.list({ limit: 200 }), academicApi.semesters.list()])
@@ -102,19 +138,44 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
   };
 
   const handleTimeChange = (type, value) => {
-    if (type === "startHour") {
-      const minute = form.startTime.split(":")[1] || "00";
-      setForm((prev) => ({ ...prev, startTime: `${value}:${minute}` }));
-    } else if (type === "startMinute") {
-      const hour = form.startTime.split(":")[0] || "00";
-      setForm((prev) => ({ ...prev, startTime: `${hour}:${value}` }));
-    } else if (type === "endHour") {
-      const minute = form.endTime.split(":")[1] || "00";
-      setForm((prev) => ({ ...prev, endTime: `${value}:${minute}` }));
-    } else if (type === "endMinute") {
-      const hour = form.endTime.split(":")[0] || "00";
-      setForm((prev) => ({ ...prev, endTime: `${hour}:${value}` }));
-    }
+    setTimeDisplay((prev) => {
+      const updated = { ...prev };
+
+      if (type === "startHour") {
+        updated.startHour = value;
+      } else if (type === "startMinute") {
+        updated.startMinute = value;
+      } else if (type === "startPeriod") {
+        updated.startPeriod = value;
+      } else if (type === "endHour") {
+        updated.endHour = value;
+      } else if (type === "endMinute") {
+        updated.endMinute = value;
+      } else if (type === "endPeriod") {
+        updated.endPeriod = value;
+      }
+
+      // Update form with 24-hour format
+      if (updated.startHour && updated.startMinute) {
+        const time24 = convert12To24(
+          updated.startHour,
+          updated.startMinute,
+          updated.startPeriod,
+        );
+        setForm((prev) => ({ ...prev, startTime: time24 }));
+      }
+
+      if (updated.endHour && updated.endMinute) {
+        const time24 = convert12To24(
+          updated.endHour,
+          updated.endMinute,
+          updated.endPeriod,
+        );
+        setForm((prev) => ({ ...prev, endTime: time24 }));
+      }
+
+      return updated;
+    });
   };
 
   const submit = async (e) => {
@@ -283,11 +344,11 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
             <div className="mt-4 space-y-3">
               {/* Start Time */}
               <div className="form-group">
-                <label className="form-label">Start Time (24-hour)</label>
+                <label className="form-label">Start Time (12-hour)</label>
                 <div className="flex items-center gap-2">
                   <CustomDropdown
                     options={[{ id: "", name: "HH" }, ...HOURS]}
-                    value={form.startTime.split(":")[0] || ""}
+                    value={timeDisplay.startHour}
                     onChange={(val) => handleTimeChange("startHour", val)}
                     placeholder="HH"
                     isSmallScreen={false}
@@ -299,9 +360,19 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
                   <span className="text-lg font-semibold text-gray-600">:</span>
                   <CustomDropdown
                     options={[{ id: "", name: "MM" }, ...MINUTES]}
-                    value={form.startTime.split(":")[1] || ""}
+                    value={timeDisplay.startMinute}
                     onChange={(val) => handleTimeChange("startMinute", val)}
                     placeholder="MM"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={metaLoading}
+                    dropdownDirection="up"
+                  />
+                  <CustomDropdown
+                    options={PERIODS}
+                    value={timeDisplay.startPeriod}
+                    onChange={(val) => handleTimeChange("startPeriod", val)}
+                    placeholder="AM/PM"
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={metaLoading}
@@ -312,11 +383,11 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
 
               {/* End Time */}
               <div className="form-group">
-                <label className="form-label">End Time (24-hour)</label>
+                <label className="form-label">End Time (12-hour)</label>
                 <div className="flex items-center gap-2">
                   <CustomDropdown
                     options={[{ id: "", name: "HH" }, ...HOURS]}
-                    value={form.endTime.split(":")[0] || ""}
+                    value={timeDisplay.endHour}
                     onChange={(val) => handleTimeChange("endHour", val)}
                     placeholder="HH"
                     isSmallScreen={false}
@@ -328,9 +399,19 @@ export default function SectionFormModal({ onClose, onSaved, editSection }) {
                   <span className="text-lg font-semibold text-gray-600">:</span>
                   <CustomDropdown
                     options={[{ id: "", name: "MM" }, ...MINUTES]}
-                    value={form.endTime.split(":")[1] || ""}
+                    value={timeDisplay.endMinute}
                     onChange={(val) => handleTimeChange("endMinute", val)}
                     placeholder="MM"
+                    isSmallScreen={false}
+                    BRAND={BRAND}
+                    disabled={metaLoading}
+                    dropdownDirection="up"
+                  />
+                  <CustomDropdown
+                    options={PERIODS}
+                    value={timeDisplay.endPeriod}
+                    onChange={(val) => handleTimeChange("endPeriod", val)}
+                    placeholder="AM/PM"
                     isSmallScreen={false}
                     BRAND={BRAND}
                     disabled={metaLoading}

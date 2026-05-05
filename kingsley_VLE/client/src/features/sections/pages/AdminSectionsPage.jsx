@@ -3,6 +3,7 @@ import { sectionsApi } from "../api/sections.api";
 import { coursesApi } from "../../courses/api/courses.api";
 import SectionFormModal from "../components/SectionFormModal";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
+import { formatTimeDisplay } from "../../../utils/timeFormat";
 
 const BRAND = "#6b1142";
 
@@ -13,11 +14,13 @@ const formatSchedule = (section) => {
   let schedule = section.daysOfWeek;
 
   if (section.startTime && section.endTime) {
-    schedule += ` ${section.startTime}-${section.endTime}`;
+    const startDisplay = formatTimeDisplay(section.startTime);
+    const endDisplay = formatTimeDisplay(section.endTime);
+    schedule += ` ${startDisplay} - ${endDisplay}`;
   } else if (section.startTime) {
-    schedule += ` ${section.startTime}`;
+    schedule += ` ${formatTimeDisplay(section.startTime)}`;
   } else if (section.endTime) {
-    schedule += ` (ends ${section.endTime})`;
+    schedule += ` (ends ${formatTimeDisplay(section.endTime)})`;
   }
 
   return schedule;

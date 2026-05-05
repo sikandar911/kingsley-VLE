@@ -655,7 +655,7 @@ const TeacherClassRecords = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-xs sm:text-sm font-medium transition hover:underline"
-                      style={{ color: BRAND }}
+                      style={{ color: "#5c1732" }}
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       Open Recording
@@ -663,14 +663,17 @@ const TeacherClassRecords = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => openEdit(record)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                        className="p-1.5 rounded transition hover:bg-[#f3e8f0]"
+                        style={{ color: "#5c1732"
+                          }}
                         title="Edit"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(record.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                        className="p-1.5 rounded transition hover:bg-[#f3e8f0]"
+                        style={{ color: "#5c1732" }}
                         title="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -783,21 +786,30 @@ const TeacherClassRecords = () => {
                               href={record.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                              className="p-1.5 rounded transition hover:bg-[#f3e8f0]"
+                              style={{
+                                color: "#5c1732",
+                              }}
                               title="Open Recording"
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
                             <button
                               onClick={() => openEdit(record)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                              className="p-1.5 rounded transition hover:bg-[#f3e8f0]"
+                              style={{
+                                color: "#5c1732",
+                              }}
                               title="Edit"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(record.id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                              className="p-1.5 rounded transition hover:bg-[#f3e8f0]"
+                              style={{
+                                color: "#5c1732",
+                              }}
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />

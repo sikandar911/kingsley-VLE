@@ -163,7 +163,12 @@ export default function AssignmentsTab({ courseId, sectionId }) {
         {/* Empty state */}
         {assignments.length === 0 && (
           <div className="bg-white rounded-xl shadow-sm p-10 text-center">
-            <div className="text-4xl mb-3">📋</div>
+            {/* <div className="text-4xl mb-3">📋</div> */}
+              <img
+                src="/assignment-profile.png"
+                alt="No assignments"
+                className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3"
+              />
             <p className="text-gray-500 text-sm">
               No assignments for this course yet.
             </p>
