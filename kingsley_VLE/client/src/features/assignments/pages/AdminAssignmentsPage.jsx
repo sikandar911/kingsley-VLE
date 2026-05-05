@@ -34,7 +34,7 @@ export default function AdminAssignmentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  
+
   // Filter states
   const [filterSemester, setFilterSemester] = useState("");
   const [filterCourse, setFilterCourse] = useState("");
@@ -46,20 +46,20 @@ export default function AdminAssignmentsPage() {
   const [semesters, setSemesters] = useState([]);
   const [sections, setSections] = useState([]);
   const [courseModules, setCourseModules] = useState([]);
-  
+
   // Filtered lists for dropdowns
   const [filteredSemesters, setFilteredSemesters] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [filteredModules, setFilteredModules] = useState([]);
-  
+
   // Maps for dependent filtering
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
-  
+
   // Loading states
   const [metaLoading, setMetaLoading] = useState(true);
-  
+
   const [showCreate, setShowCreate] = useState(false);
   const [editAssignment, setEditAssignment] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -75,7 +75,7 @@ export default function AdminAssignmentsPage() {
     if (filterCourse) filterParams.courseId = filterCourse;
     if (filterSection) filterParams.sectionId = filterSection;
     if (filterModule) filterParams.courseModuleId = filterModule;
-    
+
     assignmentsApi
       .list(filterParams)
       .then((res) => setAssignments(res.data))
@@ -167,7 +167,7 @@ export default function AdminAssignmentsPage() {
       const courseObj = courses.find((c) => c.id === filterCourse);
       const sectionsList = courseObj?.sections || [];
       setFilteredSections(
-        sectionsList.filter((s) => sectionIds.includes(s.id))
+        sectionsList.filter((s) => sectionIds.includes(s.id)),
       );
       // Fetch modules for the selected course
       courseModulesApi
@@ -387,9 +387,9 @@ export default function AdminAssignmentsPage() {
             <CustomDropdown
               options={[
                 { id: "", name: "All Semesters" },
-                ...filteredSemesters.map((s) => ({ 
-                  id: s.id, 
-                  name: `${s.name} (${s.year})` 
+                ...filteredSemesters.map((s) => ({
+                  id: s.id,
+                  name: `${s.name} (${s.year})`,
                 })),
               ]}
               value={filterSemester}
