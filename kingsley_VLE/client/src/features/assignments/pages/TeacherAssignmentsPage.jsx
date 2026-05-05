@@ -68,6 +68,10 @@ export default function TeacherAssignmentsPage() {
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Delete confirmation modal
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null); // { assignment, confirmText: "" }
+  const [deleteConfirmError, setDeleteConfirmError] = useState(null);
+
   const load = useCallback(() => {
     setLoading(true);
     const filterParams = {};
@@ -318,17 +322,26 @@ export default function TeacherAssignmentsPage() {
   };
 
   const handleDelete = async (assignment) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete "${assignment.title}"? This action cannot be undone.`,
-      )
-    ) {
+    // Show confirmation modal
+    setDeleteConfirmModal({ assignment, confirmText: "" });
+    setDeleteConfirmError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmModal) return;
+    
+    // Validate confirmation text
+    if (deleteConfirmModal.confirmText !== "confirm") {
+      setDeleteConfirmError('Please type "confirm" to verify deletion');
       return;
     }
+
+    const { assignment } = deleteConfirmModal;
     setDeletingId(assignment.id);
     try {
       await assignmentsApi.delete(assignment.id);
       load();
+      setDeleteConfirmModal(null);
     } catch (e) {
       alert(e.response?.data?.error || "Failed to delete assignment");
     } finally {
@@ -773,6 +786,66 @@ export default function TeacherAssignmentsPage() {
           assignment={viewSubmissions}
           onClose={() => setViewSubmissions(null)}
         />
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Delete Assignment
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to delete <strong>"{deleteConfirmModal.assignment.title}"</strong>?
+            </p>
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mb-4">
+              ⚠️ This action cannot be undone. All student submissions and uploaded files will be permanently deleted.
+            </p>
+            
+            <label className="text-xs font-semibold text-gray-600 block mb-2">
+              To confirm, type <code className="bg-gray-100 px-1 py-0.5 rounded">confirm</code>:
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmModal.confirmText}
+              onChange={(e) => {
+                setDeleteConfirmModal({ ...deleteConfirmModal, confirmText: e.target.value });
+                setDeleteConfirmError(null);
+              }}
+              placeholder="Type 'confirm' to verify"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+            />
+            {deleteConfirmError && (
+              <p className="text-xs text-red-600 mb-4">{deleteConfirmError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setDeleteConfirmModal(null);
+                  setDeleteConfirmError(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deletingId === deleteConfirmModal.assignment.id}
+                className="flex-1 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingId === deleteConfirmModal.assignment.id ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete Assignment"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -41,6 +41,20 @@ enum SubmissionStatus {
   missing
 }
 
+enum IqaStatus {
+  PENDING
+  IN_REVIEW
+  IQA_PASSED
+  IQA_FAILED
+}
+
+enum EqaStatus {
+  NOT_APPLICABLE
+  PENDING_STUDENT_CONFIRMATION
+  CONFIRMED
+  LOCKED
+}
+
 enum EventType {
   institution
   course
@@ -382,7 +396,7 @@ model File {
   // Relations
   assignmentFiles AssignmentFile[]
   classMaterial ClassMaterial?
-  assignmentSubmissions AssignmentSubmission[]
+  submissionAttempts SubmissionAttempt[]
 
   @@map("files")
 }
@@ -415,6 +429,8 @@ model Assignment {
   totalMarks Int? @map("total_marks")
 
   passingMarks Int? @map("passing_marks")
+
+  requiredWordCount Int? @map("required_word_count")
 
   allowLateSubmission Boolean @default(false) @map("allow_late_submission")
 
@@ -467,40 +483,69 @@ model AssignmentSubmission {
   studentId String
   student StudentProfile @relation(fields: [studentId], references: [id])
 
-  submissionFileId String?
-  submissionFile File? @relation(fields: [submissionFileId], references: [id])
+  iqaStatus IqaStatus @default(PENDING) @map("iqa_status")
 
-  submissionFileIds String? @map("submission_file_ids") // JSON array of file IDs: ["id1", "id2"]
+  eqaStatus EqaStatus @default(NOT_APPLICABLE) @map("eqa_status")
 
-  submissionText String? @map("submission_text")
-
-  submissionFileUrl String? @map("submission_file_url")
-
-  status SubmissionStatus @default(submitted)
-
-  attemptNumber Int @default(1) @map("attempt_number")
-
-  submittedAt DateTime @default(now()) @map("submitted_at")
-
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  deletedAt DateTime? @map("deleted_at")
+  // Points to the attempt the teacher marked as qualified
+  finalQualifiedAttemptId String? @map("final_qualified_attempt_id")
 
   marks Int?
 
   gradeLetter String? @db.VarChar(10) @map("grade_letter")
-
-  feedback String?
 
   markedBy String?
   markedByTeacher TeacherProfile? @relation(fields: [markedBy], references: [id])
 
   markedAt DateTime?
 
+  deletedAt DateTime? @map("deleted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  attempts SubmissionAttempt[]
+
   @@index([assignmentId, studentId])
-  @@index([assignmentId, status])
 
   @@map("assignment_submissions")
+}
+
+model SubmissionAttempt {
+  id String @id @default(uuid())
+
+  submissionId String @map("submission_id")
+  submission AssignmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  attemptNumber Int @map("attempt_number")
+
+  submissionText String? @map("submission_text")
+
+  submissionFileId String? @map("submission_file_id")
+  submissionFile File? @relation(fields: [submissionFileId], references: [id])
+
+  submissionFileIds String? @map("submission_file_ids") // JSON array of file IDs
+
+  submissionFileUrl String? @map("submission_file_url")
+
+  status SubmissionStatus @default(submitted)
+
+  wordCount Int? @map("word_count")
+
+  feedback String?
+
+  isQualifiedForEqa Boolean @default(false) @map("is_qualified_for_eqa")
+
+  // Student confirms this attempt for EQA — once true, submission is locked
+  studentSelect Boolean @default(false) @map("student_select")
+
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([submissionId])
+
+  @@map("submission_attempts")
 }
 
 model AssignmentRubric {

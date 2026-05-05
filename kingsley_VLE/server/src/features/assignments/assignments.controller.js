@@ -1,4 +1,6 @@
 import prisma from "../../config/prisma.js";
+import mammoth from "mammoth";
+import { generateSecureSASUrl, deleteFromAzure } from "../../config/azure.storage.js";
 
 const assignmentBaseInclude = {
   course: true,
@@ -33,6 +35,7 @@ const assignmentBaseInclude = {
   rubrics: true,
 };
 
+// Include for a full submission (parent + attempts)
 const submissionInclude = {
   student: {
     select: {
@@ -47,7 +50,6 @@ const submissionInclude = {
       },
     },
   },
-  submissionFile: true,
   markedByTeacher: {
     select: {
       id: true,
@@ -55,41 +57,115 @@ const submissionInclude = {
       fullName: true,
     },
   },
+  attempts: {
+    where: { deletedAt: null },
+    orderBy: { attemptNumber: "asc" },
+    select: {
+      id: true,
+      submissionId: true,
+      attemptNumber: true,
+      submissionText: true,
+      submissionFileId: true,
+      submissionFileIds: true,
+      submissionFileUrl: true,
+      status: true,
+      wordCount: true,
+      feedback: true,
+      isQualifiedForEqa: true,
+      studentSelect: true,
+      submittedAt: true,
+      updatedAt: true,
+      submissionFile: true,
+    },
+  },
 };
 
-// Helper function to populate submissionFiles array from submissionFileIds JSON
-const populateSubmissionFiles = async (submissions, prisma) => {
-  if (!Array.isArray(submissions)) {
-    submissions = [submissions];
-  }
-
-  for (const submission of submissions) {
-    if (submission.submissionFileIds) {
+// Populate submissionFiles array on each attempt from JSON submissionFileIds
+const populateAttemptFiles = async (attempts) => {
+  for (const attempt of attempts) {
+    if (attempt.submissionFileIds) {
       try {
-        const fileIds = JSON.parse(submission.submissionFileIds);
+        const fileIds = JSON.parse(attempt.submissionFileIds);
+        console.log(`[POPULATE] Attempt ${attempt.id}: fileIds=${JSON.stringify(fileIds)}`);
         if (fileIds?.length > 0) {
-          const files = await prisma.file.findMany({
+          attempt.submissionFiles = await prisma.file.findMany({
             where: { id: { in: fileIds } },
           });
-          submission.submissionFiles = files;
+          console.log(`[POPULATE] Fetched ${attempt.submissionFiles.length} files:`, attempt.submissionFiles.map(f => ({ id: f.id, name: f.name, fileUrl: f.fileUrl?.substring(0, 100) })));
         } else {
-          submission.submissionFiles = [];
+          attempt.submissionFiles = [];
         }
-      } catch (err) {
-        console.error("Error parsing submissionFileIds:", err);
-        submission.submissionFiles = [];
+      } catch (e) {
+        console.error(`[POPULATE] Error parsing fileIds:`, e.message);
+        attempt.submissionFiles = [];
       }
     } else {
-      submission.submissionFiles = submission.submissionFile
-        ? [submission.submissionFile]
+      attempt.submissionFiles = attempt.submissionFile
+        ? [attempt.submissionFile]
         : [];
     }
   }
-
-  return Array.isArray(submissions) ? submissions : submissions;
 };
 
 const parseDate = (value) => (value ? new Date(value) : null);
+
+/**
+ * Extract word count from a DOCX file using mammoth.
+ * Requires file object with slug (blob name) and fileName.
+ * Returns null if extraction fails or file is not DOCX.
+ */
+const extractDocxWordCount = async (fileSlug, fileName) => {
+  try {
+    console.log(`[DOCX] Processing: ${fileName}`);
+    
+    if (!fileName || !fileName.toLowerCase().endsWith(".docx")) {
+      console.log(`[DOCX] Skipping non-DOCX file: ${fileName}`);
+      return null;
+    }
+    
+    // Generate SAS URL for secure Azure Blob access
+    console.log(`[DOCX] Generating SAS URL for: ${fileName}`);
+    const sasUrl = await generateSecureSASUrl(fileSlug);
+    
+    if (!sasUrl) {
+      console.error(`[DOCX] Failed to generate SAS URL for: ${fileName}`);
+      return null;
+    }
+    
+    console.log(`[DOCX] Fetching from Azure with SAS: ${fileName}`);
+    const response = await fetch(sasUrl);
+    
+    if (!response.ok) {
+      console.warn(`[DOCX] Fetch failed with status ${response.status}: ${fileName}`);
+      return null;
+    }
+    
+    console.log(`[DOCX] Fetch success, extracting text...`);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    console.log(`[DOCX] Buffer size: ${buffer.length} bytes`);
+    const result = await mammoth.extractRawText({ buffer });
+    const text = result?.value ?? "";
+    
+    console.log(`[DOCX] Extracted text length: ${text.length}`);
+    if (text.length > 0) {
+      console.log(`[DOCX] First 200 chars: "${text.substring(0, 200)}"`);
+    } else {
+      console.log(`[DOCX] WARNING: No text extracted from ${fileName}`);
+    }
+    
+    const words = text.match(/\b[\w]+(?:['-][\w]+)*\b/g) || []
+    const wordCount = words.length
+    
+    console.log(`[DOCX] Word count: ${wordCount} for ${fileName}`);
+    return wordCount > 0 ? wordCount : null;
+  } catch (err) {
+    console.error(`[DOCX] ERROR extracting from ${fileName}:`, err.message);
+    console.error(`[DOCX] Stack:`, err.stack);
+    return null;
+  }
+};
 
 const normalizeRubrics = (rubrics) => {
   if (!Array.isArray(rubrics)) return [];
@@ -166,6 +242,10 @@ const buildAssignmentPayload = ({ body, teacherId, keepStatus = true }) => {
     passingMarks:
       body.passingMarks !== undefined && body.passingMarks !== null
         ? Number(body.passingMarks)
+        : null,
+    requiredWordCount:
+      body.requiredWordCount !== undefined && body.requiredWordCount !== null
+        ? Number(body.requiredWordCount)
         : null,
     allowLateSubmission: Boolean(body.allowLateSubmission),
     targetType: body.targetType || (body.sectionId ? "section" : "individual"),
@@ -638,7 +718,7 @@ export const listAssignments = async (req, res) => {
                   },
                   deletedAt: null,
                 },
-                orderBy: { attemptNumber: "desc" },
+                orderBy: { createdAt: "desc" },
                 take: 1,
                 include: submissionInclude,
               }
@@ -647,23 +727,20 @@ export const listAssignments = async (req, res) => {
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     });
 
-    // Filter out soft-deleted assignments (until Prisma client is regenerated)
+    // Filter out soft-deleted assignments
     const activeAssignments = assignments.filter((a) => !a.deletedAt);
 
-    // Populate submission files for all submissions in assignments
+    // Populate attempt files
     for (const assignment of activeAssignments) {
-      if (
-        Array.isArray(assignment.submissions) &&
-        assignment.submissions.length > 0
-      ) {
-        await populateSubmissionFiles(assignment.submissions, prisma);
+      if (Array.isArray(assignment.submissions)) {
+        for (const sub of assignment.submissions) {
+          if (Array.isArray(sub.attempts)) {
+            await populateAttemptFiles(sub.attempts);
+          }
+        }
       }
     }
 
-    // console.log(
-    //   "[listAssignments] Found assignments from DB:",
-    //   activeAssignments.length,
-    // );
     return res.json(activeAssignments);
   } catch (err) {
     console.error("List assignments error:", err);
@@ -729,7 +806,7 @@ export const getAssignmentById = async (req, res) => {
               studentId: studentProfile.id,
               deletedAt: null,
             },
-            orderBy: { attemptNumber: "desc" },
+            orderBy: { createdAt: "desc" },
             include: submissionInclude,
           },
         },
@@ -748,7 +825,7 @@ export const getAssignmentById = async (req, res) => {
           ...assignmentBaseInclude,
           submissions: {
             where: { deletedAt: null },
-            orderBy: [{ submittedAt: "desc" }, { attemptNumber: "desc" }],
+            orderBy: { createdAt: "desc" },
             include: submissionInclude,
           },
         },
@@ -760,7 +837,7 @@ export const getAssignmentById = async (req, res) => {
           ...assignmentBaseInclude,
           submissions: {
             where: { deletedAt: null },
-            orderBy: [{ submittedAt: "desc" }, { attemptNumber: "desc" }],
+            orderBy: { createdAt: "desc" },
             include: submissionInclude,
           },
         },
@@ -769,6 +846,15 @@ export const getAssignmentById = async (req, res) => {
 
     if (!assignment) {
       return res.status(404).json({ error: "Assignment not found" });
+    }
+
+    // Populate attempt files on all submissions
+    if (Array.isArray(assignment.submissions)) {
+      for (const sub of assignment.submissions) {
+        if (Array.isArray(sub.attempts)) {
+          await populateAttemptFiles(sub.attempts);
+        }
+      }
     }
 
     return res.json(assignment);
@@ -919,6 +1005,12 @@ export const updateAssignment = async (req, res) => {
             ? null
             : Number(req.body.passingMarks)
           : existing.passingMarks,
+      requiredWordCount:
+        req.body.requiredWordCount !== undefined
+          ? req.body.requiredWordCount === null
+            ? null
+            : Number(req.body.requiredWordCount)
+          : existing.requiredWordCount,
       allowLateSubmission:
         req.body.allowLateSubmission !== undefined
           ? Boolean(req.body.allowLateSubmission)
@@ -1121,6 +1213,17 @@ export const deleteAssignment = async (req, res) => {
   try {
     const existing = await prisma.assignment.findUnique({
       where: { id: req.params.id },
+      include: {
+        submissions: {
+          where: { deletedAt: null },
+          include: {
+            attempts: {
+              where: { deletedAt: null },
+              select: { id: true, submissionFileIds: true },
+            },
+          },
+        },
+      },
     });
     if (!existing) {
       return res.status(404).json({ error: "Assignment not found" });
@@ -1132,6 +1235,31 @@ export const deleteAssignment = async (req, res) => {
         return res
           .status(403)
           .json({ error: "You can only delete your own assignments" });
+      }
+    }
+
+    // Delete all submission attempt files from Azure
+    console.log(`[DELETE_ASSIGNMENT] Cleaning up files for assignment ${req.params.id}`);
+    for (const submission of existing.submissions) {
+      for (const attempt of submission.attempts) {
+        if (attempt.submissionFileIds) {
+          try {
+            const fileIds = JSON.parse(attempt.submissionFileIds);
+            if (Array.isArray(fileIds) && fileIds.length > 0) {
+              // Get file slugs and delete from Azure
+              const files = await prisma.file.findMany({
+                where: { id: { in: fileIds } },
+                select: { id: true, slug: true, name: true },
+              });
+              for (const file of files) {
+                console.log(`[DELETE_ASSIGNMENT] Deleting file from Azure: ${file.name} (slug: ${file.slug})`);
+                await deleteFromAzure(file.slug);
+              }
+            }
+          } catch (e) {
+            console.error(`[DELETE_ASSIGNMENT] Error processing files for attempt ${attempt.id}:`, e.message);
+          }
+        }
       }
     }
 
@@ -1149,9 +1277,81 @@ export const deleteAssignment = async (req, res) => {
       },
     });
 
+    console.log(`[DELETE_ASSIGNMENT] Assignment ${req.params.id} deleted successfully with all associated files`);
     return res.json({ message: "Assignment deleted successfully" });
   } catch (err) {
     console.error("Delete assignment error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+/**
+ * Delete a submission attempt (student can only delete attempts without feedback)
+ */
+export const deleteSubmissionAttempt = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+
+    const attempt = await prisma.submissionAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        submission: {
+          include: {
+            student: true,
+            assignment: true,
+          },
+        },
+      },
+    });
+
+    if (!attempt) {
+      return res.status(404).json({ error: "Attempt not found" });
+    }
+
+    // Students can only delete attempts without feedback
+    if (req.user.role === "student") {
+      const studentProfile = await getStudentProfileByUserId(req.user.id);
+      if (!studentProfile || attempt.submission.student.id !== studentProfile.id) {
+        return res.status(403).json({ error: "You can only delete your own attempts" });
+      }
+
+      if (attempt.feedback) {
+        return res.status(400).json({
+          error: "Cannot delete attempts with teacher feedback. Contact your instructor if you need to remove this attempt.",
+        });
+      }
+    }
+
+    // Delete files from Azure if any exist
+    console.log(`[DELETE_ATTEMPT] Deleting attempt ${attemptId} with files`);
+    if (attempt.submissionFileIds) {
+      try {
+        const fileIds = JSON.parse(attempt.submissionFileIds);
+        if (Array.isArray(fileIds) && fileIds.length > 0) {
+          const files = await prisma.file.findMany({
+            where: { id: { in: fileIds } },
+            select: { id: true, slug: true, name: true },
+          });
+          for (const file of files) {
+            console.log(`[DELETE_ATTEMPT] Deleting file from Azure: ${file.name}`);
+            await deleteFromAzure(file.slug);
+          }
+        }
+      } catch (e) {
+        console.error(`[DELETE_ATTEMPT] Error deleting files:`, e.message);
+      }
+    }
+
+    // Soft delete the attempt
+    await prisma.submissionAttempt.update({
+      where: { id: attemptId },
+      data: { deletedAt: new Date() },
+    });
+
+    console.log(`[DELETE_ATTEMPT] Attempt ${attemptId} deleted successfully`);
+    return res.json({ message: "Attempt deleted successfully" });
+  } catch (err) {
+    console.error("Delete submission attempt error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 };
@@ -1203,12 +1403,9 @@ export const submitAssignment = async (req, res) => {
     submissionFileUrl,
   } = req.body;
 
-  // NEW REQUIREMENT: At least 1 file must be provided during submission
-  // File can be via submissionFileId (single), submissionFileIds (multiple), or submissionFileUrl
   if (!submissionFileId && !submissionFileIds?.length && !submissionFileUrl) {
     return res.status(400).json({
-      error:
-        "At least 1 file must be provided for submission (file, URL, or notes with file)",
+      error: "At least 1 file must be provided for submission",
     });
   }
 
@@ -1221,9 +1418,7 @@ export const submitAssignment = async (req, res) => {
     const { courseIds, sectionIds, semesterIds } =
       await getStudentEnrollmentScope(studentProfile.id);
     if (!courseIds.length) {
-      return res
-        .status(403)
-        .json({ error: "You are not enrolled in any course" });
+      return res.status(403).json({ error: "You are not enrolled in any course" });
     }
 
     const assignment = await prisma.assignment.findFirst({
@@ -1240,92 +1435,120 @@ export const submitAssignment = async (req, res) => {
     }
 
     if (assignment.status !== "published") {
-      return res
-        .status(400)
-        .json({ error: "Only published assignments can receive submissions" });
+      return res.status(400).json({ error: "Only published assignments can receive submissions" });
     }
 
     const now = new Date();
     const isLate = Boolean(assignment.dueDate && now > assignment.dueDate);
     if (isLate && !assignment.allowLateSubmission) {
-      return res
-        .status(400)
-        .json({ error: "Late submission is not allowed for this assignment" });
+      return res.status(400).json({ error: "Late submission is not allowed for this assignment" });
     }
 
-    // Validate single file if provided
-    if (submissionFileId) {
-      const file = await prisma.file.findUnique({
-        where: { id: submissionFileId },
+    // Find or create the parent submission record
+    let parentSubmission = await prisma.assignmentSubmission.findFirst({
+      where: {
+        assignmentId: assignment.id,
+        studentId: studentProfile.id,
+        deletedAt: null,
+      },
+    });
+
+    // If locked (student confirmed EQA), block new attempts
+    if (parentSubmission && parentSubmission.eqaStatus === "LOCKED") {
+      return res.status(400).json({
+        error: "Submission is locked after EQA confirmation. No further attempts allowed.",
       });
-      if (!file) {
-        return res.status(400).json({ error: "submissionFileId is invalid" });
-      }
     }
 
-    // Validate multiple files if provided
+    if (!parentSubmission) {
+      parentSubmission = await prisma.assignmentSubmission.create({
+        data: {
+          assignmentId: assignment.id,
+          studentId: studentProfile.id,
+          iqaStatus: "PENDING",
+          eqaStatus: "NOT_APPLICABLE",
+        },
+      });
+    }
+
+    // Validate single file
+    if (submissionFileId) {
+      const file = await prisma.file.findUnique({ where: { id: submissionFileId } });
+      if (!file) return res.status(400).json({ error: "submissionFileId is invalid" });
+    }
+
+    // Validate multiple files
     let fileIdsToStore = [];
     if (submissionFileIds?.length > 0) {
-      // Validate: at least 1 file must be provided
-      if (!submissionFileIds || submissionFileIds.length === 0) {
-        return res.status(400).json({
-          error: "At least 1 file must be provided for submission",
-        });
-      }
-
-      // Validate: maximum 5 files per submission
       if (submissionFileIds.length > 5) {
-        return res.status(400).json({
-          error: "Maximum 5 files allowed per submission",
-        });
+        return res.status(400).json({ error: "Maximum 5 files allowed per submission" });
       }
-
       const files = await prisma.file.findMany({
         where: { id: { in: submissionFileIds } },
         select: { id: true },
       });
       if (files.length !== submissionFileIds.length) {
-        return res
-          .status(400)
-          .json({ error: "One or more submissionFileIds are invalid" });
+        return res.status(400).json({ error: "One or more submissionFileIds are invalid" });
       }
       fileIdsToStore = submissionFileIds;
     }
 
-    const latestAttempt = await prisma.assignmentSubmission.findFirst({
-      where: {
-        assignmentId: assignment.id,
-        studentId: studentProfile.id,
-      },
-      orderBy: { attemptNumber: "desc" },
-      select: { attemptNumber: true },
+    // Count existing attempts
+    const attemptCount = await prisma.submissionAttempt.count({
+      where: { submissionId: parentSubmission.id, deletedAt: null },
     });
 
-    const submission = await prisma.assignmentSubmission.create({
+    const attempt = await prisma.submissionAttempt.create({
       data: {
-        assignmentId: assignment.id,
-        studentId: studentProfile.id,
+        submissionId: parentSubmission.id,
+        attemptNumber: attemptCount + 1,
         submissionText: submissionText || null,
         submissionFileId: submissionFileId || null,
-        submissionFileIds:
-          fileIdsToStore.length > 0 ? JSON.stringify(fileIdsToStore) : null,
+        submissionFileIds: fileIdsToStore.length > 0 ? JSON.stringify(fileIdsToStore) : null,
         submissionFileUrl: submissionFileUrl || null,
         status: isLate ? "late" : "submitted",
-        attemptNumber: (latestAttempt?.attemptNumber || 0) + 1,
+        isQualifiedForEqa: false,
+        studentSelect: false,
+        wordCount: null,
       },
-      include: submissionInclude,
+      include: { submissionFile: true },
     });
 
-    // Fetch all related files if submissionFileIds exist
-    if (submission.submissionFileIds) {
-      const fileIds = JSON.parse(submission.submissionFileIds);
-      const files = await prisma.file.findMany({
-        where: { id: { in: fileIds } },
-      });
-      submission.submissionFiles = files;
+    // Populate files on the attempt
+    await populateAttemptFiles([attempt]);
+
+    // ── Server-side word count for DOCX files ────────────────────────────────
+    console.log(`[SUBMIT] Attempt has ${attempt.submissionFiles?.length || 0} files`);
+    if (attempt.submissionFiles?.length > 0) {
+      console.log(`[SUBMIT] Files:`, attempt.submissionFiles.map(f => ({ name: f.name, slug: f.slug })));
+      const docxFile = attempt.submissionFiles.find((f) =>
+        f.name?.toLowerCase().endsWith(".docx")
+      );
+      if (docxFile) {
+        console.log(`[SUBMIT] Found DOCX file: ${docxFile.name}`);
+        const wordCount = await extractDocxWordCount(docxFile.slug, docxFile.name);
+        console.log(`[SUBMIT] Extraction result: ${wordCount}`);
+        if (wordCount !== null) {
+          console.log(`[SUBMIT] Updating attempt ${attempt.id} with wordCount=${wordCount}`);
+          await prisma.submissionAttempt.update({
+            where: { id: attempt.id },
+            data: { wordCount },
+          });
+          attempt.wordCount = wordCount;
+        }
+      } else {
+        console.log(`[SUBMIT] No DOCX files found in submission`);
+      }
     }
 
-    return res.status(201).json(submission);
+    // Return the full parent submission with all attempts
+    const fullSubmission = await prisma.assignmentSubmission.findUnique({
+      where: { id: parentSubmission.id },
+      include: submissionInclude,
+    });
+    await populateAttemptFiles(fullSubmission.attempts);
+
+    return res.status(201).json(fullSubmission);
   } catch (err) {
     console.error("Submit assignment error:", err);
     return res.status(500).json({ error: err.message || "Server error" });
@@ -1365,26 +1588,15 @@ export const listAssignmentSubmissions = async (req, res) => {
       return res.status(404).json({ error: "Assignment not found" });
     }
 
-    // Students can only view their own submissions for this assignment
+    let where = { assignmentId: req.params.id, deletedAt: null };
+
     if (req.user.role === "student") {
       const studentProfile = await getStudentProfileByUserId(req.user.id);
       if (!studentProfile) {
         return res.status(400).json({ error: "Student profile not found" });
       }
-      const submissions = await prisma.assignmentSubmission.findMany({
-        where: {
-          assignmentId: req.params.id,
-          studentId: studentProfile.id,
-          deletedAt: null,
-        },
-        include: submissionInclude,
-        orderBy: [{ attemptNumber: "desc" }],
-      });
-      const withFiles = await populateSubmissionFiles(submissions, prisma);
-      return res.json(withFiles);
-    }
-
-    if (req.user.role === "teacher") {
+      where.studentId = studentProfile.id;
+    } else if (req.user.role === "teacher") {
       const teacherProfile = await getTeacherProfileByUserId(req.user.id);
       if (!teacherProfile || teacherProfile.id !== assignment.teacherId) {
         return res.status(403).json({
@@ -1394,16 +1606,16 @@ export const listAssignmentSubmissions = async (req, res) => {
     }
 
     const submissions = await prisma.assignmentSubmission.findMany({
-      where: {
-        assignmentId: req.params.id,
-        deletedAt: null,
-      },
+      where,
       include: submissionInclude,
-      orderBy: [{ submittedAt: "desc" }, { attemptNumber: "desc" }],
+      orderBy: { createdAt: "desc" },
     });
 
-    const withFiles = await populateSubmissionFiles(submissions, prisma);
-    return res.json(withFiles);
+    for (const sub of submissions) {
+      await populateAttemptFiles(sub.attempts);
+    }
+
+    return res.json(submissions);
   } catch (err) {
     console.error("List assignment submissions error:", err);
     return res.status(500).json({ error: err.message || "Server error" });
@@ -1450,119 +1662,90 @@ export const listAssignmentSubmissions = async (req, res) => {
 export const updateSubmission = async (req, res) => {
   const { submissionText, submissionFileId, submissionFileIds } = req.body;
   try {
-    const submission = await prisma.assignmentSubmission.findUnique({
+    const attempt = await prisma.submissionAttempt.findUnique({
       where: { id: req.params.submissionId },
       include: {
-        assignment: true,
-        student: true,
+        submission: {
+          include: { assignment: true, student: true },
+        },
       },
     });
 
-    if (!submission) {
-      return res.status(404).json({ error: "Submission not found" });
+    if (!attempt) {
+      return res.status(404).json({ error: "Submission attempt not found" });
     }
 
-    // Only the student who submitted can edit (if not graded)
+    const parentSubmission = attempt.submission;
+
+    // Block editing if submission is locked
+    if (parentSubmission.eqaStatus === "LOCKED") {
+      return res.status(400).json({ error: "Submission is locked after EQA confirmation" });
+    }
+
     const studentProfile = await getStudentProfileByUserId(req.user.id);
-    if (!studentProfile || studentProfile.id !== submission.student.id) {
-      return res
-        .status(403)
-        .json({ error: "You can only edit your own submissions" });
+    if (!studentProfile || studentProfile.id !== parentSubmission.student.id) {
+      return res.status(403).json({ error: "You can only edit your own submissions" });
     }
 
-    // Check if submission is already graded
-    if (submission.marks !== null && submission.marks !== undefined) {
-      return res
-        .status(400)
-        .json({ error: "Cannot edit a submission that has been graded" });
+    // Block if attempt is already qualified
+    if (attempt.isQualifiedForEqa) {
+      return res.status(400).json({ error: "Cannot edit an attempt that has been qualified for EQA" });
     }
 
-    // Check if assignment is overdue
+    // Block if assignment overdue
     const now = new Date();
     if (
-      submission.assignment.dueDate &&
-      now > new Date(submission.assignment.dueDate)
+      parentSubmission.assignment.dueDate &&
+      now > new Date(parentSubmission.assignment.dueDate)
     ) {
-      return res
-        .status(400)
-        .json({ error: "Cannot edit submission after due date" });
+      return res.status(400).json({ error: "Cannot edit submission after due date" });
     }
 
-    // Validate single file if provided
     if (submissionFileId) {
-      const file = await prisma.file.findUnique({
-        where: { id: submissionFileId },
-      });
-      if (!file) {
-        return res.status(400).json({ error: "submissionFileId is invalid" });
-      }
+      const file = await prisma.file.findUnique({ where: { id: submissionFileId } });
+      if (!file) return res.status(400).json({ error: "submissionFileId is invalid" });
     }
 
-    // Validate multiple files if provided
-    let fileIdsToStore = undefined; // Only update if explicitly provided
+    let fileIdsToStore = undefined;
     if (submissionFileIds !== undefined) {
-      fileIdsToStore = null; // Default to null (can be cleared)
+      fileIdsToStore = null;
       if (submissionFileIds?.length > 0) {
-        // Validate: maximum 5 files per submission
         if (submissionFileIds.length > 5) {
-          return res.status(400).json({
-            error: "Maximum 5 files allowed per submission",
-          });
+          return res.status(400).json({ error: "Maximum 5 files allowed per submission" });
         }
-
         const files = await prisma.file.findMany({
           where: { id: { in: submissionFileIds } },
           select: { id: true },
         });
         if (files.length !== submissionFileIds.length) {
-          return res
-            .status(400)
-            .json({ error: "One or more submissionFileIds are invalid" });
+          return res.status(400).json({ error: "One or more submissionFileIds are invalid" });
         }
         fileIdsToStore = JSON.stringify(submissionFileIds);
       } else {
-        // NEW REQUIREMENT: Trying to clear all files
-        // Check if there are existing files
-        const existingFileIds = submission.submissionFileIds
-          ? JSON.parse(submission.submissionFileIds)
+        const existingIds = attempt.submissionFileIds
+          ? JSON.parse(attempt.submissionFileIds)
           : [];
-
-        if (existingFileIds.length > 0) {
-          // Can't delete all files - at least 1 must remain
+        if (existingIds.length > 0) {
           return res.status(400).json({
-            error:
-              "At least 1 file must remain in the submission. Cannot delete all files.",
+            error: "At least 1 file must remain in the submission. Cannot delete all files.",
           });
         }
       }
-      // If empty or zero length, fileIdsToStore stays null (explicitly clear files)
     }
 
-    // Update submission - only include fields that were provided
     const updateData = {};
-    if (submissionText !== undefined)
-      updateData.submissionText = submissionText;
-    if (submissionFileId !== undefined)
-      updateData.submissionFileId = submissionFileId;
-    if (fileIdsToStore !== undefined)
-      updateData.submissionFileIds = fileIdsToStore;
+    if (submissionText !== undefined) updateData.submissionText = submissionText;
+    if (submissionFileId !== undefined) updateData.submissionFileId = submissionFileId;
+    if (fileIdsToStore !== undefined) updateData.submissionFileIds = fileIdsToStore;
 
-    const updatedSubmission = await prisma.assignmentSubmission.update({
+    const updated = await prisma.submissionAttempt.update({
       where: { id: req.params.submissionId },
       data: updateData,
-      include: submissionInclude,
+      include: { submissionFile: true },
     });
 
-    // Fetch all related files if submissionFileIds exist
-    if (updatedSubmission.submissionFileIds) {
-      const fileIds = JSON.parse(updatedSubmission.submissionFileIds);
-      const files = await prisma.file.findMany({
-        where: { id: { in: fileIds } },
-      });
-      updatedSubmission.submissionFiles = files;
-    }
-
-    return res.json(updatedSubmission);
+    await populateAttemptFiles([updated]);
+    return res.json(updated);
   } catch (err) {
     console.error("Update submission error:", err);
     return res.status(500).json({ error: "Server error" });
@@ -1608,13 +1791,11 @@ export const updateSubmission = async (req, res) => {
  *               $ref: '#/components/schemas/Submission'
  */
 export const gradeSubmission = async (req, res) => {
-  const { marks, gradeLetter, feedback, markedByTeacherId } = req.body;
+  const { marks, gradeLetter, feedback, markedByTeacherId, attemptId } = req.body;
   try {
     const submission = await prisma.assignmentSubmission.findUnique({
       where: { id: req.params.submissionId },
-      include: {
-        assignment: true,
-      },
+      include: { assignment: true },
     });
 
     if (!submission) {
@@ -1625,10 +1806,7 @@ export const gradeSubmission = async (req, res) => {
 
     if (req.user.role === "teacher") {
       const teacherProfile = await getTeacherProfileByUserId(req.user.id);
-      if (
-        !teacherProfile ||
-        teacherProfile.id !== submission.assignment.teacherId
-      ) {
+      if (!teacherProfile || teacherProfile.id !== submission.assignment.teacherId) {
         return res.status(403).json({
           error: "You can only grade submissions for your own assignments",
         });
@@ -1661,27 +1839,208 @@ export const gradeSubmission = async (req, res) => {
       }
     }
 
+    // If feedback is provided for a specific attempt, update that attempt too
+    if (attemptId && feedback !== undefined) {
+      await prisma.submissionAttempt.update({
+        where: { id: attemptId },
+        data: { feedback },
+      });
+    }
+
     const graded = await prisma.assignmentSubmission.update({
       where: { id: req.params.submissionId },
       data: {
         marks: marks !== undefined ? Number(marks) : submission.marks,
-        gradeLetter:
-          gradeLetter !== undefined ? gradeLetter : submission.gradeLetter,
-        feedback: feedback !== undefined ? feedback : submission.feedback,
+        gradeLetter: gradeLetter !== undefined ? gradeLetter : submission.gradeLetter,
         markedBy: graderTeacherId,
         markedAt: new Date(),
       },
       include: {
         ...submissionInclude,
-        assignment: {
-          include: assignmentBaseInclude,
-        },
+        assignment: { include: assignmentBaseInclude },
       },
     });
 
+    await populateAttemptFiles(graded.attempts);
     return res.json(graded);
   } catch (err) {
     console.error("Grade submission error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ============================================================================
+// IQA / EQA WORKFLOW ENDPOINTS
+// ============================================================================
+
+/**
+ * Teacher: provide feedback on a specific attempt (IQA round).
+ * PATCH /api/assignments/attempts/:attemptId/feedback
+ * Body: { feedback: string, iqaStatus?: "PENDING"|"IN_REVIEW"|"IQA_PASSED"|"IQA_FAILED" }
+ */
+export const reviewAttempt = async (req, res) => {
+  const { feedback, iqaStatus } = req.body;
+  try {
+    const attempt = await prisma.submissionAttempt.findUnique({
+      where: { id: req.params.attemptId },
+      include: {
+        submission: { include: { assignment: true } },
+      },
+    });
+
+    if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+
+    const assignment = attempt.submission.assignment;
+
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
+      if (!teacherProfile || teacherProfile.id !== assignment.teacherId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+    }
+
+    const updateData = {};
+    if (feedback !== undefined) updateData.feedback = feedback;
+
+    const updatedAttempt = await prisma.submissionAttempt.update({
+      where: { id: req.params.attemptId },
+      data: updateData,
+      include: { submissionFile: true },
+    });
+
+    // Update parent IQA status if requested
+    if (iqaStatus) {
+      const validIqaStatuses = ["PENDING", "IN_REVIEW", "IQA_PASSED", "IQA_FAILED"];
+      if (!validIqaStatuses.includes(iqaStatus)) {
+        return res.status(400).json({ error: "Invalid iqaStatus" });
+      }
+      await prisma.assignmentSubmission.update({
+        where: { id: attempt.submissionId },
+        data: { iqaStatus },
+      });
+    }
+
+    await populateAttemptFiles([updatedAttempt]);
+
+    // Return full parent submission
+    const fullSubmission = await prisma.assignmentSubmission.findUnique({
+      where: { id: attempt.submissionId },
+      include: submissionInclude,
+    });
+    await populateAttemptFiles(fullSubmission.attempts);
+    return res.json(fullSubmission);
+  } catch (err) {
+    console.error("Review attempt error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+/**
+ * Teacher: mark an attempt as qualified for EQA.
+ * PATCH /api/assignments/attempts/:attemptId/qualify
+ */
+export const qualifyAttemptForEqa = async (req, res) => {
+  try {
+    const attempt = await prisma.submissionAttempt.findUnique({
+      where: { id: req.params.attemptId },
+      include: {
+        submission: { include: { assignment: true } },
+      },
+    });
+
+    if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+
+    const assignment = attempt.submission.assignment;
+
+    if (req.user.role === "teacher") {
+      const teacherProfile = await getTeacherProfileByUserId(req.user.id);
+      if (!teacherProfile || teacherProfile.id !== assignment.teacherId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+    }
+
+    // Unqualify all other attempts for this submission
+    await prisma.submissionAttempt.updateMany({
+      where: { submissionId: attempt.submissionId },
+      data: { isQualifiedForEqa: false },
+    });
+
+    // Qualify this attempt
+    await prisma.submissionAttempt.update({
+      where: { id: req.params.attemptId },
+      data: { isQualifiedForEqa: true },
+    });
+
+    // Update parent: IQA_PASSED, EQA pending student confirmation
+    const updatedSubmission = await prisma.assignmentSubmission.update({
+      where: { id: attempt.submissionId },
+      data: {
+        iqaStatus: "IQA_PASSED",
+        eqaStatus: "PENDING_STUDENT_CONFIRMATION",
+        finalQualifiedAttemptId: req.params.attemptId,
+      },
+      include: submissionInclude,
+    });
+
+    await populateAttemptFiles(updatedSubmission.attempts);
+    return res.json(updatedSubmission);
+  } catch (err) {
+    console.error("Qualify attempt error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+/**
+ * Student: confirm (StudentSelect) the qualified attempt for EQA, locking the submission.
+ * PATCH /api/assignments/attempts/:attemptId/student-select
+ */
+export const studentSelectAttempt = async (req, res) => {
+  try {
+    const attempt = await prisma.submissionAttempt.findUnique({
+      where: { id: req.params.attemptId },
+      include: {
+        submission: { include: { student: true } },
+      },
+    });
+
+    if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+
+    const parentSubmission = attempt.submission;
+
+    const studentProfile = await getStudentProfileByUserId(req.user.id);
+    if (!studentProfile || studentProfile.id !== parentSubmission.student.id) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    if (!attempt.isQualifiedForEqa) {
+      return res.status(400).json({
+        error: "This attempt has not been qualified for EQA by the teacher yet",
+      });
+    }
+
+    if (parentSubmission.eqaStatus !== "PENDING_STUDENT_CONFIRMATION") {
+      return res.status(400).json({
+        error: "Submission is not awaiting student EQA confirmation",
+      });
+    }
+
+    // Mark studentSelect on this attempt
+    await prisma.submissionAttempt.update({
+      where: { id: req.params.attemptId },
+      data: { studentSelect: true },
+    });
+
+    // Lock the parent submission
+    const lockedSubmission = await prisma.assignmentSubmission.update({
+      where: { id: parentSubmission.id },
+      data: { eqaStatus: "LOCKED" },
+      include: submissionInclude,
+    });
+
+    await populateAttemptFiles(lockedSubmission.attempts);
+    return res.json(lockedSubmission);
+  } catch (err) {
+    console.error("Student select attempt error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 };
