@@ -23,6 +23,7 @@ const INITIAL = {
   dueDate: "",
   totalMarks: "",
   passingMarks: "",
+  requiredWordCount: "",
   allowLateSubmission: false,
   status: "draft",
 };
@@ -62,6 +63,7 @@ export default function CreateAssignmentModal({
           dueDate: toLocalDt(editAssignment.dueDate),
           totalMarks: editAssignment.totalMarks ?? "",
           passingMarks: editAssignment.passingMarks ?? "",
+          requiredWordCount: editAssignment.requiredWordCount ?? "",
           allowLateSubmission: Boolean(editAssignment.allowLateSubmission),
           status: editAssignment.status || "draft",
         }
@@ -437,6 +439,7 @@ export default function CreateAssignmentModal({
         totalMarks: form.totalMarks !== "" ? Number(form.totalMarks) : null,
         passingMarks:
           form.passingMarks !== "" ? Number(form.passingMarks) : null,
+        requiredWordCount: form.requiredWordCount !== "" ? Number(form.requiredWordCount) : null,
         allowLateSubmission: Boolean(form.allowLateSubmission),
         status: statusOverride || form.status,
         targetType: form.sectionId ? "section" : "individual",
@@ -762,6 +765,23 @@ export default function CreateAssignmentModal({
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                       />
                     </div>
+                  </div>
+                  <div className="mt-3">
+                    <label className="block text-xs text-gray-600 mb-1.5">
+                      Required Word Count <span className="text-gray-400">(optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="requiredWordCount"
+                      value={form.requiredWordCount}
+                      onChange={handleChange}
+                      min={1}
+                      placeholder="e.g. 500"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Students will see a word count indicator when typing their response.
+                    </p>
                   </div>
                 </div>
 

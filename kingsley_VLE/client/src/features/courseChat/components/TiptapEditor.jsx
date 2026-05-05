@@ -215,6 +215,11 @@ const TiptapEditor = forwardRef(function TiptapEditor(
     isEmpty: () => !editor || editor.isEmpty,
     clear: () => editor?.commands.clearContent(true),
     focus: () => editor?.commands.focus(),
+    setContent: (content) => {
+      if (editor && content) {
+        editor.commands.setContent(content);
+      }
+    },
   }));
 
   const handleLink = () => {

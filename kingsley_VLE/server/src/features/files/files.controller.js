@@ -1,4 +1,5 @@
 import prisma from '../../config/prisma.js'
+import mammoth from 'mammoth'
 import { uploadToAzure, deleteFromAzure, generateSecureSASUrl } from '../../config/azure.storage.js'
 
 /**
@@ -7,6 +8,28 @@ import { uploadToAzure, deleteFromAzure, generateSecureSASUrl } from '../../conf
  *   name: Files
  *   description: File upload and management (Azure Blob Storage)
  */
+
+/**
+ * Extract word count from DOCX buffer
+ */
+const extractWordCountFromBuffer = async (buffer, fileName) => {
+  try {
+    if (!fileName || !fileName.toLowerCase().endsWith('.docx')) {
+      return null
+    }
+    const result = await mammoth.extractRawText({ buffer })
+    const text = result?.value ?? ''
+    // Count words like Microsoft Word does:
+    // Matches sequences of word characters with optional hyphens/apostrophes within
+    // Examples: "word", "don't", "mother-in-law" (3 words), "123", "word's"
+    const words = text.match(/\b[\w]+(?:['-][\w]+)*\b/g) || []
+    const wordCount = words.length
+    return wordCount > 0 ? wordCount : null
+  } catch (err) {
+    console.error(`[FILE_UPLOAD] Error extracting word count from ${fileName}:`, err.message)
+    return null
+  }
+}
 
 /**
  * @swagger
@@ -59,6 +82,9 @@ export const uploadFile = async (req, res) => {
 
     const { url, blobName } = await uploadToAzure(buffer, originalname, mimetype)
 
+    // Extract word count for DOCX files
+    const wordCount = await extractWordCountFromBuffer(buffer, originalname)
+
     const file = await prisma.file.create({
       data: {
         name: originalname,
@@ -69,7 +95,9 @@ export const uploadFile = async (req, res) => {
       },
     })
 
-    return res.status(201).json(file)
+    // Return file with wordCount property (not persisted to DB, just for frontend validation)
+    const response = { ...file, wordCount }
+    return res.status(201).json(response)
   } catch (err) {
     console.error('uploadFile error:', err)
     return res.status(500).json({ error: 'Server error' })

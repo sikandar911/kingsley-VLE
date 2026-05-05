@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   createAssignment,
   deleteAssignment,
+  deleteSubmissionAttempt,
   getAssignmentById,
   getAssignmentsMeta,
   gradeSubmission,
@@ -11,6 +12,9 @@ import {
   updateAssignment,
   updateAssignmentStatus,
   updateSubmission,
+  reviewAttempt,
+  qualifyAttemptForEqa,
+  studentSelectAttempt,
 } from './assignments.controller.js'
 import { authenticate, authorize } from '../../middleware/auth.middleware.js'
 
@@ -29,7 +33,15 @@ router.patch('/:id/status', authorize('admin', 'teacher'), updateAssignmentStatu
 
 router.post('/:id/submissions', authorize('student'), submitAssignment)
 router.get('/:id/submissions', authorize('admin', 'teacher', 'student'), listAssignmentSubmissions)
+
+// Attempt-level operations (submissionId param is actually attemptId for edit)
 router.patch('/submissions/:submissionId', authorize('student'), updateSubmission)
 router.patch('/submissions/:submissionId/grade', authorize('admin', 'teacher'), gradeSubmission)
+
+// IQA / EQA workflow
+router.patch('/attempts/:attemptId/feedback', authorize('admin', 'teacher'), reviewAttempt)
+router.patch('/attempts/:attemptId/qualify', authorize('admin', 'teacher'), qualifyAttemptForEqa)
+router.patch('/attempts/:attemptId/student-select', authorize('student'), studentSelectAttempt)
+router.delete('/attempts/:attemptId', authorize('student', 'admin', 'teacher'), deleteSubmissionAttempt)
 
 export default router
