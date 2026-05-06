@@ -132,7 +132,18 @@ export default function AdminDashboard() {
                     : "bg-transparent text-gray-600 hover:text-gray-900"
                 }`}
               >
-                {r === "student" ? "🎓 Students" : "👨\u200d🏫 Teachers"}
+                <div className="flex items-center gap-2">
+                  <img
+                    src={
+                      r === "student"
+                        ? "/icon-students.png"
+                        : "/icon-teachers.png"
+                    }
+                    alt={r === "student" ? "Students" : "Teachers"}
+                    className="w-5 h-5"
+                  />
+                  <span>{r === "student" ? "Students" : "Teachers"}</span>
+                </div>
               </button>
             ))}
           </div>

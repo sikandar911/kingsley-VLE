@@ -46,7 +46,9 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
     }
 
     // Filter courses that match the selected semester
-    const filtered = allCourses.filter((course) => course.semesterId === form.semesterId);
+    const filtered = allCourses.filter(
+      (course) => course.semesterId === form.semesterId,
+    );
     setFilteredCourses(filtered);
     setForm((prev) => ({ ...prev, courseId: "", sectionId: "" }));
   }, [form.semesterId, allCourses]);
@@ -80,13 +82,17 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
       setError("Please select a course");
       return;
     }
+    if (!form.sectionId) {
+      setError("Please select a section");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
       await enrollmentsApi.teachers.create({
         teacherId: form.teacherId,
         courseId: form.courseId,
-        sectionId: form.sectionId || undefined,
+        sectionId: form.sectionId,
         semesterId: form.semesterId,
       });
       onSaved();
@@ -99,7 +105,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal overflow-visible">
+      <div className="modal">
         <div className="modal-header">
           <h2 className="text-lg font-bold text-gray-900">
             Assign Teacher to Course &amp; Section
@@ -172,8 +178,8 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
                   name: !form.semesterId
                     ? "Select a semester first…"
                     : filteredCourses.length === 0
-                    ? "No courses available"
-                    : "Select course…",
+                      ? "No courses available"
+                      : "Select course…",
                 },
                 ...filteredCourses.map((c) => ({
                   id: c.id,
@@ -193,10 +199,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">
-              Section{" "}
-              <span className="text-gray-400 font-normal text-xs">(optional)</span>
-            </label>
+            <label className="form-label">Section *</label>
             <CustomDropdown
               options={[
                 {
@@ -204,10 +207,10 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
                   name: !form.courseId
                     ? "Select a course first…"
                     : sectionsLoading
-                    ? "Loading…"
-                    : sections.length === 0
-                    ? "No sections available"
-                    : "Select section…",
+                      ? "Loading…"
+                      : sections.length === 0
+                        ? "No sections available"
+                        : "Select section…",
                 },
                 ...sections.map((s) => ({ id: s.id, name: s.name })),
               ]}

@@ -347,7 +347,12 @@ export default function CourseChatTab({ courseId, sectionId }) {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
-            <div className="text-5xl mb-3">💬</div>
+          
+              <img
+            src="/text-profile.png"
+            alt="User avatar"
+            className="w-9 h-9 md:w-11 md:h-11"
+          />
             <p className="text-gray-500 text-sm">No messages yet.</p>
             <p className="text-gray-400 text-xs mt-1">
               Be the first to say something!

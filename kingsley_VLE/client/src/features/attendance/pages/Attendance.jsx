@@ -411,15 +411,16 @@ const Attendance = () => {
   return (
     <div className="px-4 py-4 md:px-4 lg:px-8  lg:py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 md:mb-6 lg:mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
-            Attendance
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
-            Manage and track student attendance records.
-          </p>
-        </div>
+      <div className="mb-4 md:mb-6 lg:mb-8">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+              Attendance
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
+              Manage and track student attendance records.
+            </p>
+          </div>
 
         <div className="flex gap-2">
           <button
@@ -434,6 +435,7 @@ const Attendance = () => {
           >
             Report
           </button>
+        </div>
         </div>
       </div>
 
@@ -796,7 +798,7 @@ const Attendance = () => {
                 borderRadius: "50%",
                 animation: "spin 1s linear infinite",
               }}
-            />
+            ></div>
             <p
               style={{
                 marginTop: "16px",

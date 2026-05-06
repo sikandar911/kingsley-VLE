@@ -145,26 +145,26 @@ export default function TeacherEventsPage() {
     {
       label: "Total Events",
       value: events.length,
-      icon: "📅",
-      bg: "bg-blue-50",
+      icon: "/total-events.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Institution",
       value: events.filter((e) => e.type === "institution").length,
-      icon: "🏛️",
-      bg: "bg-purple-50",
+      icon: "/institution-icon.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Course",
       value: events.filter((e) => e.type === "course").length,
-      icon: "📚",
-      bg: "bg-indigo-50",
+      icon: "/allcourses-icon.png",
+      bg: "bg-orange-50",
     },
     {
       label: "Section",
       value: events.filter((e) => e.type === "section").length,
-      icon: "🏫",
-      bg: "bg-green-50",
+      icon: "/total-section-icon.png",
+      bg: "bg-orange-50",
     },
   ];
 
@@ -188,9 +188,13 @@ export default function TeacherEventsPage() {
             className="bg-white rounded-xl p-4 md:p-5 flex flex-col md:flex-row items-center gap-3 md:gap-4 shadow-sm border border-gray-200"
           >
             <div
-              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center text-xl md:text-2xl flex-shrink-0`}
+              className={`${s.bg} w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0`}
             >
-              {s.icon}
+              <img
+                src={s.icon}
+                alt={s.label}
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
+              />
             </div>
             <div className=" flex-col text-center md:text-left md:flex-row">
               <p className="text-xs text-gray-500">{s.label}</p>
@@ -292,7 +296,7 @@ export default function TeacherEventsPage() {
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => setSelectedEvent(event)}
-                          className="text-blue-600 whitespace-nowrap hover:text-blue-800 font-medium text-xs"
+                          className="text-[#6b1d3e] whitespace-nowrap hover:text-[#6b1d3e] font-medium text-xs"
                         >
                           View Details
                         </button>

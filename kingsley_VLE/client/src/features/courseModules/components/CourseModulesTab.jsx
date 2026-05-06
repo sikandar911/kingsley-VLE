@@ -378,7 +378,11 @@ export default function CourseModulesTab({ courseId, sectionId, semesterId }) {
         </div>
       ) : modules.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-12 text-center">
-          <div className="text-4xl mb-3">📚</div>
+          <img
+            src="/module-profile.png"
+            alt="No modules"
+            className="w-12 h-12 lg:w-[56px] lg:h-[56px] mx-auto mb-3"
+          />
           <p className="text-gray-500 text-sm">
             No modules yet. Create your first module to get started.
           </p>

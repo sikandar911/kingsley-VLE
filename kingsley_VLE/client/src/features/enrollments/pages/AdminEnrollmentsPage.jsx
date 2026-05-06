@@ -123,17 +123,35 @@ export default function AdminEnrollmentsPage() {
         )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 md:mb-8">
-        <div className="stat-card">
-          <div className="stat-icon stat-icon--green">🎓</div>
+      {/* Stats div*/}
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mb-6 md:mb-8">
+        <div
+          className="stat-card flex flex-col sm:flex-row items-center sm:items-start gap-3 text-center sm:text-left
+"
+        >
+          <div className="stat-icon bg-orange-50">
+            <img
+              src="/enrolled-student-icon.png"
+              alt="Student Enrollments"
+              className="w-8 h-8 sm:w-9 sm:h-9"
+            />
+          </div>
           <div>
             <p className="stat-label">Student Enrollments</p>
             <p className="stat-value">{enrollments.length}</p>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon stat-icon--blue">👨‍🏫</div>
+        <div
+          className="stat-card flex flex-col sm:flex-row items-center sm:items-start gap-3 text-center sm:text-left
+"
+        >
+          <div className="stat-icon bg-orange-50">
+            <img
+              src="/entrolled-teacher-icon.png"
+              alt="Teacher Enrollments"
+              className="w-8 h-8 sm:w-9 sm:h-9"
+            />
+          </div>
           <div>
             <p className="stat-label">Teacher Enrollments</p>
             <p className="stat-value">{teacherCourses.length}</p>
@@ -141,7 +159,7 @@ export default function AdminEnrollmentsPage() {
         </div>
       </div>
 
-      {/* Panel */}
+      {/* Panel div*/}
       <div className="panel overflow-visible">
         <div className="panel-header flex-wrap gap-3 ">
           <div className="tab-group">
@@ -149,13 +167,23 @@ export default function AdminEnrollmentsPage() {
               className={`tab-btn ${tab === "students" ? "tab-btn--active" : ""}`}
               onClick={() => setTab("students")}
             >
-              🎓 Students
+              <img
+                src="/icon-students.png"
+                alt="Students"
+                className="w-5 h-5 inline mr-2"
+              />
+              Students
             </button>
             <button
               className={`tab-btn ${tab === "teachers" ? "tab-btn--active" : ""}`}
               onClick={() => setTab("teachers")}
             >
-              👨‍🏫 Teachers
+              <img
+                src="/icon-teachers.png"
+                alt="Teachers"
+                className="w-5 h-5 inline mr-2"
+              />
+              Teachers
             </button>
           </div>
 
@@ -258,10 +286,24 @@ export default function AdminEnrollmentsPage() {
                       <td>
                         <button
                           onClick={() => setDeleteEnrollId(en.id)}
-                          className="btn-icon text-red-500 hover:bg-red-50"
+                          className="btn-icon hover:bg-red-50"
                           title="Remove enrollment"
                         >
-                          🗑️
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#6b1d3e"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
                         </button>
                       </td>
                     </tr>
@@ -320,10 +362,24 @@ export default function AdminEnrollmentsPage() {
                       <td>
                         <button
                           onClick={() => setDeleteTeacherId(tc.id)}
-                          className="btn-icon text-red-500 hover:bg-red-50"
+                          className="btn-icon hover:bg-red-50"
                           title="Remove assignment"
                         >
-                          🗑️
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#6b1d3e"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
                         </button>
                       </td>
                     </tr>

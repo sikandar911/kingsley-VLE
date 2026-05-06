@@ -85,6 +85,7 @@ export default function CreateAssignmentModal({
   const [courseSectionMap, setCourseSectionMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [metaLoading, setMetaLoading] = useState(true);
+  const [moduleLoading, setModuleLoading] = useState(false);
   const [error, setError] = useState("");
   // Files attached to the assignment (list of File records {id, name, fileUrl})
   const [uploadedFiles, setUploadedFiles] = useState(
@@ -287,7 +288,16 @@ export default function CreateAssignmentModal({
             // console.log("Teacher object keys:", Object.keys(teachersList[0]));
           }
 
-          setFilteredTeachers(teachersList);
+          // Deduplicate teachers by their ID to avoid showing same teacher multiple times
+          const uniqueTeachersMap = new Map();
+          teachersList.forEach((record) => {
+            const teacherId = record.teacher?.id || record.teacherId;
+            if (teacherId && !uniqueTeachersMap.has(teacherId)) {
+              uniqueTeachersMap.set(teacherId, record);
+            }
+          });
+          const uniqueTeachers = Array.from(uniqueTeachersMap.values());
+          setFilteredTeachers(uniqueTeachers);
         })
         .catch((err) => {
           console.error("Error fetching teachers:", err);
@@ -325,17 +335,27 @@ export default function CreateAssignmentModal({
 
   // Fetch course modules when courseId or sectionId changes
   useEffect(() => {
-    if (form.courseId) {
+    // Clear modules and courseModuleId immediately when dependencies change for smooth UX
+    setCourseModules([]);
+    setForm((prev) => ({ ...prev, courseModuleId: "" }));
+
+    if (form.courseId && form.sectionId) {
+      setModuleLoading(true);
       courseModulesApi
         .list({
           courseId: form.courseId,
           ...(form.sectionId ? { sectionId: form.sectionId } : {}),
         })
-        .then((res) => setCourseModules(res.data?.modules || []))
-        .catch(() => setCourseModules([]));
+        .then((res) => {
+          setCourseModules(res.data?.modules || []);
+          setModuleLoading(false);
+        })
+        .catch(() => {
+          setCourseModules([]);
+          setModuleLoading(false);
+        });
     } else {
-      setCourseModules([]);
-      setForm((prev) => ({ ...prev, courseModuleId: "" }));
+      setModuleLoading(false);
     }
   }, [form.courseId, form.sectionId]);
 
@@ -439,7 +459,8 @@ export default function CreateAssignmentModal({
         totalMarks: form.totalMarks !== "" ? Number(form.totalMarks) : null,
         passingMarks:
           form.passingMarks !== "" ? Number(form.passingMarks) : null,
-        requiredWordCount: form.requiredWordCount !== "" ? Number(form.requiredWordCount) : null,
+        requiredWordCount:
+          form.requiredWordCount !== "" ? Number(form.requiredWordCount) : null,
         allowLateSubmission: Boolean(form.allowLateSubmission),
         status: statusOverride || form.status,
         targetType: form.sectionId ? "section" : "individual",
@@ -590,7 +611,7 @@ export default function CreateAssignmentModal({
                   />
                 </div>
 
-                {/* Course Module - optional, depends on course */}
+                {/* Course Module - depends on section, with loading state */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     Module <span className="text-red-500">*</span>
@@ -607,15 +628,19 @@ export default function CreateAssignmentModal({
                       })
                     }
                     placeholder={
-                      !form.courseId
-                        ? "Select course first"
-                        : courseModules.length === 0
-                          ? "No modules"
-                          : "Select module…"
+                      moduleLoading
+                        ? "Loading modules…"
+                        : !form.courseId
+                          ? "Select course first"
+                          : !form.sectionId
+                            ? "Select section first"
+                            : courseModules.length === 0
+                              ? "No modules"
+                              : "Select module…"
                     }
                     isSmallScreen={false}
                     BRAND={BRAND}
-                    disabled={!form.courseId || courseModules.length === 0}
+                    disabled={!form.sectionId || moduleLoading || courseModules.length === 0}
                   />
                 </div>
 
@@ -768,7 +793,8 @@ export default function CreateAssignmentModal({
                   </div>
                   <div className="mt-3">
                     <label className="block text-xs text-gray-600 mb-1.5">
-                      Required Word Count <span className="text-gray-400">(optional)</span>
+                      Required Word Count{" "}
+                      <span className="text-gray-400">(optional)</span>
                     </label>
                     <input
                       type="number"
@@ -780,7 +806,8 @@ export default function CreateAssignmentModal({
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      Students will see a word count indicator when typing their response.
+                      Students will see a word count indicator when typing their
+                      response.
                     </p>
                   </div>
                 </div>

@@ -209,7 +209,7 @@ export default function StudentAssignmentsPage() {
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${cls}`}
+                            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap font-semibold ${cls}`}
                           >
                             {label}
                           </span>
@@ -228,7 +228,7 @@ export default function StudentAssignmentsPage() {
                               title="View Details & Results"
                             >
                               <svg
-                                className="w-5 h-5 text-gray-500"
+                                className="w-5 h-5 text-[#5b1731]"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"

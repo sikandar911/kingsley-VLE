@@ -94,9 +94,13 @@ export default function GradePerformanceTab({ courseId, sectionId, enrollment })
       {/* ── Empty state ── */}
       {modules.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm p-10 text-center">
-          <div className="text-4xl mb-3">📊</div>
+           <img
+            src="/grading-icon-profile.png"
+            alt="No submissions to grade"
+            className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3"
+          />
           <p className="text-gray-500 text-sm">
-            No assignments found for this course yet.
+            No assignments with grades yet.
           </p>
         </div>
       )}

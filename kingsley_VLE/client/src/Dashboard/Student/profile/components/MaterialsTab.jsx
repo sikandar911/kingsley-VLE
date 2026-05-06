@@ -192,8 +192,18 @@ export default function MaterialsTab({ courseId, sectionId }) {
       {/* Empty state */}
       {filteredData.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm p-10 text-center">
-          <div className="text-4xl mb-3">
-            {activeSwitch === "materials" ? "📁" : "🎬"}
+          <div className="mb-3">
+            <img
+              src={
+                activeSwitch === "materials"
+                  ? "/folder-icon-profile.png"
+                  : "/record-icon-profile.png"
+              }
+              alt={
+                activeSwitch === "materials" ? "Folder icon" : "Recording icon"
+              }
+              className="w-12 h-12 lg:w-15 lg:h-15 mx-auto"
+            />
           </div>
           <p className="text-gray-500 text-sm">
             {searchTerm || selectedModuleId
@@ -213,9 +223,9 @@ export default function MaterialsTab({ courseId, sectionId }) {
                 key={m.id}
                 className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-start gap-4"
               >
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-[#6b1d3e] flex items-center justify-center flex-shrink-0">
                   <svg
-                    className="w-5 h-5 text-blue-600"
+                    className="w-5 h-5 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -268,9 +278,9 @@ export default function MaterialsTab({ courseId, sectionId }) {
               key={r.id}
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-start gap-4"
             >
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-[#6b1d3e] flex items-center justify-center flex-shrink-0">
                 <svg
-                  className="w-5 h-5 text-purple-600"
+                  className="w-5 h-5 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
