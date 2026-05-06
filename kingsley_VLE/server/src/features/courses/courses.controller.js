@@ -162,6 +162,13 @@ export const getCourse = async (req, res) => {
     return res.json(course);
   } catch (err) {
     console.error("getCourse error:", err);
+    // Surface migration-related column errors in a readable form
+    if (err.code === 'P2010' || (err.message && err.message.includes('column'))) {
+      return res.status(500).json({
+        error: "Database schema mismatch — run `npx prisma migrate deploy` on the server",
+        detail: err.message,
+      });
+    }
     return res.status(500).json({ error: "Server error" });
   }
 };
@@ -329,30 +336,69 @@ export const updateCourse = async (req, res) => {
  */
 export const deleteCourse = async (req, res) => {
   try {
+    const courseId = req.params.id;
     const existing = await prisma.course.findUnique({
-      where: { id: req.params.id },
+      where: { id: courseId },
     });
     if (!existing) return res.status(404).json({ error: "Course not found" });
 
-    // Clean up class materials: delete Azure blobs + File records before course delete
-    const materials = await prisma.classMaterial.findMany({
-      where: { courseId: req.params.id },
-      include: { file: true },
-    });
+    // Pre-fetch IDs needed for cascading deletes (relations without onDelete: Cascade)
+    const [sections, assignments, materials] = await Promise.all([
+      prisma.section.findMany({ where: { courseId }, select: { id: true } }),
+      prisma.assignment.findMany({ where: { courseId }, select: { id: true } }),
+      prisma.classMaterial.findMany({ where: { courseId }, include: { file: true } }),
+    ]);
+
+    const sectionIds = sections.map((s) => s.id);
+    const assignmentIds = assignments.map((a) => a.id);
+
+    // Clean up Azure blobs for class materials
     for (const material of materials) {
       if (material.file?.slug) await deleteFromAzure(material.file.slug);
     }
     const fileIds = materials.map((m) => m.fileId).filter(Boolean);
-    if (fileIds.length > 0) {
-      // Unlink before delete to avoid FK constraint on classMaterial
-      await prisma.classMaterial.deleteMany({
-        where: { courseId: req.params.id },
-      });
-      await prisma.file.deleteMany({ where: { id: { in: fileIds } } });
-    }
 
-    // Delete the course — ClassRecords cascade via onDelete:Cascade in schema
-    await prisma.course.delete({ where: { id: req.params.id } });
+    await prisma.$transaction(async (tx) => {
+      // 1. Unlink class materials from file records, then delete files
+      if (materials.length > 0) {
+        await tx.classMaterial.deleteMany({ where: { courseId } });
+        if (fileIds.length > 0) {
+          await tx.file.deleteMany({ where: { id: { in: fileIds } } });
+        }
+      }
+
+      // 2. Delete attendance for sections (Attendance.sectionId NOT nullable, no cascade)
+      if (sectionIds.length > 0) {
+        await tx.attendance.deleteMany({ where: { sectionId: { in: sectionIds } } });
+      }
+
+      // 3. Delete assignments + full submission tree (Assignment.courseId NOT nullable, no cascade)
+      if (assignmentIds.length > 0) {
+        const submissions = await tx.assignmentSubmission.findMany({
+          where: { assignmentId: { in: assignmentIds } },
+          select: { id: true },
+        });
+        const submissionIds = submissions.map((s) => s.id);
+        if (submissionIds.length > 0) {
+          await tx.submissionAttempt.deleteMany({ where: { submissionId: { in: submissionIds } } });
+          await tx.assignmentSubmission.deleteMany({ where: { assignmentId: { in: assignmentIds } } });
+        }
+        await tx.calendarReminder.deleteMany({ where: { assignmentId: { in: assignmentIds } } });
+        await tx.assignmentRubric.deleteMany({ where: { assignmentId: { in: assignmentIds } } });
+        await tx.assignmentFile.deleteMany({ where: { assignmentId: { in: assignmentIds } } });
+        await tx.assignment.deleteMany({ where: { courseId } });
+      }
+
+      // 4. Delete enrollments (Enrollment.courseId NOT nullable, no cascade)
+      await tx.enrollment.deleteMany({ where: { courseId } });
+
+      // 5. Delete teacher-course links (TeacherCourse.courseId NOT nullable, no cascade)
+      await tx.teacherCourse.deleteMany({ where: { courseId } });
+
+      // 6. Delete the course — Section, ClassRecord, CourseModule, CourseMessage cascade via schema
+      await tx.course.delete({ where: { id: courseId } });
+    });
+
     return res.json({ message: "Course deleted successfully" });
   } catch (err) {
     console.error("deleteCourse error:", err);

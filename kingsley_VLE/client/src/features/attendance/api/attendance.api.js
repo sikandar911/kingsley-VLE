@@ -35,4 +35,10 @@ export const attendanceApi = {
 
   // Get semesters with optional filters (by courseId)
   getSemesters: (params = {}) => api.get("/semesters", { params }),
+
+  // Get monthly attendance report for a course-section
+  getMonthlyReport: (courseId, sectionId, month, year) =>
+    api.get(`/attendance/report/course/${courseId}/section/${sectionId}`, {
+      params: { month, year },
+    }),
 };

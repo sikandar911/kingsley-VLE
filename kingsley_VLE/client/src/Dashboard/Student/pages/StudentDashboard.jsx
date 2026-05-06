@@ -165,7 +165,7 @@ export default function StudentDashboard() {
       title: "Assignments",
       count: assignments.length,
       icon: "/icon-assignment.png",
-      route: "/student/assignments",
+      route: "/student/courses",
     },
     {
       title: "Class Recordings",

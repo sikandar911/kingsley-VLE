@@ -537,3 +537,289 @@ export const deleteAttendance = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+/**
+ * @swagger
+ * /api/attendance/report/course/{courseId}/section/{sectionId}:
+ *   get:
+ *     summary: Get monthly attendance report for a course-section
+ *     tags: [Attendance]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: sectionId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: month
+ *         required: true
+ *         schema: { type: integer, minimum: 1, maximum: 12 }
+ *         description: Month (1-12)
+ *       - in: query
+ *         name: year
+ *         required: true
+ *         schema: { type: integer, minimum: 2000 }
+ *         description: Year (e.g., 2026)
+ *     responses:
+ *       200:
+ *         description: Monthly attendance report with per-student summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 course:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                 section:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                 month:
+ *                   type: integer
+ *                 year:
+ *                   type: integer
+ *                 totalStudents:
+ *                   type: integer
+ *                 reportDate:
+ *                   type: string
+ *                   format: date-time
+ *                 students:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       studentId:
+ *                         type: string
+ *                       fullName:
+ *                         type: string
+ *                       studentNumber:
+ *                         type: string
+ *                       summary:
+ *                         type: object
+ *                         properties:
+ *                           present:
+ *                             type: integer
+ *                           absent:
+ *                             type: integer
+ *                           late:
+ *                             type: integer
+ *                           excused:
+ *                             type: integer
+ *                           totalDays:
+ *                             type: integer
+ *                           attendancePercentage:
+ *                             type: number
+ *                       records:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             date:
+ *                               type: string
+ *                               format: date
+ *                             status:
+ *                               type: string
+ *                               enum: [present, absent, late, excused]
+ *       400:
+ *         description: Invalid month/year or missing parameters
+ *       404:
+ *         description: Course or section not found
+ */
+export const getMonthlyAttendanceReport = async (req, res) => {
+  const { courseId, sectionId } = req.params;
+  const { month, year } = req.query;
+
+  // Validation
+  if (!month || !year) {
+    return res
+      .status(400)
+      .json({ error: "month and year query parameters are required" });
+  }
+
+  const monthNum = Number(month);
+  const yearNum = Number(year);
+
+  if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+    return res.status(400).json({ error: "month must be between 1 and 12" });
+  }
+
+  if (isNaN(yearNum) || yearNum < 2000) {
+    return res.status(400).json({ error: "year must be a valid number >= 2000" });
+  }
+
+  if (!courseId || !sectionId) {
+    return res
+      .status(400)
+      .json({ error: "courseId and sectionId are required" });
+  }
+
+  try {
+    // Verify course and section exist
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true, title: true },
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+
+    const section = await prisma.section.findUnique({
+      where: { id: sectionId },
+      select: { id: true, name: true, courseId: true },
+    });
+
+    if (!section) {
+      return res.status(404).json({ error: "Section not found" });
+    }
+
+    // Verify section belongs to course
+    if (section.courseId !== courseId) {
+      return res
+        .status(400)
+        .json({ error: "Section does not belong to the specified course" });
+    }
+
+    // Get all students enrolled in this section
+    const enrollments = await prisma.enrollment.findMany({
+      where: { sectionId },
+      include: {
+        student: {
+          select: {
+            id: true,
+            studentId: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    if (enrollments.length === 0) {
+      return res.json({
+        course,
+        section,
+        month: monthNum,
+        year: yearNum,
+        totalStudents: 0,
+        reportDate: new Date().toISOString(),
+        students: [],
+        message: "No students enrolled in this section",
+      });
+    }
+
+    const studentIds = enrollments.map((e) => e.student.id);
+
+    // Calculate date range for the month using UTC to avoid timezone issues
+    const startDate = new Date(Date.UTC(yearNum, monthNum - 1, 1, 0, 0, 0, 0));
+    const endDate = new Date(Date.UTC(yearNum, monthNum, 0, 23, 59, 59, 999));
+
+    // Fetch all attendance records for these students in the month
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        studentId: { in: studentIds },
+        sectionId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      orderBy: [{ date: "asc" }],
+    });
+
+    // Group attendance by student
+    const studentAttendanceMap = new Map();
+    attendanceRecords.forEach((record) => {
+      if (!studentAttendanceMap.has(record.studentId)) {
+        studentAttendanceMap.set(record.studentId, []);
+      }
+      studentAttendanceMap.get(record.studentId).push(record);
+    });
+
+    // Build detailed student report
+    const students = enrollments.map((enrollment) => {
+      const studentId = enrollment.student.id;
+      const records = studentAttendanceMap.get(studentId) || [];
+
+      // Calculate summary
+      const summary = {
+        present: records.filter((r) => r.status === "present").length,
+        absent: records.filter((r) => r.status === "absent").length,
+        late: records.filter((r) => r.status === "late").length,
+        excused: records.filter((r) => r.status === "excused").length,
+        totalDays: records.length,
+      };
+
+      // Calculate attendance percentage (present + late = present, rest = absent)
+      const effectivePresent = summary.present + summary.late;
+      const attendancePercentage =
+        summary.totalDays > 0
+          ? Number(((effectivePresent / summary.totalDays) * 100).toFixed(2))
+          : 0;
+
+      return {
+        studentId: enrollment.student.id,
+        studentNumber: enrollment.student.studentId,
+        fullName: enrollment.student.fullName,
+        summary: {
+          ...summary,
+          attendancePercentage,
+        },
+        records: records.map((r) => ({
+          id: r.id,
+          date: r.date.toISOString().split("T")[0], // YYYY-MM-DD
+          status: r.status,
+        })),
+      };
+    });
+
+    // Sort by student name
+    students.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+    // Calculate overall statistics
+    const overallStats = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      excused: 0,
+    };
+
+    students.forEach((student) => {
+      overallStats.present += student.summary.present;
+      overallStats.absent += student.summary.absent;
+      overallStats.late += student.summary.late;
+      overallStats.excused += student.summary.excused;
+    });
+
+    return res.json({
+      course,
+      section,
+      month: monthNum,
+      year: yearNum,
+      monthName: new Date(yearNum, monthNum - 1).toLocaleString("en-US", {
+        month: "long",
+      }),
+      totalStudents: students.length,
+      reportDate: new Date().toISOString(),
+      overallStatistics: overallStats,
+      students,
+    });
+  } catch (err) {
+    console.error("getMonthlyAttendanceReport error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};

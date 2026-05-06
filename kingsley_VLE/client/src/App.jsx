@@ -8,7 +8,6 @@ import AdminUserManagement from "./Dashboard/Admin/pages/AdminUserManagement";
 import StudentDashboard from "./Dashboard/Student/pages/StudentDashboard";
 import StudentCoursesPage from "./Dashboard/Student/pages/StudentCoursesPage";
 import CourseProfilePage from "./Dashboard/Student/profile/CourseProfilePage";
-import StudentAssignmentsPage from "./Dashboard/Student/pages/StudentAssignmentsPage";
 import StudentResultsPage from "./Dashboard/Student/pages/StudentResultsPage";
 import StudentProfilePage from "./Profile/student/pages/StudentProfilePage";
 import TeacherDashboard from "./Dashboard/Teacher/pages/TeacherDashboard";
@@ -71,10 +70,6 @@ export default function App() {
             <Route element={<DashboardLayout />}>
               <Route path="/student/dashboard" element={<StudentDashboard />} />
               <Route path="/student/courses" element={<StudentCoursesPage />} />
-              <Route
-                path="/student/assignments"
-                element={<StudentAssignmentsPage />}
-              />
               <Route path="/student/results" element={<StudentResultsPage />} />
               <Route path="/student/events" element={<StudentEventsPage />} />
               <Route path="/student/class-records" element={<ClassRecords />} />

@@ -154,7 +154,7 @@ export default function StudentSubmissionAttemptsModal({
         let alertMsg = null;
         if (wordCount !== null && assignment.requiredWordCount) {
           if (wordCount < assignment.requiredWordCount) {
-            alertMsg = `⚠️ Word count (${wordCount}) is below the required ${assignment.requiredWordCount} words.`;
+            alertMsg = `⚠️ Word count is (${wordCount}) ||Required ${assignment.requiredWordCount} words.`;
           }
         }
 

@@ -428,13 +428,85 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   const { id } = req.params
   try {
-    const user = await prisma.user.findUnique({ where: { id } })
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        studentProfile: { select: { id: true } },
+        teacherProfile: { select: { id: true } },
+      },
+    })
     if (!user) return res.status(404).json({ error: 'User not found' })
     if (user.role === 'admin') return res.status(403).json({ error: 'Cannot delete admin accounts' })
 
-    await prisma.user.delete({ where: { id } })
+    // Admin performing the deletion — will receive ownership of transferred content
+    const adminId = req.user.id
+
+    await prisma.$transaction(async (tx) => {
+      // Transfer non-nullable "createdBy / uploadedBy" FK references to admin
+      // so the user record can be deleted without FK constraint violations
+      await tx.file.updateMany({ where: { uploadedBy: id }, data: { uploadedBy: adminId } })
+      await tx.calendarReminder.updateMany({ where: { createdBy: id }, data: { createdBy: adminId } })
+      await tx.event.updateMany({ where: { createdBy: id }, data: { createdBy: adminId } })
+      await tx.classMaterial.updateMany({ where: { uploadedBy: id }, data: { uploadedBy: adminId } })
+      await tx.assignment.updateMany({ where: { createdBy: id }, data: { createdBy: adminId } })
+
+      if (user.role === 'student' && user.studentProfile) {
+        const studentId = user.studentProfile.id
+        // Delete all submission attempts then submissions (no cascade from StudentProfile)
+        const submissions = await tx.assignmentSubmission.findMany({
+          where: { studentId },
+          select: { id: true },
+        })
+        const submissionIds = submissions.map((s) => s.id)
+        if (submissionIds.length > 0) {
+          await tx.submissionAttempt.deleteMany({ where: { submissionId: { in: submissionIds } } })
+          await tx.assignmentSubmission.deleteMany({ where: { studentId } })
+        }
+        await tx.enrollment.deleteMany({ where: { studentId } })
+        await tx.attendance.deleteMany({ where: { studentId } })
+        await tx.studentPerformance.deleteMany({ where: { studentId } })
+      }
+
+      if (user.role === 'teacher' && user.teacherProfile) {
+        const teacherId = user.teacherProfile.id
+        // Delete all assignments owned by teacher and their full submission trees
+        // (Assignment.teacherId is NOT nullable — no cascade from TeacherProfile)
+        const assignments = await tx.assignment.findMany({
+          where: { teacherId },
+          select: { id: true },
+        })
+        const assignmentIds = assignments.map((a) => a.id)
+        if (assignmentIds.length > 0) {
+          const submissions = await tx.assignmentSubmission.findMany({
+            where: { assignmentId: { in: assignmentIds } },
+            select: { id: true },
+          })
+          const submissionIds = submissions.map((s) => s.id)
+          if (submissionIds.length > 0) {
+            await tx.submissionAttempt.deleteMany({ where: { submissionId: { in: submissionIds } } })
+            await tx.assignmentSubmission.deleteMany({ where: { assignmentId: { in: assignmentIds } } })
+          }
+          await tx.calendarReminder.deleteMany({ where: { assignmentId: { in: assignmentIds } } })
+          await tx.assignmentRubric.deleteMany({ where: { assignmentId: { in: assignmentIds } } })
+          await tx.assignmentFile.deleteMany({ where: { assignmentId: { in: assignmentIds } } })
+          await tx.assignment.deleteMany({ where: { teacherId } })
+        }
+        // Nullify markedBy on submissions graded by this teacher
+        await tx.assignmentSubmission.updateMany({
+          where: { markedBy: teacherId },
+          data: { markedBy: null, markedAt: null },
+        })
+        // Delete teacher-course link records (teacherId NOT nullable, no cascade)
+        await tx.teacherCourse.deleteMany({ where: { teacherId } })
+      }
+
+      // Delete user — StudentProfile and TeacherProfile cascade automatically
+      await tx.user.delete({ where: { id } })
+    })
+
     return res.json({ message: 'User deleted successfully' })
   } catch (err) {
+    console.error('deleteUser error:', err)
     return res.status(500).json({ error: 'Server error' })
   }
 }

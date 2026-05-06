@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { attendanceApi } from "../api/attendance.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
+import MonthlyAttendanceReportModal from "../components/MonthlyAttendanceReportModal";
 
 const Attendance = () => {
   const [records, setRecords] = useState([]);
@@ -20,6 +21,9 @@ const Attendance = () => {
 
   // Loading state for fetching attendance data
   const [isFetching, setIsFetching] = useState(false);
+
+  // Monthly report modal state
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Dropdown data
   const [sessions, setSessions] = useState([]);
@@ -417,7 +421,20 @@ const Attendance = () => {
           </p>
         </div>
 
-        <div className="flex gap-2"></div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            disabled={!selectedCourse || !selectedSection}
+            className="px-4 py-2.5 sm:py-3 bg-[#6b1d3e] text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#8b2d5e] transition disabled:bg-gray-400 disabled:cursor-not-allowed hover:disabled:bg-gray-400"
+            title={
+              !selectedCourse || !selectedSection
+                ? "Select course and section first"
+                : "View monthly attendance report"
+            }
+          >
+            Report
+          </button>
+        </div>
       </div>
 
       {/* Filter - DEPENDENT DROPDOWNS */}
@@ -801,6 +818,16 @@ const Attendance = () => {
           </div>
         </div>
       )}
+
+      {/* Monthly Attendance Report Modal */}
+      <MonthlyAttendanceReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        courseId={selectedCourse}
+        sectionId={selectedSection}
+        courseName={getCourseName(selectedCourse)}
+        sectionName={getSectionName(selectedSection)}
+      />
     </div>
   );
 };

@@ -238,13 +238,13 @@ const buildAssignmentPayload = ({ body, teacherId, keepStatus = true }) => {
     teacherInstruction: body.instructions || body.teacherInstruction || null,
     teacherId,
     dueDate: parseDate(body.dueDate),
-    totalMarks: body.totalMarks !== undefined ? Number(body.totalMarks) : 100,
+    totalMarks: body.totalMarks !== undefined && body.totalMarks !== null && body.totalMarks !== "" ? Number(body.totalMarks) : null,
     passingMarks:
-      body.passingMarks !== undefined && body.passingMarks !== null
+      body.passingMarks !== undefined && body.passingMarks !== null && body.passingMarks !== ""
         ? Number(body.passingMarks)
         : null,
     requiredWordCount:
-      body.requiredWordCount !== undefined && body.requiredWordCount !== null
+      body.requiredWordCount !== undefined && body.requiredWordCount !== null && body.requiredWordCount !== ""
         ? Number(body.requiredWordCount)
         : null,
     allowLateSubmission: Boolean(body.allowLateSubmission),
@@ -287,14 +287,14 @@ const validateAssignmentPayload = async (body, { requireTeacherId }) => {
     return "sectionId is required";
   }
 
-  const totalMarks =
-    body.totalMarks !== undefined ? Number(body.totalMarks) : 100;
-  const passingMarks =
-    body.passingMarks !== undefined && body.passingMarks !== null
-      ? Number(body.passingMarks)
-      : null;
+  // Treat empty string as null/undefined
+  const totalMarksValue = body.totalMarks !== undefined && body.totalMarks !== null && body.totalMarks !== "" ? body.totalMarks : null;
+  const passingMarksValue = body.passingMarks !== undefined && body.passingMarks !== null && body.passingMarks !== "" ? body.passingMarks : null;
 
-  if (!Number.isFinite(totalMarks) || totalMarks <= 0) {
+  const totalMarks = totalMarksValue !== null ? Number(totalMarksValue) : null;
+  const passingMarks = passingMarksValue !== null ? Number(passingMarksValue) : null;
+
+  if (totalMarks !== null && (!Number.isFinite(totalMarks) || totalMarks <= 0)) {
     return "totalMarks must be a positive number";
   }
 
@@ -302,7 +302,7 @@ const validateAssignmentPayload = async (body, { requireTeacherId }) => {
     passingMarks !== null &&
     (!Number.isFinite(passingMarks) ||
       passingMarks < 0 ||
-      passingMarks > totalMarks)
+      (totalMarks !== null && passingMarks > totalMarks))
   ) {
     return "passingMarks must be between 0 and totalMarks";
   }
@@ -952,11 +952,11 @@ export const updateAssignment = async (req, res) => {
           : existing.semesterId,
       totalMarks:
         req.body.totalMarks !== undefined
-          ? req.body.totalMarks
+          ? (req.body.totalMarks === null || req.body.totalMarks === "" ? null : Number(req.body.totalMarks))
           : existing.totalMarks,
       passingMarks:
         req.body.passingMarks !== undefined
-          ? req.body.passingMarks
+          ? (req.body.passingMarks === null || req.body.passingMarks === "" ? null : Number(req.body.passingMarks))
           : existing.passingMarks,
       status: req.body.status || existing.status,
       targetType: req.body.targetType || existing.targetType,
@@ -997,19 +997,15 @@ export const updateAssignment = async (req, res) => {
           : existing.dueDate,
       totalMarks:
         req.body.totalMarks !== undefined
-          ? Number(req.body.totalMarks)
+          ? (req.body.totalMarks === null || req.body.totalMarks === "" ? null : Number(req.body.totalMarks))
           : existing.totalMarks,
       passingMarks:
         req.body.passingMarks !== undefined
-          ? req.body.passingMarks === null
-            ? null
-            : Number(req.body.passingMarks)
+          ? (req.body.passingMarks === null || req.body.passingMarks === "" ? null : Number(req.body.passingMarks))
           : existing.passingMarks,
       requiredWordCount:
         req.body.requiredWordCount !== undefined
-          ? req.body.requiredWordCount === null
-            ? null
-            : Number(req.body.requiredWordCount)
+          ? (req.body.requiredWordCount === null || req.body.requiredWordCount === "" ? null : Number(req.body.requiredWordCount))
           : existing.requiredWordCount,
       allowLateSubmission:
         req.body.allowLateSubmission !== undefined

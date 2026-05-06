@@ -352,6 +352,9 @@ export const deleteSection = async (req, res) => {
     const existing = await prisma.section.findUnique({ where: { id: req.params.id } })
     if (!existing) return res.status(404).json({ error: 'Section not found' })
 
+    // Delete attendance records first — Attendance.sectionId is NOT nullable with no cascade
+    await prisma.attendance.deleteMany({ where: { sectionId: req.params.id } })
+
     await prisma.section.delete({ where: { id: req.params.id } })
 
     // Update course totalSectionCount

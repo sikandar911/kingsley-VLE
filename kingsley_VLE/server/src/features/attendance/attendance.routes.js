@@ -6,12 +6,16 @@ import {
   markBulkAttendance,
   updateAttendance,
   deleteAttendance,
+  getMonthlyAttendanceReport,
 } from './attendance.controller.js'
 import { authenticate, authorize } from '../../middleware/auth.middleware.js'
 
 const router = Router()
 
 router.use(authenticate)
+
+// Monthly report endpoint (place before generic /:id to avoid conflicts)
+router.get('/report/course/:courseId/section/:sectionId', getMonthlyAttendanceReport)
 
 // All roles can list/get (filtered by role in controller)
 router.get('/', listAttendance)
