@@ -145,11 +145,18 @@ export default function AdminAssignmentsPage() {
 
   // Filter courses based on selected semester
   useEffect(() => {
-    if (filterSemester && semesterCourseMap[filterSemester]) {
-      const courseIds = semesterCourseMap[filterSemester];
-      const filtered = courses.filter((c) => courseIds.includes(c.id));
-      setFilteredCourses(filtered);
+    if (filterSemester) {
+      // Semester is selected
+      if (semesterCourseMap[filterSemester]) {
+        // Semester exists in map - show its courses
+        const courseIds = semesterCourseMap[filterSemester];
+        setFilteredCourses(courses.filter((c) => courseIds.includes(c.id)));
+      } else {
+        // Semester selected but has no courses - show empty
+        setFilteredCourses([]);
+      }
     } else {
+      // No semester selected - show all courses
       setFilteredCourses(courses);
     }
     // Reset course, section, module when semester changes
@@ -386,7 +393,7 @@ export default function AdminAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Semesters" },
+                { id: "", name: `All Semesters (${filteredSemesters.length})` },
                 ...filteredSemesters.map((s) => ({
                   id: s.id,
                   name: `${s.name} (${s.year})`,
@@ -408,7 +415,7 @@ export default function AdminAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Courses" },
+                { id: "", name: `All Courses (${filteredCourses.length})` },
                 ...filteredCourses.map((c) => ({ id: c.id, name: c.title })),
               ]}
               value={filterCourse}
@@ -427,7 +434,7 @@ export default function AdminAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Sections" },
+                { id: "", name: `All Sections (${filteredSections.length})` },
                 ...filteredSections.map((s) => ({ id: s.id, name: s.name })),
               ]}
               value={filterSection}
@@ -446,7 +453,7 @@ export default function AdminAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Modules" },
+                { id: "", name: `All Modules (${filteredModules.length})` },
                 ...filteredModules.map((m) => ({ id: m.id, name: m.name })),
               ]}
               value={filterModule}
@@ -454,7 +461,7 @@ export default function AdminAssignmentsPage() {
               placeholder="Select Module"
               isSmallScreen={false}
               BRAND={BRAND}
-              disabled={!filterCourse || filteredModules.length === 0}
+              disabled={!filterSection || filteredModules.length === 0}
             />
           </div>
         </div>

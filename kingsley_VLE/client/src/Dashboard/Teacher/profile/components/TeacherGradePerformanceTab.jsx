@@ -323,32 +323,41 @@ export default function TeacherGradePerformanceTab({
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-xs sm:text-sm">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="text-left px-2 sm:px-5 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                            Student
-                          </th>
-                          <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                            Marks
-                          </th>
-                          <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                            Grade
-                          </th>
-                          <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                            Marked At
-                          </th>
-                          <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] whitespace-nowrap sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                            Marked By
-                          </th>
-                          <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                            Status
-                          </th>
-                        </tr>
+                        {(() => {
+                          const hasMarks = subs.some((s) => s.marks != null);
+                          const hasGrade = subs.some(
+                            (s) => s.gradeLetter != null,
+                          );
+                          return (
+                            <tr className="bg-gray-50 border-b border-gray-100">
+                              <th className="text-left px-2 sm:px-5 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                                Student
+                              </th>
+                              {(hasMarks || (hasGrade && !hasMarks)) && (
+                                <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                                  Marks
+                                </th>
+                              )}
+                              {(hasGrade || (hasMarks && !hasGrade)) && (
+                                <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                                  Grade
+                                </th>
+                              )}
+                              <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                                EQA-Qualified
+                              </th>
+                              <th className="text-center px-1.5 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                                Status
+                              </th>
+                            </tr>
+                          );
+                        })()}
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {students.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={6}
+                              colSpan={4}
                               className="px-2 sm:px-5 py-3 sm:py-4 text-center text-xs text-gray-400"
                             >
                               No students enrolled in this section.
@@ -359,9 +368,19 @@ export default function TeacherGradePerformanceTab({
                             const sub = subByStudent[student.id];
                             const marks = sub?.marks ?? null;
                             const grade = sub?.gradeLetter ?? null;
-                            const markedAt = sub?.markedAt || null;
-                            const markedBy =
-                              sub?.markedByTeacher?.fullName || null;
+
+                            // Check if any attempt has both isQualifiedForEqa AND studentSelect as true
+                            const attempts = sub?.attempts ?? [];
+                            const isEqaQualified = attempts.some(
+                              (attempt) =>
+                                attempt.isQualifiedForEqa === true &&
+                                attempt.studentSelect === true,
+                            );
+
+                            const hasMarks = subs.some((s) => s.marks != null);
+                            const hasGrade = subs.some(
+                              (s) => s.gradeLetter != null,
+                            );
 
                             return (
                               <tr
@@ -380,30 +399,39 @@ export default function TeacherGradePerformanceTab({
                                   )}
                                 </td>
 
-                                {/* Marks */}
-                                <td className="px-1.5 sm:px-4 py-2 sm:py-3.5 text-center text-gray-700 text-xs sm:text-sm">
-                                  {marks != null
-                                    ? `${marks} / ${assignment.totalMarks ?? "—"}`
-                                    : "— / " + (assignment.totalMarks ?? "—")}
-                                </td>
+                                {/* Marks - Conditional */}
+                                {(hasMarks || (hasGrade && !hasMarks)) && (
+                                  <td className="px-1.5 sm:px-4 py-2 sm:py-3.5 text-center text-gray-700 text-xs sm:text-sm">
+                                    {marks != null
+                                      ? `${marks} / ${assignment.totalMarks ?? "—"}`
+                                      : "— / " + (assignment.totalMarks ?? "—")}
+                                  </td>
+                                )}
 
-                                {/* Grade */}
-                                <td className="px-1.5 sm:px-4 py-2 sm:py-3.5 text-center">
+                                {/* Grade - Conditional */}
+                                {(hasGrade || (hasMarks && !hasGrade)) && (
+                                  <td className="px-1.5 sm:px-4 py-2 sm:py-3.5 text-center">
+                                    <span
+                                      className={`inline-flex items-center justify-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-bold ${gradeStyle(grade)}`}
+                                    >
+                                      {grade ?? "—"}
+                                    </span>
+                                  </td>
+                                )}
+
+                                {/* EQA-Qualified */}
+                                <td className="px-1.5 sm:px-4 py-2 sm:py-3.5 text-center text-xs font-medium">
                                   <span
-                                    className={`inline-flex items-center justify-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-bold ${gradeStyle(grade)}`}
+                                    className={
+                                      isEqaQualified
+                                        ? "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap font-semibold bg-green-50 text-green-700 "
+                                        : "text-red-600   inline-flex items-center px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap font-semibold bg-red-100"
+                                    }
                                   >
-                                    {grade ?? "—"}
+                                    {isEqaQualified
+                                      ? "Qualified"
+                                      : "Unqualified"}
                                   </span>
-                                </td>
-
-                                {/* Marked At */}
-                                <td className="px-1.5 sm:px-4 py-2 sm:py-3.5 text-center text-xs text-gray-500">
-                                  {sub?.markedAt ? formatDate(markedAt) : "—"}
-                                </td>
-
-                                {/* Marked By */}
-                                <td className="px-1.5 sm:px-4 py-2 sm:py-3.5 text-center text-xs text-gray-600">
-                                  {markedBy || "—"}
                                 </td>
 
                                 {/* Status */}

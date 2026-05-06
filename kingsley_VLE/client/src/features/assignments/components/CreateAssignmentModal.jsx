@@ -287,7 +287,16 @@ export default function CreateAssignmentModal({
             // console.log("Teacher object keys:", Object.keys(teachersList[0]));
           }
 
-          setFilteredTeachers(teachersList);
+          // Deduplicate teachers by their ID to avoid showing same teacher multiple times
+          const uniqueTeachersMap = new Map();
+          teachersList.forEach((record) => {
+            const teacherId = record.teacher?.id || record.teacherId;
+            if (teacherId && !uniqueTeachersMap.has(teacherId)) {
+              uniqueTeachersMap.set(teacherId, record);
+            }
+          });
+          const uniqueTeachers = Array.from(uniqueTeachersMap.values());
+          setFilteredTeachers(uniqueTeachers);
         })
         .catch((err) => {
           console.error("Error fetching teachers:", err);
@@ -439,7 +448,8 @@ export default function CreateAssignmentModal({
         totalMarks: form.totalMarks !== "" ? Number(form.totalMarks) : null,
         passingMarks:
           form.passingMarks !== "" ? Number(form.passingMarks) : null,
-        requiredWordCount: form.requiredWordCount !== "" ? Number(form.requiredWordCount) : null,
+        requiredWordCount:
+          form.requiredWordCount !== "" ? Number(form.requiredWordCount) : null,
         allowLateSubmission: Boolean(form.allowLateSubmission),
         status: statusOverride || form.status,
         targetType: form.sectionId ? "section" : "individual",
@@ -768,7 +778,8 @@ export default function CreateAssignmentModal({
                   </div>
                   <div className="mt-3">
                     <label className="block text-xs text-gray-600 mb-1.5">
-                      Required Word Count <span className="text-gray-400">(optional)</span>
+                      Required Word Count{" "}
+                      <span className="text-gray-400">(optional)</span>
                     </label>
                     <input
                       type="number"
@@ -780,7 +791,8 @@ export default function CreateAssignmentModal({
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      Students will see a word count indicator when typing their response.
+                      Students will see a word count indicator when typing their
+                      response.
                     </p>
                   </div>
                 </div>

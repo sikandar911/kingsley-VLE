@@ -329,7 +329,7 @@ export default function TeacherAssignmentsPage() {
 
   const handleConfirmDelete = async () => {
     if (!deleteConfirmModal) return;
-    
+
     // Validate confirmation text
     if (deleteConfirmModal.confirmText !== "confirm") {
       setDeleteConfirmError('Please type "confirm" to verify deletion');
@@ -434,7 +434,7 @@ export default function TeacherAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Semesters" },
+                { id: "", name: `All Semesters (${filteredSemesters.length})` },
                 ...filteredSemesters.map((s) => ({
                   id: s.id,
                   name: `${s.name} (${s.year})`,
@@ -456,7 +456,7 @@ export default function TeacherAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Courses" },
+                { id: "", name: `All Courses (${filteredCourses.length})` },
                 ...filteredCourses.map((c) => ({ id: c.id, name: c.title })),
               ]}
               value={filterCourse}
@@ -475,7 +475,7 @@ export default function TeacherAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Sections" },
+                { id: "", name: `All Sections (${filteredSections.length})` },
                 ...filteredSections.map((s) => ({ id: s.id, name: s.name })),
               ]}
               value={filterSection}
@@ -494,7 +494,7 @@ export default function TeacherAssignmentsPage() {
             </label>
             <CustomDropdown
               options={[
-                { id: "", name: "All Modules" },
+                { id: "", name: `All Modules (${filteredModules.length})` },
                 ...filteredModules.map((m) => ({ id: m.id, name: m.name })),
               ]}
               value={filterModule}
@@ -502,7 +502,7 @@ export default function TeacherAssignmentsPage() {
               placeholder="Select Module"
               isSmallScreen={false}
               BRAND={BRAND}
-              disabled={!filterCourse || filteredModules.length === 0}
+              disabled={!filterSection || filteredModules.length === 0}
             />
           </div>
         </div>
@@ -796,20 +796,26 @@ export default function TeacherAssignmentsPage() {
               Delete Assignment
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to delete <strong>"{deleteConfirmModal.assignment.title}"</strong>?
+              Are you sure you want to delete{" "}
+              <strong>"{deleteConfirmModal.assignment.title}"</strong>?
             </p>
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mb-4">
-              ⚠️ This action cannot be undone. All student submissions and uploaded files will be permanently deleted.
+              ⚠️ This action cannot be undone. All student submissions and
+              uploaded files will be permanently deleted.
             </p>
-            
+
             <label className="text-xs font-semibold text-gray-600 block mb-2">
-              To confirm, type <code className="bg-gray-100 px-1 py-0.5 rounded">confirm</code>:
+              To confirm, type{" "}
+              <code className="bg-gray-100 px-1 py-0.5 rounded">confirm</code>:
             </label>
             <input
               type="text"
               value={deleteConfirmModal.confirmText}
               onChange={(e) => {
-                setDeleteConfirmModal({ ...deleteConfirmModal, confirmText: e.target.value });
+                setDeleteConfirmModal({
+                  ...deleteConfirmModal,
+                  confirmText: e.target.value,
+                });
                 setDeleteConfirmError(null);
               }}
               placeholder="Type 'confirm' to verify"
