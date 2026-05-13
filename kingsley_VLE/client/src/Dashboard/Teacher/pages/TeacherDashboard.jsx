@@ -172,7 +172,7 @@ export default function TeacherDashboard() {
           ].map((s) => (
             <div
               key={s.label}
-              className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+              className="relative overflow-hidden bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
               <img
                 src={s.icon}
@@ -183,6 +183,10 @@ export default function TeacherDashboard() {
               <p className="font-semibold text-gray-900 text-xs sm:text-sm mt-0.5">
                 {s.value}
               </p>
+              <div
+                style={{ backgroundColor: "#6b1d3e" }}
+                className="absolute bottom-0 right-0 w-16 h-16 opacity-5 rounded-full -mr-5 -mb-5"
+              ></div>
             </div>
           ))}
         </div>
@@ -203,7 +207,7 @@ export default function TeacherDashboard() {
                 {/* Content */}
                 <div className="relative gap-5 flex md:flex-col lg:flex-row xl:flex-col md:gap-0 lg:gap-6 xl:gap-0 z-10">
                   {/* Icon */}
-                  <div className="w-16 sm:w-18 h-16 sm:h-18 mb-3 sm:mb-4 transition-transform duration-300 group-hover:scale-110">
+                  <div className="w-[50px] sm:w-18 h-14 sm:h-18 mb-3 sm:mb-4 transition-transform duration-300 group-hover:scale-110">
                     <img
                       src={card.icon}
                       alt={card.title}
@@ -239,7 +243,7 @@ export default function TeacherDashboard() {
                 {/* Decorative Elements */}
                 <div
                   style={{ backgroundColor: "#6b1d3e" }}
-                  className={`absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 opacity-5 rounded-full -mr-10 -mt-10 group-hover:opacity-10 transition-opacity duration-300`}
+                  className={`absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 opacity-5 rounded-full -mr-6 -mt-6 md:-mr-14 md:-mt-14  xl:-mr-10 xl:-mt-11 group-hover:opacity-10 transition-opacity duration-300`}
                 ></div>
               </Link>
             ))}

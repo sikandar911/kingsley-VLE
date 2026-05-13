@@ -3,12 +3,16 @@ import { X, Upload, Link } from "lucide-react";
 import Swal from "sweetalert2";
 import { classMaterialsApi } from "../api/classMaterials.api";
 import { courseModulesApi } from "../../courseModules/api/courseModules.api";
+import { enrollmentsApi } from "../../enrollments/api/enrollments.api";
+import { useAuth } from "../../../context/AuthContext";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1142";
 const BRAND_DARK = "#5a1630";
 
 const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const isEdit = Boolean(editMaterial);
   const [inputMode, setInputMode] = useState("file"); // "file" | "url"
   const [formData, setFormData] = useState(() =>
@@ -109,33 +113,71 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
     const fetchDropdownData = async () => {
       try {
         setLoadingDropdowns(true);
-        const [coursesRes, sectionsRes, semestersRes] = await Promise.all([
+        const promises = [
           classMaterialsApi.getCourses(),
           classMaterialsApi.getSections(),
           classMaterialsApi.getSemesters(),
-        ]);
+        ];
+
+        // Add teacher enrollments for teachers
+        if (!isAdmin && user?.teacherProfile?.id) {
+          promises.push(enrollmentsApi.teachers.list());
+        }
+
+        const responses = await Promise.all(promises);
+
+        const coursesRes = responses[0];
         const coursesList =
           coursesRes.data?.data ||
           coursesRes.data?.courses ||
           coursesRes.data ||
           [];
+        const sectionsRes = responses[1];
         const sectionsData = Array.isArray(sectionsRes.data)
           ? sectionsRes.data
           : sectionsRes.data?.data || sectionsRes.data || [];
+        const semestersRes = responses[2];
         const semestersData = Array.isArray(semestersRes.data)
           ? semestersRes.data
           : semestersRes.data?.data || semestersRes.data || [];
 
+        // For teachers, filter courses and sections by enrollments
+        let coursesToUse = coursesList;
+        let sectionsToUse = sectionsData;
+
+        if (!isAdmin && user?.teacherProfile?.id && responses[3]) {
+          const teacherId = user.teacherProfile.id;
+          const allEnrollments =
+            responses[3].data?.data || responses[3].data || [];
+          const teacherEnrollments = allEnrollments.filter(
+            (enrollment) => enrollment.teacher?.id === teacherId,
+          );
+
+          // Get unique course IDs and section IDs from teacher's enrollments
+          const teacherCourseIds = new Set(
+            teacherEnrollments.map((e) => e.courseId),
+          );
+          const teacherSectionIds = new Set(
+            teacherEnrollments.map((e) => e.sectionId),
+          );
+
+          // Filter courses and sections
+          coursesToUse = coursesList.filter((c) => teacherCourseIds.has(c.id));
+          sectionsToUse = sectionsData.filter((s) =>
+            teacherSectionIds.has(s.id),
+          );
+        }
+
         setCourses(coursesList);
         setSections(sectionsData);
         setSemesters(semestersData);
-        setFilteredCourses(coursesList);
+        setFilteredCourses(coursesToUse);
         setFilteredSections([]);
         setFilteredSemesters(semestersData);
 
         // Build semester -> courses map
         const semCourseMap = {};
-        coursesList.forEach((course) => {
+        coursesToUse.forEach((course) => {
           const semId = course.semesterId;
           if (semId) {
             if (!semCourseMap[semId]) semCourseMap[semId] = [];
@@ -147,7 +189,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
 
         // Build course -> sections map
         const courseSectionMap = {};
-        sectionsData.forEach((section) => {
+        sectionsToUse.forEach((section) => {
           const cId = section.courseId;
           if (cId) {
             if (!courseSectionMap[cId]) courseSectionMap[cId] = [];
@@ -172,7 +214,7 @@ const ClassMaterialsModal = ({ isOpen, onClose, onSubmit, editMaterial }) => {
       }
     };
     if (isOpen) fetchDropdownData();
-  }, [isOpen]);
+  }, [isOpen, isAdmin, user?.teacherProfile?.id]);
 
   // Filter courses based on selected semester
   useEffect(() => {

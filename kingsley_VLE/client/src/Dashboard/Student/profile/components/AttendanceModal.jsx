@@ -50,6 +50,7 @@ export default function AttendanceModal({ courseId, sectionId, studentId, studen
   // ── Summary stats ──────────────────────────────────────────────────────────
   const total   = records.length
   const present = records.filter((r) => r.status === 'present').length
+  const excused = records.filter((r) => r.status === 'excused').length
   const absent  = records.filter((r) => r.status === 'absent').length
   const late    = records.filter((r) => r.status === 'late').length
   const rate    = total > 0 ? Math.round((present / total) * 100) : 0
@@ -89,10 +90,11 @@ export default function AttendanceModal({ courseId, sectionId, studentId, studen
         ) : (
           <>
             {/* ── Summary numbers ── */}
-            <div className="grid grid-cols-4 gap-3 px-6 py-4 border-b border-gray-100">
+            <div className="grid grid-cols-5 gap-3 px-4 py-4 border-b border-gray-100">
               {[
                 { label: 'Total',   value: total,   color: 'text-gray-900' },
                 { label: 'Present', value: present, color: 'text-green-600' },
+                { label: 'Excused', value: excused, color: 'text-yellow-600' },
                 { label: 'Absent',  value: absent,  color: 'text-red-600'   },
                 { label: 'Late',    value: late,     color: 'text-yellow-600' },
               ].map(({ label, value, color }) => (

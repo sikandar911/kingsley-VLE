@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Search, Plus, Edit2, Trash2, FileText, Link } from "lucide-react";
 import ClassMaterialsModal from "../components/ClassMaterialsModal";
-import SecureFileLink, { getMaterialSource } from "../components/SecureFileLink";
+import SecureFileLink, {
+  getMaterialSource,
+} from "../components/SecureFileLink";
 import { classMaterialsApi } from "../api/classMaterials.api";
 import { enrollmentsApi } from "../../enrollments/api/enrollments.api";
 import { authApi } from "../../../Auth/api/auth.api";
@@ -19,6 +21,9 @@ const TeacherClassMaterials = () => {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [alertModal, setAlertModal] = useState(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Teacher's enrollments
   const [teacherEnrollments, setTeacherEnrollments] = useState([]);
@@ -189,7 +194,10 @@ const TeacherClassMaterials = () => {
       setIsModalOpen(false);
     } catch (err) {
       console.error("Error creating material:", err);
-      alert("Failed to create material. Please try again.");
+      setAlertModal({
+        title: "Create failed",
+        message: "Failed to create material. Please try again.",
+      });
     }
   };
 
@@ -198,15 +206,28 @@ const TeacherClassMaterials = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteMaterial = async (id, title) => {
-    if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
-      try {
-        await classMaterialsApi.delete(id);
-        setMaterials(materials.filter((m) => m.id !== id));
-      } catch (err) {
-        console.error("Error deleting material:", err);
-        alert("Failed to delete material. Please try again.");
-      }
+  const handleDeleteMaterial = (id, title) => {
+    setDeleteConfirmModal({ id, title });
+  };
+
+  const confirmDeleteMaterial = async () => {
+    if (!deleteConfirmModal) return;
+    try {
+      setDeletingId(deleteConfirmModal.id);
+      await classMaterialsApi.delete(deleteConfirmModal.id);
+      setMaterials((prev) =>
+        prev.filter((m) => m.id !== deleteConfirmModal.id),
+      );
+      setDeleteConfirmModal(null);
+    } catch (err) {
+      console.error("Error deleting material:", err);
+      setAlertModal({
+        title: "Delete failed",
+        message: "Failed to delete material. Please try again.",
+      });
+      setDeleteConfirmModal(null);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -307,6 +328,7 @@ const TeacherClassMaterials = () => {
                 placeholder="Select semester…"
                 isSmallScreen={false}
                 BRAND={BRAND}
+                dropdownAlign="right"
               />
 
               <CustomDropdown
@@ -428,9 +450,15 @@ const TeacherClassMaterials = () => {
                               style={{ color: BRAND }}
                             >
                               {src.type === "url" ? (
-                                <><Link className="w-4 h-4" /><span>Open URL</span></>
+                                <>
+                                  <Link className="w-4 h-4" />
+                                  <span>Open URL</span>
+                                </>
                               ) : (
-                                <><FileText className="w-4 h-4" /><span>View File</span></>
+                                <>
+                                  <FileText className="w-4 h-4" />
+                                  <span>View File</span>
+                                </>
                               )}
                             </SecureFileLink>
                           ) : (
@@ -451,8 +479,12 @@ const TeacherClassMaterials = () => {
                             </button>
                             <button
                               onClick={() =>
-                                handleDeleteMaterial(material.id, material.title)
+                                handleDeleteMaterial(
+                                  material.id,
+                                  material.title,
+                                )
                               }
+                              disabled={deletingId === material.id}
                               className="inline-flex items-center justify-center p-2 rounded-lg transition hover:bg-red-50"
                               style={{ color: BRAND }}
                               title="Delete"
@@ -569,8 +601,12 @@ const TeacherClassMaterials = () => {
                             </button>
                             <button
                               onClick={() =>
-                                handleDeleteMaterial(material.id, material.title)
+                                handleDeleteMaterial(
+                                  material.id,
+                                  material.title,
+                                )
                               }
+                              disabled={deletingId === material.id}
                               className="inline-flex items-center justify-center p-1.5 rounded transition hover:bg-red-50"
                               style={{ color: BRAND }}
                               title="Delete"
@@ -602,6 +638,74 @@ const TeacherClassMaterials = () => {
         onSubmit={handleAddMaterial}
         editMaterial={editingMaterial}
       />
+
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              Delete Material?
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-5">
+              Are you sure you want to delete "{deleteConfirmModal.title}"?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 text-gray-800 font-semibold text-sm hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteMaterial}
+                disabled={deletingId === deleteConfirmModal.id}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition disabled:opacity-60"
+              >
+                {deletingId === deleteConfirmModal.id
+                  ? "Deleting..."
+                  : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {alertModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 3c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              {alertModal.title}
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-5">
+              {alertModal.message}
+            </p>
+            <button
+              onClick={() => setAlertModal(null)}
+              className="w-full px-4 py-2.5 rounded-lg text-white font-semibold text-sm transition"
+              style={{ backgroundColor: BRAND }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 };

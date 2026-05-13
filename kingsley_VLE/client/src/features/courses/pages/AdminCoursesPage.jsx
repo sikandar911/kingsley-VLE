@@ -266,7 +266,7 @@ export default function AdminCoursesPage() {
         />
       )}
 
-      {/* Delete Confirm Modal */}
+      {/* Delete Confirm Modal alert*/}
       {deleteId && (
         <div className="modal-overlay">
           <div className="modal max-w-sm">

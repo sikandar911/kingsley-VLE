@@ -12,6 +12,8 @@ export default function SubmitModal({
   const [notes, setNotes] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
 
   const handleFilesChange = (files) => {
     setUploadedFiles(files);
@@ -27,7 +29,8 @@ export default function SubmitModal({
 
     // Validation: at least 1 file must be present
     if (uploadedFiles.length === 0) {
-      alert("Please upload at least 1 file before submitting.");
+      setAlertMessage("Please upload at least 1 file before submitting.");
+      setShowAlert(true);
       return;
     }
 
@@ -38,7 +41,7 @@ export default function SubmitModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 overflow-y-scroll max-h-[90vh]">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold text-gray-900">Submit Assignment</h3>
           <button
@@ -133,6 +136,41 @@ export default function SubmitModal({
             </button>
           </div>
         </form>
+
+        {/* Custom Alert Modal */}
+        {showAlert && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <div className="flex items-center justify-center h-[48px] w-[48px] rounded-full bg-red-100">
+                  <svg
+                    className="h-[30px] w-[30px] text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Alert</h3>
+              <p className="text-sm text-gray-600 mt-[8px]">{alertMessage}</p>
+              <div className="mt-4">
+                <button
+                  onClick={() => setShowAlert(false)}
+                  className="px-6 py-2.5 bg-[#6b1d3e] text-white text-sm font-semibold rounded-lg hover:bg-[#7e2347] transition"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

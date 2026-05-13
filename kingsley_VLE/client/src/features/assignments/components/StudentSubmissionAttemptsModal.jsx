@@ -41,10 +41,14 @@ export default function StudentSubmissionAttemptsModal({
   const [selectingId, setSelectingId] = useState(null);
   const [selectLoading, setSelectLoading] = useState(false);
   const [selectError, setSelectError] = useState(null);
+  const [eqaConfirmModal, setEqaConfirmModal] = useState(null);
+  const [eqaConfirmError, setEqaConfirmError] = useState(null);
 
   // Delete attempt
   const [deletingAttemptId, setDeletingAttemptId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null);
+  const [deleteConfirmError, setDeleteConfirmError] = useState(null);
 
   // New submission form
   const [showForm, setShowForm] = useState(false);
@@ -53,29 +57,28 @@ export default function StudentSubmissionAttemptsModal({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [uploadAlerts, setUploadAlerts] = useState({}); // {fileId: "message"}
-  
+
   const fileInputRef = useRef(null);
 
   const isLocked = submission.eqaStatus === "LOCKED";
-  const iqaMeta = IQA_STATUS_MAP[submission.iqaStatus] ?? IQA_STATUS_MAP.PENDING;
+  const iqaMeta =
+    IQA_STATUS_MAP[submission.iqaStatus] ?? IQA_STATUS_MAP.PENDING;
   const attempts = submission.attempts ?? [];
 
   // ── EQA selection ────────────────────────────────────────────────────────
   const handleSelectForEqa = async (attemptId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to confirm this attempt for EQA?\n\nThis action is final — your submission will be locked and no further changes can be made."
-      )
-    )
-      return;
     setSelectingId(attemptId);
     setSelectLoading(true);
     setSelectError(null);
     try {
       await assignmentsApi.studentSelectAttempt(attemptId);
+      setEqaConfirmModal(null);
+      setEqaConfirmError(null);
       onRefresh?.();
     } catch (err) {
-      setSelectError(err.response?.data?.error || "Failed to confirm. Try again.");
+      setSelectError(
+        err.response?.data?.error || "Failed to confirm. Try again.",
+      );
     } finally {
       setSelectLoading(false);
       setSelectingId(null);
@@ -84,19 +87,17 @@ export default function StudentSubmissionAttemptsModal({
 
   // ── Delete attempt ───────────────────────────────────────────────────────
   const handleDeleteAttempt = async (attemptId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this attempt?\n\nThis action cannot be undone and all files will be permanently removed."
-      )
-    )
-      return;
     setDeletingAttemptId(attemptId);
     setDeleteError(null);
     try {
       await assignmentsApi.deleteAttempt(attemptId);
+      setDeleteConfirmModal(null);
+      setDeleteConfirmError(null);
       onRefresh?.();
     } catch (err) {
-      setDeleteError(err.response?.data?.error || "Failed to delete attempt. Try again.");
+      setDeleteConfirmError(
+        err.response?.data?.error || "Failed to delete attempt. Try again.",
+      );
     } finally {
       setDeletingAttemptId(null);
     }
@@ -104,7 +105,7 @@ export default function StudentSubmissionAttemptsModal({
 
   // ── File upload ──────────────────────────────────────────────────────────
   const ALLOWED_FILE_TYPES = [".doc", ".docx", ".pptx"];
-  
+
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -113,21 +114,25 @@ export default function StudentSubmissionAttemptsModal({
     // Validate file types
     const validFiles = [];
     const invalidFiles = [];
-    
+
     for (const file of files) {
       const fileName = file.name.toLowerCase();
-      const isAllowed = ALLOWED_FILE_TYPES.some(ext => fileName.endsWith(ext));
-      
+      const isAllowed = ALLOWED_FILE_TYPES.some((ext) =>
+        fileName.endsWith(ext),
+      );
+
       if (isAllowed) {
         validFiles.push(file);
       } else {
         invalidFiles.push(file.name);
       }
     }
-    
+
     // Show error for invalid files
     if (invalidFiles.length > 0) {
-      setSubmitError(`Invalid file type(s): ${invalidFiles.join(", ")}. Only .doc, .docx, and .pptx files are allowed.`);
+      setSubmitError(
+        `Invalid file type(s): ${invalidFiles.join(", ")}. Only .doc, .docx, and .pptx files are allowed.`,
+      );
       setTimeout(() => setSubmitError(null), 5000);
     }
 
@@ -169,8 +174,8 @@ export default function StudentSubmissionAttemptsModal({
                   name: uploadedFile.name,
                   wordCount,
                 }
-              : p
-          )
+              : p,
+          ),
         );
 
         // Store alert if there is one
@@ -182,8 +187,8 @@ export default function StudentSubmissionAttemptsModal({
           prev.map((p) =>
             p._key === entry._key
               ? { ...p, uploading: false, error: "Upload failed" }
-              : p
-          )
+              : p,
+          ),
         );
       }
     }
@@ -218,7 +223,8 @@ export default function StudentSubmissionAttemptsModal({
     try {
       const payload = {};
       if (submissionText.trim()) payload.submissionText = submissionText.trim();
-      if (readyFiles.length) payload.submissionFileIds = readyFiles.map((f) => f.id);
+      if (readyFiles.length)
+        payload.submissionFileIds = readyFiles.map((f) => f.id);
       await assignmentsApi.submit(assignment.id, payload);
       setSubmissionText("");
       setPendingFiles([]);
@@ -226,13 +232,13 @@ export default function StudentSubmissionAttemptsModal({
       setShowForm(false);
       onRefresh?.();
     } catch (err) {
-      setSubmitError(err.response?.data?.error || "Submission failed. Try again.");
+      setSubmitError(
+        err.response?.data?.error || "Submission failed. Try again.",
+      );
     } finally {
       setSubmitting(false);
     }
   };
-
-
 
   return (
     <>
@@ -250,13 +256,19 @@ export default function StudentSubmissionAttemptsModal({
           }`}
         >
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${iqaMeta.cls}`}>
+            <span
+              className={`text-xs font-bold px-2 py-0.5 rounded-full ${iqaMeta.cls}`}
+            >
               {iqaMeta.label}
             </span>
             {isLocked && (
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">🔒 Locked</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                🔒 Locked
+              </span>
             )}
-            <span className="text-xs text-gray-600">{IQA_DESC[submission.iqaStatus]}</span>
+            <span className="text-xs text-gray-600">
+              {IQA_DESC[submission.iqaStatus]}
+            </span>
           </div>
         </div>
 
@@ -264,7 +276,9 @@ export default function StudentSubmissionAttemptsModal({
         <div>
           <p className="text-xs font-semibold text-gray-600 mb-2">
             Submission Attempts
-            <span className="ml-1.5 font-normal text-gray-400">({attempts.length})</span>
+            <span className="ml-1.5 font-normal text-gray-400">
+              ({attempts.length})
+            </span>
           </p>
 
           {attempts.length === 0 ? (
@@ -303,26 +317,47 @@ export default function StudentSubmissionAttemptsModal({
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {attempt.feedback && (
                           <span className="text-amber-500" title="Has feedback">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z" clipRule="evenodd" />
+                            <svg
+                              className="w-3 h-3"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                           </span>
                         )}
                         {attempt.studentSelect ? (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-semibold">EQA</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-semibold">
+                            EQA
+                          </span>
                         ) : attempt.isQualifiedForEqa ? (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-semibold">✓</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-semibold">
+                            ✓
+                          </span>
                         ) : (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold">•</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold">
+                            •
+                          </span>
                         )}
                       </div>
 
                       {/* Chevron */}
                       <svg
                         className={`w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </button>
 
@@ -332,7 +367,9 @@ export default function StudentSubmissionAttemptsModal({
                         {/* Submission text */}
                         {attempt.submissionText && (
                           <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1">Content</p>
+                            <p className="text-xs font-semibold text-gray-500 mb-1">
+                              Content
+                            </p>
                             <p className="text-xs text-gray-700 bg-white border border-gray-200 rounded p-2 whitespace-pre-wrap max-h-28 overflow-y-auto leading-relaxed">
                               {attempt.submissionText}
                             </p>
@@ -342,31 +379,49 @@ export default function StudentSubmissionAttemptsModal({
                         {/* Files */}
                         {attempt.submissionFiles?.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold text-gray-500 mb-1">Files</p>
+                            <p className="text-xs font-semibold text-gray-500 mb-1">
+                              Files
+                            </p>
                             <div className="flex flex-col gap-1.5">
                               {attempt.submissionFiles.map((f) => {
                                 return (
                                   <div key={f.id}>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); setViewFile(f); }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setViewFile(f);
+                                      }}
                                       className="flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded text-xs text-[#6b1d3e] hover:bg-blue-50 transition w-full"
                                     >
-                                      <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                      <svg
+                                        className="w-3 h-3 flex-shrink-0"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
                                         <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
                                       </svg>
-                                      <span className="truncate flex-1">{f.name}</span>
+                                      <span className="truncate flex-1">
+                                        {f.name}
+                                      </span>
                                     </button>
                                     <div className="flex items-center gap-1 mt-0.5">
-                                      {attempt.wordCount !== null && attempt.wordCount !== undefined ? (
-                                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold inline-block ${
-                                          assignment.requiredWordCount
-                                            ? attempt.wordCount >= assignment.requiredWordCount
-                                              ? "bg-green-100 text-green-700"
-                                              : "bg-red-100 text-red-700"
-                                            : "bg-green-100 text-green-700"
-                                        }`}>
-                                          {attempt.wordCount.toLocaleString()} words
-                                          {assignment.requiredWordCount ? ` / ${assignment.requiredWordCount.toLocaleString()} required` : ""}
+                                      {attempt.wordCount !== null &&
+                                      attempt.wordCount !== undefined ? (
+                                        <span
+                                          className={`text-xs px-1.5 py-0.5 rounded-full font-semibold inline-block ${
+                                            assignment.requiredWordCount
+                                              ? attempt.wordCount >=
+                                                assignment.requiredWordCount
+                                                ? "bg-green-100 text-green-700"
+                                                : "bg-red-100 text-red-700"
+                                              : "bg-green-100 text-green-700"
+                                          }`}
+                                        >
+                                          {attempt.wordCount.toLocaleString()}{" "}
+                                          words
+                                          {assignment.requiredWordCount
+                                            ? ` / ${assignment.requiredWordCount.toLocaleString()} required`
+                                            : ""}
                                         </span>
                                       ) : (
                                         <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold inline-block bg-gray-100 text-gray-600">
@@ -384,17 +439,29 @@ export default function StudentSubmissionAttemptsModal({
                         {/* Teacher feedback */}
                         {attempt.feedback && (
                           <div>
-                            <p className="text-xs font-semibold text-amber-700 mb-1">Feedback</p>
-                            <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded p-2 leading-relaxed space-y-1"
-                              dangerouslySetInnerHTML={{ 
+                            <p className="text-xs font-semibold text-amber-700 mb-1">
+                              Feedback
+                            </p>
+                            <div
+                              className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded p-2 leading-relaxed space-y-1"
+                              dangerouslySetInnerHTML={{
                                 __html: attempt.feedback
                                   .replace(/<p>/g, '<p class="my-1">')
                                   .replace(/<li>/g, '<li class="ml-4">')
                                   .replace(/<ul>/g, '<ul class="my-1">')
                                   .replace(/<ol>/g, '<ol class="my-1">')
-                                  .replace(/<h1>/g, '<h1 class="font-bold text-sm my-1">')
-                                  .replace(/<h2>/g, '<h2 class="font-bold text-sm my-1">')
-                                  .replace(/<h3>/g, '<h3 class="font-bold text-sm my-1">')
+                                  .replace(
+                                    /<h1>/g,
+                                    '<h1 class="font-bold text-sm my-1">',
+                                  )
+                                  .replace(
+                                    /<h2>/g,
+                                    '<h2 class="font-bold text-sm my-1">',
+                                  )
+                                  .replace(
+                                    /<h3>/g,
+                                    '<h3 class="font-bold text-sm my-1">',
+                                  ),
                               }}
                             />
                           </div>
@@ -404,17 +471,42 @@ export default function StudentSubmissionAttemptsModal({
                         {canSelectEqa && (
                           <div>
                             {selectError && selectingId === attempt.id && (
-                              <p className="text-xs text-red-600 mb-1">{selectError}</p>
+                              <p className="text-xs text-red-600 mb-1">
+                                {selectError}
+                              </p>
                             )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleSelectForEqa(attempt.id); }}
-                              disabled={selectLoading && selectingId === attempt.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEqaConfirmModal(attempt.id);
+                              }}
+                              disabled={
+                                selectLoading && selectingId === attempt.id
+                              }
                               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded transition disabled:opacity-50"
                             >
                               {selectLoading && selectingId === attempt.id ? (
-                                <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />Confirming…</>
+                                <>
+                                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  Confirming…
+                                </>
                               ) : (
-                                <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Select for EQA (final)</>
+                                <>
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                  Select for EQA (final)
+                                </>
                               )}
                             </button>
                           </div>
@@ -422,7 +514,17 @@ export default function StudentSubmissionAttemptsModal({
 
                         {attempt.studentSelect && (
                           <p className="text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded p-2 flex items-center gap-1.5">
-                            <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                            <svg
+                              className="w-3 h-3 flex-shrink-0"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                             Confirmed for EQA — submission is locked.
                           </p>
                         )}
@@ -430,18 +532,42 @@ export default function StudentSubmissionAttemptsModal({
                         {/* Delete attempt (only if no feedback) */}
                         {!attempt.feedback && !attempt.studentSelect && (
                           <div>
-                            {deleteError && deletingAttemptId === attempt.id && (
-                              <p className="text-xs text-red-600 mb-1">{deleteError}</p>
-                            )}
+                            {deleteError &&
+                              deletingAttemptId === attempt.id && (
+                                <p className="text-xs text-red-600 mb-1">
+                                  {deleteError}
+                                </p>
+                              )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteAttempt(attempt.id); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmModal(attempt.id);
+                              }}
                               disabled={deletingAttemptId === attempt.id}
                               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition disabled:opacity-50"
                             >
                               {deletingAttemptId === attempt.id ? (
-                                <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />Deleting…</>
+                                <>
+                                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  Deleting…
+                                </>
                               ) : (
-                                <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>Delete Attempt</>
+                                <>
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                  Delete Attempt
+                                </>
                               )}
                             </button>
                           </div>
@@ -479,7 +605,9 @@ export default function StudentSubmissionAttemptsModal({
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                {attempts.length === 0 ? "Submit Assignment" : "Submit New Attempt"}
+                {attempts.length === 0
+                  ? "Submit Assignment"
+                  : "Submit New Attempt"}
               </button>
             ) : (
               <div className="p-3 space-y-3 bg-white">
@@ -499,8 +627,18 @@ export default function StudentSubmissionAttemptsModal({
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -514,7 +652,10 @@ export default function StudentSubmissionAttemptsModal({
                 {/* Text area */}
                 <div>
                   <label className="text-xs font-semibold text-gray-600 block mb-1">
-                    Text <span className="font-normal text-gray-400">(optional)</span>
+                    Text{" "}
+                    <span className="font-normal text-gray-400">
+                      (optional)
+                    </span>
                   </label>
                   <textarea
                     value={submissionText}
@@ -548,26 +689,59 @@ export default function StudentSubmissionAttemptsModal({
                             {pf.uploading ? (
                               <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                             ) : pf.error ? (
-                              <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              <svg
+                                className="w-3 h-3 text-red-500 flex-shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             ) : (
-                              <svg className="w-3 h-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              <svg
+                                className="w-3 h-3 text-green-600 flex-shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             )}
-                            <span className={`flex-1 truncate ${pf.error ? "text-red-700" : "text-gray-700"}`}>
+                            <span
+                              className={`flex-1 truncate ${pf.error ? "text-red-700" : "text-gray-700"}`}
+                            >
                               {pf.error ? `${pf.name} — ${pf.error}` : pf.name}
                             </span>
-                            {pf.wordCount !== null && pf.wordCount !== undefined && !pf.uploading && (
-                              <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 flex-shrink-0">
-                                {pf.wordCount} words
-                              </span>
-                            )}
+                            {pf.wordCount !== null &&
+                              pf.wordCount !== undefined &&
+                              !pf.uploading && (
+                                <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 flex-shrink-0">
+                                  {pf.wordCount} words
+                                </span>
+                              )}
                             {!pf.uploading && (
-                              <button onClick={() => removeFile(pf._key)} className="text-gray-400 hover:text-red-500">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              <button
+                                onClick={() => removeFile(pf._key)}
+                                className="text-gray-400 hover:text-red-500"
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
                                 </svg>
                               </button>
                             )}
@@ -598,12 +772,24 @@ export default function StudentSubmissionAttemptsModal({
                       className="flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 transition"
                       title="Upload .doc, .docx, or .pptx files only"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                        />
                       </svg>
                       Attach Files
                     </button>
-                    <p className="text-xs text-gray-400">Allowed: .doc, .docx, .pptx</p>
+                    <p className="text-xs text-gray-400">
+                      Allowed: .doc, .docx, .pptx
+                    </p>
                   </div>
                 </div>
 
@@ -611,7 +797,9 @@ export default function StudentSubmissionAttemptsModal({
                 <div className="flex gap-2">
                   <button
                     onClick={handleSubmit}
-                    disabled={submitting || pendingFiles.some((p) => p.uploading)}
+                    disabled={
+                      submitting || pendingFiles.some((p) => p.uploading)
+                    }
                     className="flex-1 px-3 py-2 bg-[#6b1d3e] text-white text-xs font-semibold rounded hover:bg-[#5a0d38] transition disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {submitting ? (
@@ -643,10 +831,21 @@ export default function StudentSubmissionAttemptsModal({
 
         {isLocked && (
           <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 flex items-center gap-2 text-xs text-purple-800">
-            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            <svg
+              className="w-3.5 h-3.5 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
             </svg>
-            <span><strong>Locked.</strong> Confirmed for EQA — no further submissions allowed.</span>
+            <span>
+              <strong>Locked.</strong> Confirmed for EQA — no further
+              submissions allowed.
+            </span>
           </div>
         )}
       </div>
@@ -654,6 +853,103 @@ export default function StudentSubmissionAttemptsModal({
       {viewFile && (
         <div className="fixed inset-0 z-[70]">
           <FileViewerModal file={viewFile} onClose={() => setViewFile(null)} />
+        </div>
+      )}
+
+      {/* EQA Confirmation Modal */}
+      {eqaConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Confirm for EQA
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to confirm this attempt for EQA? This action
+              is final — your submission will be locked and no further changes
+              can be made.
+            </p>
+            <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+              ⚠️ This action cannot be undone. Once confirmed, you cannot submit
+              any new attempts.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setEqaConfirmModal(null);
+                  setEqaConfirmError(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSelectForEqa(eqaConfirmModal)}
+                disabled={selectLoading && selectingId === eqaConfirmModal}
+                className="flex-1 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {selectLoading && selectingId === eqaConfirmModal ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Confirming…
+                  </>
+                ) : (
+                  "Confirm for EQA"
+                )}
+              </button>
+            </div>
+            {eqaConfirmError && (
+              <p className="text-xs text-red-600 mt-3">{eqaConfirmError}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Delete Attempt
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to delete this attempt? This action cannot
+              be undone and all files will be permanently removed.
+            </p>
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mb-4">
+              ⚠️ This action cannot be undone. All submission files will be
+              permanently deleted.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setDeleteConfirmModal(null);
+                  setDeleteConfirmError(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteAttempt(deleteConfirmModal)}
+                disabled={deletingAttemptId === deleteConfirmModal}
+                className="flex-1 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingAttemptId === deleteConfirmModal ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete Attempt"
+                )}
+              </button>
+            </div>
+            {deleteConfirmError && (
+              <p className="text-xs text-red-600 mt-3">{deleteConfirmError}</p>
+            )}
+          </div>
         </div>
       )}
     </>

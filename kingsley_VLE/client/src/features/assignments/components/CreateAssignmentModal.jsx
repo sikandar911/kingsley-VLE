@@ -83,8 +83,11 @@ export default function CreateAssignmentModal({
   const [filteredTeachers, setFilteredTeachers] = useState([]);
   const [semesterCourseMap, setSemesterCourseMap] = useState({});
   const [courseSectionMap, setCourseSectionMap] = useState({});
+  const [teacherEnrollments, setTeacherEnrollments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [metaLoading, setMetaLoading] = useState(true);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+  const [loadingModules, setLoadingModules] = useState(false);
   const [error, setError] = useState("");
   // Files attached to the assignment (list of File records {id, name, fileUrl})
   const [uploadedFiles, setUploadedFiles] = useState(
@@ -152,25 +155,66 @@ export default function CreateAssignmentModal({
           // );
         }
 
-        // Build semester -> courses map from ALL courses
+        // Build semester -> courses map and course -> sections map
+        // For TEACHERS: build from ONLY their enrollments, NOT all courses
+        // For ADMINS: build from ALL courses
         const semCxMap = {};
-        fullCourseList.forEach((course) => {
-          const semId = course.semesterId;
-          if (semId) {
-            if (!semCxMap[semId]) semCxMap[semId] = [];
-            if (!semCxMap[semId].includes(course.id)) {
-              semCxMap[semId].push(course.id);
-            }
-          }
-        });
-
-        // Build course -> sections map from ALL courses
         const cxSecMap = {};
-        fullCourseList.forEach((course) => {
-          if (course.sections && Array.isArray(course.sections)) {
-            cxSecMap[course.id] = course.sections.map((s) => s.id);
-          }
-        });
+
+        if (!isAdmin && user?.teacherProfile?.id && responses[2]) {
+          // For teachers: build maps from their enrollments only
+          const teacherId = user.teacherProfile.id;
+          const allEnrollments =
+            responses[2].data?.data || responses[2].data || [];
+          const myEnrollments = allEnrollments.filter(
+            (enrollment) => enrollment.teacher?.id === teacherId,
+          );
+
+          // Store teacher enrollments for later use
+          setTeacherEnrollments(myEnrollments);
+
+          // Build semester -> courseIds map from teacher's enrollments
+          myEnrollments.forEach((enrollment) => {
+            const semId = enrollment.semesterId;
+            if (semId) {
+              if (!semCxMap[semId]) semCxMap[semId] = [];
+              if (!semCxMap[semId].includes(enrollment.courseId)) {
+                semCxMap[semId].push(enrollment.courseId);
+              }
+            }
+          });
+
+          // Build course -> sectionIds map from teacher's enrollments
+          myEnrollments.forEach((enrollment) => {
+            const courseId = enrollment.courseId;
+            if (courseId) {
+              if (!cxSecMap[courseId]) cxSecMap[courseId] = [];
+              if (!cxSecMap[courseId].includes(enrollment.sectionId)) {
+                cxSecMap[courseId].push(enrollment.sectionId);
+              }
+            }
+          });
+
+          // console.log("Teacher semester-course map:", semCxMap);
+          // console.log("Teacher course-section map:", cxSecMap);
+        } else {
+          // For admins: build maps from all courses (original logic)
+          fullCourseList.forEach((course) => {
+            const semId = course.semesterId;
+            if (semId) {
+              if (!semCxMap[semId]) semCxMap[semId] = [];
+              if (!semCxMap[semId].includes(course.id)) {
+                semCxMap[semId].push(course.id);
+              }
+            }
+          });
+
+          fullCourseList.forEach((course) => {
+            if (course.sections && Array.isArray(course.sections)) {
+              cxSecMap[course.id] = course.sections.map((s) => s.id);
+            }
+          });
+        }
 
         // console.log("Full semester course map:", semCxMap);
         // console.log("Full course section map:", cxSecMap);
@@ -268,24 +312,19 @@ export default function CreateAssignmentModal({
     }));
   }, [form.courseId, courseSectionMap, courses, isEdit, editAssignment]);
 
-  // Fetch and filter teachers based on selected course (for admin only)
+  // Fetch and filter teachers based on selected section (for admin only)
   // For teachers, automatically set their ID
   useEffect(() => {
-    if (isAdmin && form.courseId) {
-      // console.log("Fetching teachers for courseId:", form.courseId);
+    if (isAdmin && form.sectionId) {
+      setLoadingTeachers(true);
+      // console.log("Fetching teachers for sectionId:", form.sectionId);
       enrollmentsApi.teachers
-        .list({ courseId: form.courseId })
+        .list({ sectionId: form.sectionId })
         .then((res) => {
           // console.log("Teachers API response:", res);
           // console.log("Teachers data:", res.data);
           const teachersList = res.data?.data || res.data || [];
           // console.log("Teachers list:", teachersList);
-
-          // Debug: Log first teacher object to see structure
-          if (teachersList.length > 0) {
-            // console.log("First teacher object:", teachersList[0]);
-            // console.log("Teacher object keys:", Object.keys(teachersList[0]));
-          }
 
           // Deduplicate teachers by their ID to avoid showing same teacher multiple times
           const uniqueTeachersMap = new Map();
@@ -297,16 +336,19 @@ export default function CreateAssignmentModal({
           });
           const uniqueTeachers = Array.from(uniqueTeachersMap.values());
           setFilteredTeachers(uniqueTeachers);
+          setLoadingTeachers(false);
         })
         .catch((err) => {
           console.error("Error fetching teachers:", err);
           console.error("Error response:", err.response?.data);
           setFilteredTeachers([]);
+          setLoadingTeachers(false);
         });
     } else {
       setFilteredTeachers([]);
+      setLoadingTeachers(false);
     }
-    // Reset teacher selection when course changes (but not if editing and teacher was pre-set)
+    // Reset teacher selection when section changes (but not if editing and teacher was pre-set)
     if (isAdmin) {
       setForm((prev) => ({
         ...prev,
@@ -320,7 +362,7 @@ export default function CreateAssignmentModal({
       }));
     }
   }, [
-    form.courseId,
+    form.sectionId,
     isAdmin,
     user?.teacherProfile?.id,
     isEdit,
@@ -335,15 +377,23 @@ export default function CreateAssignmentModal({
   // Fetch course modules when courseId or sectionId changes
   useEffect(() => {
     if (form.courseId) {
+      setLoadingModules(true);
       courseModulesApi
         .list({
           courseId: form.courseId,
           ...(form.sectionId ? { sectionId: form.sectionId } : {}),
         })
-        .then((res) => setCourseModules(res.data?.modules || []))
-        .catch(() => setCourseModules([]));
+        .then((res) => {
+          setCourseModules(res.data?.modules || []);
+          setLoadingModules(false);
+        })
+        .catch(() => {
+          setCourseModules([]);
+          setLoadingModules(false);
+        });
     } else {
       setCourseModules([]);
+      setLoadingModules(false);
       setForm((prev) => ({ ...prev, courseModuleId: "" }));
     }
   }, [form.courseId, form.sectionId]);
@@ -368,17 +418,46 @@ export default function CreateAssignmentModal({
         );
       }
 
-      // Populate filtered teachers if admin and we have a selected course
-      if (isAdmin && form.courseId) {
+      // Populate filtered teachers if admin and we have a selected section
+      if (isAdmin && form.sectionId) {
+        setLoadingTeachers(true);
         enrollmentsApi.teachers
-          .list({ courseId: form.courseId })
+          .list({ sectionId: form.sectionId })
           .then((res) => {
             const teachersList = res.data?.data || res.data || [];
-            setFilteredTeachers(teachersList);
+            const uniqueTeachersMap = new Map();
+            teachersList.forEach((record) => {
+              const teacherId = record.teacher?.id || record.teacherId;
+              if (teacherId && !uniqueTeachersMap.has(teacherId)) {
+                uniqueTeachersMap.set(teacherId, record);
+              }
+            });
+            setFilteredTeachers(Array.from(uniqueTeachersMap.values()));
+            setLoadingTeachers(false);
           })
           .catch((err) => {
             console.error("Error fetching teachers:", err);
             setFilteredTeachers([]);
+            setLoadingTeachers(false);
+          });
+      }
+
+      // Populate course modules if we have a selected course
+      if (form.courseId) {
+        setLoadingModules(true);
+        courseModulesApi
+          .list({
+            courseId: form.courseId,
+            ...(form.sectionId ? { sectionId: form.sectionId } : {}),
+          })
+          .then((res) => {
+            setCourseModules(res.data?.modules || []);
+            setLoadingModules(false);
+          })
+          .catch((err) => {
+            console.error("Error fetching modules:", err);
+            setCourseModules([]);
+            setLoadingModules(false);
           });
       }
     }
@@ -387,6 +466,7 @@ export default function CreateAssignmentModal({
     metaLoading,
     form.semesterId,
     form.courseId,
+    form.sectionId,
     courses,
     courseSectionMap,
     semesterCourseMap,
@@ -617,19 +697,25 @@ export default function CreateAssignmentModal({
                       })
                     }
                     placeholder={
-                      !form.courseId
-                        ? "Select course first"
-                        : courseModules.length === 0
-                          ? "No modules"
-                          : "Select module…"
+                      loadingModules
+                        ? "Loading modules…"
+                        : !form.courseId
+                          ? "Select course first"
+                          : courseModules.length === 0
+                            ? "No modules"
+                            : "Select module…"
                     }
                     isSmallScreen={false}
                     BRAND={BRAND}
-                    disabled={!form.courseId || courseModules.length === 0}
+                    disabled={
+                      !form.courseId ||
+                      courseModules.length === 0 ||
+                      loadingModules
+                    }
                   />
                 </div>
 
-                {/* Assigning Teacher - Fourth selector (admin only, depends on course) */}
+                {/* Assigning Teacher - Fifth selector (admin only, depends on section) */}
                 {isAdmin && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -647,13 +733,17 @@ export default function CreateAssignmentModal({
                         })
                       }
                       placeholder={
-                        !form.courseId
-                          ? "Select course first"
-                          : "Select teacher…"
+                        loadingTeachers
+                          ? "Loading teachers…"
+                          : !form.sectionId
+                            ? "Select section first"
+                            : "Select teacher…"
                       }
                       isSmallScreen={false}
                       BRAND={BRAND}
-                      disabled={!form.courseId || metaLoading}
+                      disabled={
+                        !form.sectionId || metaLoading || loadingTeachers
+                      }
                     />
                   </div>
                 )}

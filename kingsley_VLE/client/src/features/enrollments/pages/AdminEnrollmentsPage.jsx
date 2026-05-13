@@ -206,6 +206,7 @@ export default function AdminEnrollmentsPage() {
                 placeholder="All Courses"
                 isSmallScreen={false}
                 BRAND="#6b1142"
+                dropdownAlign="right"
               />
             </div>
 

@@ -514,7 +514,7 @@ const ClassRecords = () => {
 
       {!loading && !error && records.length === 0 && isInitialLoadComplete && (
         <div className="text-center py-16">
-          <Video className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <Video className="w-16 h-16 text-[#5f1834] mx-auto mb-4" />
           <p className="text-gray-500 text-base font-medium">
             No class recordings found
           </p>

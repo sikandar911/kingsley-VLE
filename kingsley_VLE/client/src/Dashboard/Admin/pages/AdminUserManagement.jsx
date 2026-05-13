@@ -72,11 +72,59 @@ export default function AdminUserManagement() {
   return (
     <div className="px-4 py-4 md:px-4 lg:px-8  lg:py-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{userType}</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage {userType.toLowerCase()} accounts
-        </p>
+      <div className="mb-6 md:mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{userType}</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage {userType.toLowerCase()} accounts
+          </p>
+        </div>
+        <div className="flex gap-2 mt-1">
+          {tab === "student" && (
+            <button
+              className="h-10 w-10 md:w-auto px-0 md:px-4 py-2 text-sm font-medium text-brand-700 border border-brand-300 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer flex items-center justify-center md:justify-start gap-0 md:gap-2"
+              onClick={() => setShowBulkModal(true)}
+              aria-label="Bulk"
+              title="Bulk"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <span className="hidden md:inline">Bulk</span>
+            </button>
+          )}
+          <button
+            className="h-10 w-10 md:w-auto px-0 md:px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center md:justify-start gap-0 md:gap-2"
+            onClick={handleCreate}
+            aria-label="Create Account"
+            title="Create Account"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            <span className="hidden md:inline">Create Account</span>
+          </button>
+        </div>
       </div>
 
       {/* Users Panel */}
@@ -110,37 +158,11 @@ export default function AdminUserManagement() {
           <div className="md:flex items-center md:gap-14 lg:gap-3">
             <input
               type="text"
-              className="px-3 w-full md:w-56 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700 w-56"
+              className="px-3 w-full md:w-56 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-700"
               placeholder="Search by name, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <div className="flex gap-2 mt-3 md:mt-0">
-              {tab === "student" && (
-                <button
-                  className="px-4 py-2 text-sm font-medium text-brand-700 border border-brand-300 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer flex items-center gap-2"
-                  onClick={() => setShowBulkModal(true)}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  Bulk
-                </button>
-              )}
-              <button className="btn-primary" onClick={handleCreate}>
-                + Create Account
-              </button>
-            </div>
           </div>
         </div>
 

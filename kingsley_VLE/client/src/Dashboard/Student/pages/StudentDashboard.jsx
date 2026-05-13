@@ -210,7 +210,7 @@ export default function StudentDashboard() {
                 {/* Content */}
                 <div className="relative gap-5 flex md:flex-col lg:flex-row xl:flex-col md:gap-0 lg:gap-6 xl:gap-0 z-10">
                   {/* Icon */}
-                  <div className="w-16 sm:w-18 h-16 sm:h-18 mb-3 sm:mb-4 transition-transform duration-300 group-hover:scale-110">
+                  <div className="w-11 lg:w-16 h-14 lg:h-[60px] mb-3 sm:mb-4 transition-transform duration-300 group-hover:scale-110">
                     <img
                       src={card.icon}
                       alt={card.title}

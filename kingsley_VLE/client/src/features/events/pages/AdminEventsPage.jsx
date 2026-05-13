@@ -115,12 +115,12 @@ export default function AdminEventsPage() {
       icon: "/allcourses-icon.png",
       bg: "bg-orange-50",
     },
-    {
-      label: "Section",
-      value: events.filter((e) => e.type === "section").length,
-      icon: "/total-section-icon.png",
-      bg: "bg-orange-50",
-    },
+    // {
+    //   label: "Section",
+    //   value: events.filter((e) => e.type === "section").length,
+    //   icon: "/total-section-icon.png",
+    //   bg: "bg-orange-50",
+    // },
   ];
 
   const handleEdit = (event) => {

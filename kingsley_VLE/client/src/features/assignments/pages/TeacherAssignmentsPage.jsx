@@ -72,6 +72,10 @@ export default function TeacherAssignmentsPage() {
   const [deleteConfirmModal, setDeleteConfirmModal] = useState(null); // { assignment, confirmText: "" }
   const [deleteConfirmError, setDeleteConfirmError] = useState(null);
 
+  // Alert states
+  const [statusAlert, setStatusAlert] = useState({ show: false, message: "" });
+  const [deleteAlert, setDeleteAlert] = useState({ show: false, message: "" });
+
   const load = useCallback(() => {
     setLoading(true);
     const filterParams = {};
@@ -315,7 +319,10 @@ export default function TeacherAssignmentsPage() {
       await assignmentsApi.updateStatus(assignment.id, newStatus);
       load();
     } catch (e) {
-      alert(e.response?.data?.error || "Failed to update status");
+      setStatusAlert({
+        show: true,
+        message: e.response?.data?.error || "Failed to update status",
+      });
     } finally {
       setUpdatingId(null);
     }
@@ -343,7 +350,10 @@ export default function TeacherAssignmentsPage() {
       load();
       setDeleteConfirmModal(null);
     } catch (e) {
-      alert(e.response?.data?.error || "Failed to delete assignment");
+      setDeleteAlert({
+        show: true,
+        message: e.response?.data?.error || "Failed to delete assignment",
+      });
     } finally {
       setDeletingId(null);
     }
@@ -850,6 +860,70 @@ export default function TeacherAssignmentsPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Error Alert Modal */}
+      {statusAlert.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 flex flex-col items-center">
+            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mb-4 flex-shrink-0">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4v2m0-10a8 8 0 110 16 8 8 0 010-16z"
+                />
+              </svg>
+            </div>
+            <p className="text-center text-gray-700 text-sm font-medium mb-6">
+              {statusAlert.message}
+            </p>
+            <button
+              onClick={() => setStatusAlert({ show: false, message: "" })}
+              className="w-full px-4 py-2 bg-[#6b1142] text-white text-sm font-semibold rounded-lg hover:bg-[#5a0d38] transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Error Alert Modal */}
+      {deleteAlert.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 flex flex-col items-center">
+            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mb-4 flex-shrink-0">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4v2m0-10a8 8 0 110 16 8 8 0 010-16z"
+                />
+              </svg>
+            </div>
+            <p className="text-center text-gray-700 text-sm font-medium mb-6">
+              {deleteAlert.message}
+            </p>
+            <button
+              onClick={() => setDeleteAlert({ show: false, message: "" })}
+              className="w-full px-4 py-2 bg-[#6b1142] text-white text-sm font-semibold rounded-lg hover:bg-[#5a0d38] transition"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

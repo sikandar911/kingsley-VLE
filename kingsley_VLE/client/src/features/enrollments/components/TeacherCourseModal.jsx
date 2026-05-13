@@ -143,7 +143,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={metaLoading}
-              dropdownDirection="up"
+              // dropdownDirection="up"
             />
           </div>
 
@@ -165,7 +165,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={metaLoading || !form.teacherId}
-              dropdownDirection="up"
+              // dropdownDirection="up"
             />
           </div>
 
@@ -194,7 +194,7 @@ export default function TeacherCourseModal({ onClose, onSaved }) {
               isSmallScreen={false}
               BRAND={BRAND}
               disabled={!form.semesterId}
-              dropdownDirection="up"
+              // dropdownDirection="up"
             />
           </div>
 

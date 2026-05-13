@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, Link, Video } from "lucide-react";
 import { classRecordsApi } from "../../../features/classRecords/api/classRecords.api";
-import { teacherClassRecordsApi } from "../api/classRecords/teacherClassRecords.api";
 import { courseModulesApi } from "../../../features/courseModules/api/courseModules.api";
+import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.api";
+import { useAuth } from "../../../context/AuthContext";
 import CustomDropdown from "../../../features/classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1d3e";
 const BRAND_DARK = "#5a1630";
 
 const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
+  const { user } = useAuth();
   const isEdit = Boolean(record);
   const [inputMode, setInputMode] = useState("url"); // "url" | "file"
   const [formData, setFormData] = useState({
@@ -36,7 +38,7 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
   const prevCourseIdForModulesRef = useRef("");
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !user?.teacherProfile?.id) return;
 
     // Populate form when editing
     if (record) {
@@ -58,68 +60,71 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
       try {
         setLoadingDropdowns(true);
 
-        // Fetch teacher's assigned courses and ALL courses (for semesterId)
-        const { courses: teacherCoursesList } =
-          await teacherClassRecordsApi.getTeacherCourses();
-        const allCoursesRes = await classRecordsApi.getCourses();
-        const allCourses = allCoursesRes.data?.data || [];
+        const [coursesRes, sectionsRes, semestersRes, enrollmentsRes] =
+          await Promise.all([
+            classRecordsApi.getCourses(),
+            classRecordsApi.getSections(),
+            classRecordsApi.getSemesters(),
+            enrollmentsApi.teachers.list(),
+          ]);
 
-        // Fetch all sections and semesters
-        const [sectionsRes, semestersRes] = await Promise.all([
-          classRecordsApi.getSections(),
-          classRecordsApi.getSemesters(),
-        ]);
+        const allCourses = coursesRes.data?.data || [];
         const sectionsData = Array.isArray(sectionsRes.data)
           ? sectionsRes.data
           : sectionsRes || [];
         const semestersData = Array.isArray(semestersRes.data)
           ? semestersRes.data
           : semestersRes || [];
+        const allEnrollments =
+          enrollmentsRes.data?.data || enrollmentsRes.data || [];
+        const teacherId = user?.teacherProfile?.id;
+        const teacherEnrollments = teacherId
+          ? allEnrollments.filter(
+              (enrollment) => enrollment.teacher?.id === teacherId,
+            )
+          : [];
 
-        // Get teacher's course IDs
-        const teacherCourseIds = teacherCoursesList.map((c) => c.id);
-
-        // Filter ALL courses to only include those assigned to teacher, and enrich with semesterId
-        const enrichedTeacherCourses = allCourses.filter((c) =>
-          teacherCourseIds.includes(c.id),
-        );
-
-        // console.log("Teacher Assigned Course IDs:", teacherCourseIds);
-        // console.log("All Courses:", allCourses);
-        // console.log("Enriched Teacher Courses:", enrichedTeacherCourses);
-        // console.log("All Sections:", sectionsData);
-        // console.log("All Semesters:", semestersData);
+        const teacherCourseIds = [
+          ...new Set(
+            teacherEnrollments
+              .map((enrollment) => enrollment.courseId)
+              .filter(Boolean),
+          ),
+        ];
+        const enrichedTeacherCourses = teacherCourseIds.length
+          ? allCourses.filter((course) => teacherCourseIds.includes(course.id))
+          : [];
 
         setCourses(enrichedTeacherCourses);
         setSections(sectionsData);
         setSemesters(semestersData);
 
-        // Build semester -> courses map from enriched teacher courses
+        // Build semester -> courses map from ONLY teacher's enrollments
         const semCxMap = {};
-        enrichedTeacherCourses.forEach((course) => {
-          const semId = course.semesterId;
-          if (semId) {
+        teacherEnrollments.forEach((enrollment) => {
+          const semId = enrollment.semesterId;
+          const courseId = enrollment.courseId;
+          if (semId && courseId) {
             if (!semCxMap[semId]) semCxMap[semId] = [];
-            if (!semCxMap[semId].includes(course.id)) {
-              semCxMap[semId].push(course.id);
+            if (!semCxMap[semId].includes(courseId)) {
+              semCxMap[semId].push(courseId);
             }
           }
         });
 
-        // Build course -> sections map
+        // Build course -> sections map from ONLY teacher's enrollments
         const cxSecMap = {};
-        sectionsData.forEach((section) => {
-          const courseId = section.courseId;
-          if (courseId) {
+        teacherEnrollments.forEach((enrollment) => {
+          const courseId = enrollment.courseId;
+          const sectionId = enrollment.sectionId;
+          if (courseId && sectionId) {
             if (!cxSecMap[courseId]) cxSecMap[courseId] = [];
-            if (!cxSecMap[courseId].includes(section.id)) {
-              cxSecMap[courseId].push(section.id);
+            if (!cxSecMap[courseId].includes(sectionId)) {
+              cxSecMap[courseId].push(sectionId);
             }
           }
         });
 
-        // console.log("Semester course map:", semCxMap);
-        // console.log("Course section map:", cxSecMap);
         setSemesterCourseMap(semCxMap);
         setCourseSectionMap(cxSecMap);
 
@@ -149,7 +154,7 @@ const TeacherClassRecordModal = ({ isOpen, onClose, onSubmit, record }) => {
     };
 
     fetchDropdowns();
-  }, [isOpen, record]);
+  }, [isOpen, record, user?.teacherProfile?.id]);
 
   // Filter courses based on selected semester
   useEffect(() => {

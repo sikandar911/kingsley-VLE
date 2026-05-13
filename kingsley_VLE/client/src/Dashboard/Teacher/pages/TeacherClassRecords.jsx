@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Swal from "sweetalert2";
 import {
   Search,
   Plus,
@@ -44,6 +43,13 @@ const TeacherClassRecords = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+  const [alertState, setAlertState] = useState({
+    show: false,
+    type: null, // 'success', 'error', 'warning', 'confirm'
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
 
   // Handle screen resize for responsive styling
   useEffect(() => {
@@ -296,21 +302,22 @@ const TeacherClassRecords = () => {
       setRecords((prev) => [res.data, ...prev]);
       setIsModalOpen(false);
       setEditingRecord(null);
-      await Swal.fire({
+      setAlertState({
+        show: true,
+        type: "success",
         title: "Success!",
-        text: "Class record created successfully.",
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+        message: "Class record created successfully.",
       });
+      setTimeout(() => setAlertState({ ...alertState, show: false }), 2000);
     } catch (err) {
       console.error("Error creating record:", err);
-      await Swal.fire({
+      setAlertState({
+        show: true,
+        type: "error",
         title: "Error",
-        text:
+        message:
           err?.response?.data?.error ||
           "Failed to create record. Please try again.",
-        icon: "error",
       });
     }
   };
@@ -323,56 +330,57 @@ const TeacherClassRecords = () => {
       );
       setEditingRecord(null);
       setIsModalOpen(false);
-      await Swal.fire({
+      setAlertState({
+        show: true,
+        type: "success",
         title: "Success!",
-        text: "Class record updated successfully.",
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+        message: "Class record updated successfully.",
       });
+      setTimeout(() => setAlertState({ ...alertState, show: false }), 2000);
     } catch (err) {
       console.error("Error updating record:", err);
-      await Swal.fire({
+      setAlertState({
+        show: true,
+        type: "error",
         title: "Error",
-        text:
+        message:
           err?.response?.data?.error ||
           "Failed to update record. Please try again.",
-        icon: "error",
       });
     }
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
+    setAlertState({
+      show: true,
+      type: "confirm",
       title: "Delete Class Record?",
-      text: "This action cannot be undone.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
+      message: "This action cannot be undone.",
+      onConfirm: () => performDelete(id),
     });
+  };
 
-    if (!result.isConfirmed) return;
+  const performDelete = async (id) => {
+    setAlertState({ ...alertState, show: false });
 
     try {
       await classRecordsApi.delete(id);
       setRecords((prev) => prev.filter((r) => r.id !== id));
-      await Swal.fire({
+      setAlertState({
+        show: true,
+        type: "success",
         title: "Deleted!",
-        text: "Class record has been deleted successfully.",
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+        message: "Class record has been deleted successfully.",
       });
+      setTimeout(() => setAlertState({ ...alertState, show: false }), 2000);
     } catch (err) {
       console.error("Error deleting record:", err);
-      await Swal.fire({
+      setAlertState({
+        show: true,
+        type: "error",
         title: "Error",
-        text:
+        message:
           err?.response?.data?.error || "Failed to delete. Please try again.",
-        icon: "error",
       });
     }
   };
@@ -664,8 +672,7 @@ const TeacherClassRecords = () => {
                       <button
                         onClick={() => openEdit(record)}
                         className="p-1.5 rounded transition hover:bg-[#f3e8f0]"
-                        style={{ color: "#5c1732"
-                          }}
+                        style={{ color: "#5c1732" }}
                         title="Edit"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -833,6 +840,111 @@ const TeacherClassRecords = () => {
         onSubmit={editingRecord ? handleUpdate : handleCreate}
         record={editingRecord}
       />
+
+      {/* Custom Alert Modal */}
+      {alertState.show && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center">
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              {alertState.type === "success" && (
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+                  <svg
+                    className="h-8 w-8 text-green-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+              {alertState.type === "error" && (
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
+                  <svg
+                    className="h-8 w-8 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                    />
+                  </svg>
+                </div>
+              )}
+              {alertState.type === "warning" && (
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100">
+                  <svg
+                    className="h-8 w-8 text-yellow-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+              {alertState.type === "confirm" && (
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100">
+                  <svg
+                    className="h-8 w-8 text-yellow-600"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            <h3 className="text-lg font-semibold text-gray-900">
+              {alertState.title}
+            </h3>
+            <p className="text-sm text-gray-600 mt-3">{alertState.message}</p>
+
+            <div className="mt-6 flex gap-3 justify-center">
+              {alertState.type === "confirm" ? (
+                <>
+                  <button
+                    onClick={() =>
+                      setAlertState({ ...alertState, show: false })
+                    }
+                    className="px-6 py-2.5 bg-gray-200 text-gray-800 text-sm font-semibold rounded-lg hover:bg-gray-300 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      alertState.onConfirm?.();
+                    }}
+                    className="px-6 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition"
+                  >
+                    Yes, delete it!
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setAlertState({ ...alertState, show: false })}
+                  className="px-6 py-2.5 bg-[#6b1d3e] text-white text-sm font-semibold rounded-lg hover:bg-[#7e2347] transition"
+                >
+                  OK
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

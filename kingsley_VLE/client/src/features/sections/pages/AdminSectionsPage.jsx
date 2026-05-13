@@ -11,19 +11,25 @@ const formatSchedule = (section) => {
   if (!section.daysOfWeek) return <span className="text-gray-300">—</span>;
 
   // Already comes as comma-separated string (e.g., "Monday, Wednesday, Friday")
-  let schedule = section.daysOfWeek;
+  const days = section.daysOfWeek;
 
+  let timeStr = "";
   if (section.startTime && section.endTime) {
     const startDisplay = formatTimeDisplay(section.startTime);
     const endDisplay = formatTimeDisplay(section.endTime);
-    schedule += ` ${startDisplay} - ${endDisplay}`;
+    timeStr = `${startDisplay} - ${endDisplay}`;
   } else if (section.startTime) {
-    schedule += ` ${formatTimeDisplay(section.startTime)}`;
+    timeStr = formatTimeDisplay(section.startTime);
   } else if (section.endTime) {
-    schedule += ` (ends ${formatTimeDisplay(section.endTime)})`;
+    timeStr = `(ends ${formatTimeDisplay(section.endTime)})`;
   }
 
-  return schedule;
+  return (
+    <div className="flex flex-col gap-1">
+      <div>{days}</div>
+      {timeStr && <div className="text-gray-500">{timeStr}</div>}
+    </div>
+  );
 };
 
 export default function AdminSectionsPage() {

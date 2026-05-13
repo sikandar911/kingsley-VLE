@@ -131,7 +131,7 @@ export default function ReminderPopup({ reminders = [], dateStr, onClose }) {
                 {/* Name + badge */}
                 <div className=" flex flex-col-reverse md:flex-row items-start justify-between gap-2 mb-1.5">
                   <span className="text-sm font-semibold text-gray-800 leading-snug">
-                    {tc.icon} {r.name}
+                    {tc.icon} {r.assignment?.title}
                   </span>
                   <span
                     className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${tc.badge}`}
@@ -186,6 +186,18 @@ export default function ReminderPopup({ reminders = [], dateStr, onClose }) {
                 {/* Event details */}
                 {r.type === "event" && r.event && (
                   <div className="text-xs text-gray-600 space-y-0.5 mt-2">
+                      {r.event.title && (
+                      <p>
+                        📝 <span className="font-medium">Title:</span>{" "}
+                        {r.event.title}
+                      </p>
+                    )}
+                    {r.event.type && (
+                      <p>
+                        🏷️ <span className="font-medium">Type:</span>{" "}
+                        {r.event.type}
+                      </p>
+                    )}
                     {r.event.startTime && (
                       <p>
                         🕐 <span className="font-medium">Start:</span>{" "}

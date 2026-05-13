@@ -19,6 +19,8 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
   const [deleting, setDeleting] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null);
+  const [deleteConfirmError, setDeleteConfirmError] = useState(null);
   const [modules, setModules] = useState([]);
   const [selectedModuleId, setSelectedModuleId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,24 +115,23 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
     activeSwitch === "materials" ? setMaterialsPage : setRecordsPage;
 
   /* ── Delete handlers ─────────────────────────────────────────────────────── */
-  const handleDeleteMaterial = async (id, title) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete "${title}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  const handleDeleteMaterial = (id, title) => {
+    setDeleteConfirmModal({ id, title, type: "material" });
+    setDeleteConfirmError(null);
+  };
 
+  const confirmDeleteMaterial = async () => {
+    if (!deleteConfirmModal || deleteConfirmModal.type !== "material") return;
+    const { id } = deleteConfirmModal;
     setDeleting(id);
-    setDeleteError(null);
+    setDeleteConfirmError(null);
     try {
       await classMaterialsApi.delete(id);
-      // Refresh the list
+      setDeleteConfirmModal(null);
       setRefetchTrigger((prev) => prev + 1);
       setMaterialsPage(1);
     } catch (err) {
-      setDeleteError(
+      setDeleteConfirmError(
         err.response?.data?.error || err.message || "Failed to delete material",
       );
     } finally {
@@ -138,24 +139,23 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
     }
   };
 
-  const handleDeleteRecord = async (id, title) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete "${title}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  const handleDeleteRecord = (id, title) => {
+    setDeleteConfirmModal({ id, title, type: "record" });
+    setDeleteConfirmError(null);
+  };
 
+  const confirmDeleteRecord = async () => {
+    if (!deleteConfirmModal || deleteConfirmModal.type !== "record") return;
+    const { id } = deleteConfirmModal;
     setDeleting(id);
-    setDeleteError(null);
+    setDeleteConfirmError(null);
     try {
       await classRecordsApi.delete(id);
-      // Refresh the list
+      setDeleteConfirmModal(null);
       setRefetchTrigger((prev) => prev + 1);
       setRecordsPage(1);
     } catch (err) {
-      setDeleteError(
+      setDeleteConfirmError(
         err.response?.data?.error || err.message || "Failed to delete record",
       );
     } finally {
@@ -529,6 +529,64 @@ export default function TeacherMaterialsTab({ courseId, sectionId }) {
             >
               Next
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              Delete{" "}
+              {deleteConfirmModal.type === "material"
+                ? "Material"
+                : "Recording"}
+              ?
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-4">
+              Are you sure you want to delete "{deleteConfirmModal.title}"? This
+              action cannot be undone.
+            </p>
+            {deleteConfirmError && (
+              <p className="text-xs text-red-600 mb-3 p-2 bg-red-50 rounded">
+                {deleteConfirmError}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmModal(null)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={
+                  deleteConfirmModal.type === "material"
+                    ? confirmDeleteMaterial
+                    : confirmDeleteRecord
+                }
+                disabled={deleting === deleteConfirmModal.id}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting === deleteConfirmModal.id ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

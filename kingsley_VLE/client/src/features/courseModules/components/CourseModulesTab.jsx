@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import Swal from "sweetalert2";
 import { courseModulesApi } from "../api/courseModules.api";
 import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
@@ -39,6 +38,8 @@ function ModuleFormModal({
   const [error, setError] = useState("");
   const [semesters, setSemesters] = useState([]);
   const [loadingSemesters, setLoadingSemesters] = useState(true);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [successShow, setSuccessShow] = useState(false);
 
   // Fetch only the semester connected to this course
   useEffect(() => {
@@ -70,12 +71,6 @@ function ModuleFormModal({
     }
     if (!form.semesterId) {
       setError("Semester is required");
-      Swal.fire({
-        icon: "error",
-        title: "Module create unsuccessful",
-        text: "Select the right semester for create the module.",
-        confirmButtonColor: "#742345",
-      });
       return;
     }
 
@@ -88,11 +83,12 @@ function ModuleFormModal({
           status: form.status,
           semesterId: form.semesterId || null,
         });
-        await Swal.fire({
-          icon: "success",
-          title: "Module updated successfully",
-          confirmButtonColor: "#742345",
-        });
+        setSuccessMessage("Module updated successfully");
+        setSuccessShow(true);
+        setTimeout(() => {
+          setSuccessShow(false);
+          onSaved();
+        }, 2000);
       } else {
         await courseModulesApi.create({
           name: form.name.trim(),
@@ -102,25 +98,17 @@ function ModuleFormModal({
           sectionId: sectionId || undefined,
           semesterId: form.semesterId || undefined,
         });
-        await Swal.fire({
-          icon: "success",
-          title: "Module create successfully",
-          confirmButtonColor: "#742345",
-        });
+        setSuccessMessage("Module created successfully");
+        setSuccessShow(true);
+        setTimeout(() => {
+          setSuccessShow(false);
+          onSaved();
+        }, 2000);
       }
-      onSaved();
     } catch (err) {
       const message =
-        err.response?.data?.error ||
-        err.message ||
-        "Select the right semester for create the module.";
+        err.response?.data?.error || err.message || "Failed to save module";
       setError(message);
-      Swal.fire({
-        icon: "error",
-        title: "Module create unsuccessful",
-        text: message,
-        confirmButtonColor: "#742345",
-      });
     } finally {
       setSaving(false);
     }
@@ -257,6 +245,32 @@ function ModuleFormModal({
           </div>
         </form>
       </div>
+
+      {/* Success Modal */}
+      {successShow && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
+              {successMessage}
+            </h3>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -271,6 +285,9 @@ export default function CourseModulesTab({ courseId, sectionId, semesterId }) {
   const [deleting, setDeleting] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [refetch, setRefetch] = useState(0);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [successShow, setSuccessShow] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -294,22 +311,25 @@ export default function CourseModulesTab({ courseId, sectionId, semesterId }) {
     load();
   }, [load]);
 
-  const handleDelete = async (mod) => {
-    if (
-      !window.confirm(
-        `Delete module "${mod.name}"? Assignments, materials, and records linked to it will be unlinked but not deleted.`,
-      )
-    )
-      return;
-    setDeleting(mod.id);
+  const handleDelete = (mod) => {
+    setDeleteConfirmModal({ id: mod.id, name: mod.name });
     setDeleteError(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmModal) return;
+    setDeleting(deleteConfirmModal.id);
     try {
-      await courseModulesApi.delete(mod.id);
+      await courseModulesApi.delete(deleteConfirmModal.id);
+      setDeleteConfirmModal(null);
       setRefetch((p) => p + 1);
+      setSuccessMessage("Module deleted successfully");
+      setSuccessShow(true);
+      setTimeout(() => setSuccessShow(false), 2000);
     } catch (err) {
-      setDeleteError(
-        err.response?.data?.error || err.message || "Failed to delete",
-      );
+      const errorMsg =
+        err.response?.data?.error || err.message || "Failed to delete";
+      setDeleteError(errorMsg);
     } finally {
       setDeleting(null);
     }
@@ -486,6 +506,82 @@ export default function CourseModulesTab({ courseId, sectionId, semesterId }) {
           }}
           onSaved={handleSaved}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              Delete Module?
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-4">
+              Delete module "{deleteConfirmModal.name}"? Assignments, materials,
+              and records linked to it will be unlinked but not deleted.
+            </p>
+            {deleteError && (
+              <p className="text-xs text-red-600 mb-3 p-2 bg-red-50 rounded">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmModal(null)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting === deleteConfirmModal.id}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting === deleteConfirmModal.id ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {successShow && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">
+              {successMessage}
+            </h3>
+          </div>
+        </div>
       )}
     </div>
   );

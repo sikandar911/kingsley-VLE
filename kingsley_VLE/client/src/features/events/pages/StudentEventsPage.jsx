@@ -287,7 +287,7 @@ export default function StudentEventsPage() {
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => setSelectedEvent(event)}
-                          className="text-blue-600 whitespace-nowrap hover:text-blue-800 font-medium text-xs"
+                          className="text-[#6b1d3e] whitespace-nowrap hover:text-[#6b1d3e]/80 font-medium text-xs"
                         >
                           View Details
                         </button>

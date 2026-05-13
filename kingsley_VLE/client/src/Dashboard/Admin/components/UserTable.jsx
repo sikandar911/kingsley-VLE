@@ -3,30 +3,51 @@ import { adminApi } from "../api/admin.api";
 
 export default function UserTable({ users, onEdit, onRefresh }) {
   const [deletingId, setDeletingId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null); // { user, confirmText: "" }
+  const [deleteConfirmError, setDeleteConfirmError] = useState(null);
 
   const handleDelete = async (user) => {
     const name =
       user.studentProfile?.fullName ||
       user.teacherProfile?.fullName ||
       user.email;
-    if (!window.confirm(`Delete ${name}?`)) return;
+    setDeleteConfirmModal({ user, confirmText: "" });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmModal) return;
+
+    if (deleteConfirmModal.confirmText !== "confirm") {
+      setDeleteConfirmError("Please type 'confirm' to verify deletion");
+      return;
+    }
+
+    const { user } = deleteConfirmModal;
     setDeletingId(user.id);
+
     try {
       await adminApi.deleteUser(user.id);
+      setDeleteConfirmModal(null);
+      setDeleteConfirmError(null);
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Delete failed");
+      setDeleteConfirmError(err.response?.data?.error || "Delete failed");
     } finally {
       setDeletingId(null);
     }
   };
 
   const handleToggle = async (user) => {
+    setTogglingId(user.id);
     try {
       await adminApi.updateUser(user.id, { isActive: !user.isActive });
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Update failed");
+      setDeleteConfirmError(err.response?.data?.error || "Update failed");
+      setTimeout(() => setDeleteConfirmError(null), 3000);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -120,10 +141,13 @@ export default function UserTable({ users, onEdit, onRefresh }) {
                     </button>
                     <button
                       onClick={() => handleToggle(user)}
-                      className="p-1.5 rounded-md hover:bg-gray-100 transition border-0 bg-transparent cursor-pointer"
+                      disabled={togglingId === user.id}
+                      className="p-1.5 rounded-md hover:bg-gray-100 transition border-0 bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       title={user.isActive ? "Deactivate" : "Activate"}
                     >
-                      {user.isActive ? (
+                      {togglingId === user.id ? (
+                        <div className="w-5 h-5 border-[3px] border-gray-300 border-t-[#6b1d3e] rounded-full animate-spin" />
+                      ) : user.isActive ? (
                         <svg
                           className="w-5 h-5"
                           fill="#6b1d3e"
@@ -174,6 +198,79 @@ export default function UserTable({ users, onEdit, onRefresh }) {
           })}
         </tbody>
       </table>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Delete User
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to delete{" "}
+              <strong>
+                "
+                {deleteConfirmModal.user.studentProfile?.fullName ||
+                  deleteConfirmModal.user.teacherProfile?.fullName ||
+                  deleteConfirmModal.user.email}
+                "
+              </strong>
+              ?
+            </p>
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2 mb-4">
+              ⚠️ This action cannot be undone. All user data will be permanently
+              deleted.
+            </p>
+
+            <label className="text-xs font-semibold text-gray-600 block mb-2">
+              To confirm, type{" "}
+              <code className="bg-gray-100 px-1 py-0.5 rounded">confirm</code>:
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmModal.confirmText}
+              onChange={(e) => {
+                setDeleteConfirmModal({
+                  ...deleteConfirmModal,
+                  confirmText: e.target.value,
+                });
+                setDeleteConfirmError(null);
+              }}
+              placeholder="Type 'confirm' to verify"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+            />
+            {deleteConfirmError && (
+              <p className="text-xs text-red-600 mb-4">{deleteConfirmError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setDeleteConfirmModal(null);
+                  setDeleteConfirmError(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deletingId === deleteConfirmModal.user.id}
+                className="flex-1 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingId === deleteConfirmModal.user.id ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete User"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

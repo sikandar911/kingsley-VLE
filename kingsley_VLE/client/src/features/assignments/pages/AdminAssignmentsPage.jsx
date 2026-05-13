@@ -67,6 +67,11 @@ export default function AdminAssignmentsPage() {
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Alert states
+  const [statusAlert, setStatusAlert] = useState({ show: false, message: "" });
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null);
+  const [deleteAlert, setDeleteAlert] = useState({ show: false, message: "" });
+
   const load = useCallback(() => {
     setLoading(true);
     const filterParams = {};
@@ -283,26 +288,30 @@ export default function AdminAssignmentsPage() {
       await assignmentsApi.updateStatus(assignment.id, newStatus);
       load();
     } catch (e) {
-      alert(e.response?.data?.error || "Failed to update status");
+      setStatusAlert({
+        show: true,
+        message: e.response?.data?.error || "Failed to update status",
+      });
     } finally {
       setUpdatingId(null);
     }
   };
 
   const handleDelete = async (assignment) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete "${assignment.title}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmModal(assignment);
+  };
+
+  const confirmDelete = async (assignment) => {
     setDeletingId(assignment.id);
+    setDeleteConfirmModal(null);
     try {
       await assignmentsApi.delete(assignment.id);
       load();
     } catch (e) {
-      alert(e.response?.data?.error || "Failed to delete assignment");
+      setDeleteAlert({
+        show: true,
+        message: e.response?.data?.error || "Failed to delete assignment",
+      });
     } finally {
       setDeletingId(null);
     }
@@ -476,7 +485,7 @@ export default function AdminAssignmentsPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-              <span className="text-5xl mb-3">📋</span>
+               <img src="/assignment-profile.png" alt="No assignments" className="w-16 h-16 mb-3" />
               <p className="text-sm">
                 {assignments.length === 0
                   ? "No assignments yet"
@@ -680,13 +689,7 @@ export default function AdminAssignmentsPage() {
                               title="Delete Assignment"
                             >
                               {deletingId === a.id ? (
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="#fbbf24"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path d="M12 1C6.48 1 2 5.48 2 11s4.48 10 10 10 10-4.48 10-10S17.52 1 12 1zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 6 15.5 6 14 6.67 14 7.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 6 8.5 6 7 6.67 7 7.5 7.67 9 8.5 9z" />
-                                </svg>
+                                <div className="w-4 h-4 border-2 border-[#6b1142] border-t-transparent rounded-full animate-spin" />
                               ) : (
                                 <svg
                                   className="w-5 h-5"
@@ -745,6 +748,118 @@ export default function AdminAssignmentsPage() {
           assignment={viewSubmissions}
           onClose={() => setViewSubmissions(null)}
         />
+      )}
+
+      {/* Status Change Error Alert Modal */}
+      {statusAlert.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 flex flex-col items-center">
+            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mb-4 flex-shrink-0">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4v2m0-10a8 8 0 110 16 8 8 0 010-16z"
+                />
+              </svg>
+            </div>
+            <p className="text-center text-gray-700 text-sm font-medium mb-6">
+              {statusAlert.message}
+            </p>
+            <button
+              onClick={() => setStatusAlert({ show: false, message: "" })}
+              className="w-full px-4 py-2 bg-[#6b1142] text-white text-sm font-semibold rounded-lg hover:bg-[#5a0d38] transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Delete Assignment
+              </h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to delete{" "}
+              <strong>"{deleteConfirmModal.title}"</strong>? This action cannot
+              be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmModal(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 text-sm font-semibold rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmDelete(deleteConfirmModal)}
+                disabled={deletingId === deleteConfirmModal.id}
+                className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Error Alert Modal */}
+      {deleteAlert.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 flex flex-col items-center">
+            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mb-4 flex-shrink-0">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4v2m0-10a8 8 0 110 16 8 8 0 010-16z"
+                />
+              </svg>
+            </div>
+            <p className="text-center text-gray-700 text-sm font-medium mb-6">
+              {deleteAlert.message}
+            </p>
+            <button
+              onClick={() => setDeleteAlert({ show: false, message: "" })}
+              className="w-full px-4 py-2 bg-[#6b1142] text-white text-sm font-semibold rounded-lg hover:bg-[#5a0d38] transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

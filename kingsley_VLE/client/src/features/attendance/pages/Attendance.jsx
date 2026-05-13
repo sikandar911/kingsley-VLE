@@ -551,7 +551,7 @@ const Attendance = () => {
             }
             className="px-4 py-2.5 sm:py-3 bg-[#611936] text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#7e2347] transition disabled:bg-gray-400 disabled:cursor-not-allowed hover:disabled:bg-gray-400 w-full md:w-auto"
           >
-            {isSaving ? "⏳ Saving & Loading..." : "💾 Save Attendance"}
+            {isSaving ? "⏳ Saving & Loading..." : "Save Attendance"}
           </button>
         )}
       </div>
@@ -732,7 +732,7 @@ const Attendance = () => {
                 width: "40px",
                 height: "40px",
                 border: "3px solid #e5e7eb",
-                borderTop: "3px solid #3b82f6",
+                borderTop: "3px solid #6b1d3e",
                 borderRadius: "50%",
                 animation: "spin 1s linear infinite",
               }}
@@ -782,7 +782,7 @@ const Attendance = () => {
                 width: "50px",
                 height: "50px",
                 border: "4px solid #e5e7eb",
-                borderTop: "4px solid #3b82f6",
+                borderTop: "3px solid #6b1d3e",
                 borderRadius: "50%",
                 animation: "spin 1s linear infinite",
               }}
