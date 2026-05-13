@@ -4,6 +4,7 @@ import { authApi } from "../../../Auth/api/auth.api";
 import { enrollmentsApi } from "../../../features/enrollments/api/enrollments.api";
 import { formatTimeDisplay } from "../../../utils/timeFormat";
 import { BadgeCheck, ClipboardCheck, Layers } from "lucide-react";
+import SemesterFilter from "../../components/SemesterFilter";
 
 const formatSchedule = (course) => {
   if (!course.daysOfWeek) return null;
@@ -28,7 +29,10 @@ const formatScheduleTime = (course) => {
 
 export default function TeacherCoursesPage() {
   const navigate = useNavigate();
+  const [allEnrollments, setAllEnrollments] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [teacher, setTeacher] = useState(null);
@@ -56,21 +60,29 @@ export default function TeacherCoursesPage() {
         });
         const enrollments = enrollmentsResponse.data;
 
-        // Extract course data from enrollments
+        // Store all enrollments for filtering
         if (enrollments && Array.isArray(enrollments)) {
-          const coursesData = enrollments.map((enrollment) => ({
-            id: enrollment.course?.id,
-            title: enrollment.course?.title,
-            assignedAt: enrollment.assignedAt,
-            teacherName: enrollment.teacher?.fullName,
-            specialization: enrollment.teacher?.specialization,
-            sectionId: enrollment.section?.id || null,
-            sectionName: enrollment.section?.name || null,
-            daysOfWeek: enrollment.section?.daysOfWeek,
-            startTime: enrollment.section?.startTime,
-            endTime: enrollment.section?.endTime,
-          }));
-          setCourses(coursesData);
+          setAllEnrollments(enrollments);
+
+          // Extract unique semesters
+          const semesterMap = new Map();
+          enrollments.forEach((enrollment) => {
+            if (enrollment.semester?.id) {
+              semesterMap.set(enrollment.semester.id, {
+                id: enrollment.semester.id,
+                name: enrollment.semester.name,
+                year: enrollment.semester.year,
+              });
+            }
+          });
+          const uniqueSemesters = Array.from(semesterMap.values()).sort(
+            (a, b) => b.year - a.year || a.name.localeCompare(b.name),
+          );
+          setSemesters(uniqueSemesters);
+          // Auto-select the latest semester — filter useEffect will set courses reactively
+          if (uniqueSemesters.length > 0) {
+            setSelectedSemesterId(uniqueSemesters[0].id);
+          }
         }
       } catch (err) {
         console.error("Error fetching teacher courses:", err);
@@ -85,6 +97,51 @@ export default function TeacherCoursesPage() {
 
     fetchTeacherCourses();
   }, []);
+
+  // Filter courses based on selected semester
+  useEffect(() => {
+    // Helper function to deduplicate by courseId+semesterId
+    // (same course in different semesters = separate cards; same course+section duplicates in same semester = one card)
+    const deduplicateCourses = (enrollments) => {
+      const seenCourses = new Set();
+      return enrollments
+        .filter((enrollment) => {
+          const key = `${enrollment.course?.id}_${enrollment.semester?.id}`;
+          if (seenCourses.has(key)) {
+            return false; // Skip same course in same semester
+          }
+          seenCourses.add(key);
+          return true;
+        })
+        .map((enrollment) => ({
+          id: enrollment.id,
+          courseId: enrollment.course?.id,
+          title: enrollment.course?.title,
+          assignedAt: enrollment.assignedAt,
+          teacherName: enrollment.teacher?.fullName,
+          specialization: enrollment.teacher?.specialization,
+          sectionId: enrollment.section?.id || null,
+          sectionName: enrollment.section?.name || null,
+          daysOfWeek: enrollment.section?.daysOfWeek,
+          startTime: enrollment.section?.startTime,
+          endTime: enrollment.section?.endTime,
+          semesterId: enrollment.semester?.id,
+        }));
+    };
+
+    if (!selectedSemesterId) {
+      // Show all courses (deduplicated)
+      const coursesData = deduplicateCourses(allEnrollments);
+      setCourses(coursesData);
+    } else {
+      // Filter by selected semester (deduplicated)
+      const filteredEnrollments = allEnrollments.filter(
+        (e) => e.semester?.id === selectedSemesterId,
+      );
+      const coursesData = deduplicateCourses(filteredEnrollments);
+      setCourses(coursesData);
+    }
+  }, [selectedSemesterId, allEnrollments]);
 
   // Loading State
   if (loading) {
@@ -122,6 +179,23 @@ export default function TeacherCoursesPage() {
             </span>
           </p>
         </div>
+
+        {/* Semester Filter */}
+        {semesters.length > 0 && (
+          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Filter by Semester
+              </label>
+              <SemesterFilter
+                semesters={semesters}
+                selectedSemesterId={selectedSemesterId}
+                onSelect={setSelectedSemesterId}
+                loading={loading}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -285,7 +359,7 @@ export default function TeacherCoursesPage() {
                     <button
                       onClick={() =>
                         navigate(
-                          `/teacher/courses/${course.id}${course.sectionId ? `?sectionId=${course.sectionId}` : ""}`,
+                          `/teacher/courses/${course.courseId}${course.sectionId ? `?sectionId=${course.sectionId}` : ""}`,
                         )
                       }
                       style={{ backgroundColor: "#6b1d3e" }}

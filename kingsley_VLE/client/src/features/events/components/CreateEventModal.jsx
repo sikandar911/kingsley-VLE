@@ -90,17 +90,14 @@ export default function CreateEventModal({
         //   section: editEvent.section,
         // });
 
-        // Helper to convert UTC ISO string to local datetime-local format
-        const convertUTCToLocal = (utcDateStr) => {
+        // Extract UTC date part only (YYYY-MM-DD) for date input
+        const convertUTCToDate = (utcDateStr) => {
           if (!utcDateStr) return "";
           const date = new Date(utcDateStr);
-          // Use local time getters to format for datetime-local input
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          const day = String(date.getDate()).padStart(2, "0");
-          const hours = String(date.getHours()).padStart(2, "0");
-          const minutes = String(date.getMinutes()).padStart(2, "0");
-          return `${year}-${month}-${day}T${hours}:${minutes}`;
+          const year = date.getUTCFullYear();
+          const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+          const day = String(date.getUTCDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
         };
 
         setFormData({
@@ -112,8 +109,8 @@ export default function CreateEventModal({
           semesterId: editEvent.semesterId || "",
           courseId: editEvent.courseId || "",
           sectionId: editEvent.sectionId || "",
-          startTime: convertUTCToLocal(editEvent.startTime),
-          endTime: convertUTCToLocal(editEvent.endTime),
+          startTime: convertUTCToDate(editEvent.startTime),
+          endTime: convertUTCToDate(editEvent.endTime),
         });
       } else {
         // Reset form for create mode
@@ -258,13 +255,7 @@ export default function CreateEventModal({
     }
 
     if (!formData.startTime) {
-      setError("Start time is required");
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.endTime) {
-      setError("End time is required");
+      setError("Start date is required");
       setLoading(false);
       return;
     }
@@ -288,7 +279,7 @@ export default function CreateEventModal({
         courseId: formData.courseId || undefined,
         sectionId: formData.sectionId || undefined,
         startTime: convertToUTC(formData.startTime),
-        endTime: convertToUTC(formData.endTime),
+        endTime: formData.endTime ? convertToUTC(formData.endTime) : null,
       };
 
       // console.log("[CreateEventModal] Payload to send:", payload);
@@ -534,13 +525,13 @@ export default function CreateEventModal({
             </div>
           )}
 
-          {/* Start Time */}
+          {/* Start Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Start Time *
+              Start Date *
             </label>
             <input
-              type="datetime-local"
+              type="date"
               name="startTime"
               value={formData.startTime}
               onChange={handleChange}
@@ -549,17 +540,16 @@ export default function CreateEventModal({
             />
           </div>
 
-          {/* End Time */}
+          {/* End Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              End Time *
+              End Date
             </label>
             <input
-              type="datetime-local"
+              type="date"
               name="endTime"
               value={formData.endTime}
               onChange={handleChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6b1142]"
             />
           </div>

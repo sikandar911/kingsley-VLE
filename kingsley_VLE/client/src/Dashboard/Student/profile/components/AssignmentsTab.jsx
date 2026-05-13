@@ -333,6 +333,16 @@ export default function AssignmentsTab({ courseId, sectionId }) {
                                     ⏳ Ready for EQA
                                   </span>
                                 )}
+                                {submission?.isQualifiedForEqa === false && (
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 lg:px-2.5 py-0.5 lg:py-1 rounded-full bg-red-100 text-red-700 whitespace-nowrap w-fit">
+                                    ✗ Not Approved
+                                  </span>
+                                )}
+                                {submission?.isQualifiedForEqa == null && !isQualifiedPending && (
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 lg:px-2.5 py-0.5 lg:py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap w-fit">
+                                    ⏳ Pending for EQA
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-2 lg:px-3 py-3 lg:py-4 w-1/4">

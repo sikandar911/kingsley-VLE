@@ -412,9 +412,11 @@ const createAssignmentCalendarReminder = async (
       return null;
     }
 
-    // Extract just the date from dueDate in local time so it matches the calendar grid
-    const reminderDate = new Date(assignment.dueDate);
-    reminderDate.setHours(0, 0, 0, 0);
+    // Extract UTC date from dueDate to avoid local-timezone shifts
+    const d = new Date(assignment.dueDate);
+    const reminderDate = new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+    );
 
     const reminder = await prisma.calendarReminder.create({
       data: {

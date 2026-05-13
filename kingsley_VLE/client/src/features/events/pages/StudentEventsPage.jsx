@@ -6,15 +6,11 @@ import CustomDropdown from "../../classRecords/components/CustomDropdown";
 
 const BRAND = "#6b1d3e";
 
-// Format datetime keeping UTC date but showing local time
-// This prevents timezone shifts from changing which date the event is on
+// Format date keeping UTC date to avoid timezone shifts
 const fmt = (d) => {
   if (!d) return "—";
 
-  // Convert to string if it's a Date object
   const dateStr = d instanceof Date ? d.toISOString() : String(d);
-
-  // Extract UTC date from ISO string (YYYY-MM-DD part before T)
   const utcDateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!utcDateMatch) return "—";
 
@@ -22,32 +18,11 @@ const fmt = (d) => {
   const monthNum = parseInt(month) - 1;
   const dayNum = parseInt(day);
 
-  // Format time in local timezone
-  const date = new Date(d);
-  const timeStr = date.toLocaleString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  // Get month name
   const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
-  const monthName = monthNames[monthNum];
-
-  return `${monthName} ${dayNum}, ${year}, ${timeStr}`;
+  return `${monthNames[monthNum]} ${dayNum}, ${year}`;
 };
 
 const typeBadge = {

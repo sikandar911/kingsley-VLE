@@ -110,11 +110,18 @@ export default function StudentSubmissionAttemptsModal({
     if (!files.length) return;
     e.target.value = "";
 
+    // Enforce single file per attempt
+    if (pendingFiles.length >= 1) {
+      setSubmitError("Only one file is allowed per attempt. Remove the existing file first.");
+      setTimeout(() => setSubmitError(null), 5000);
+      return;
+    }
+
     // Validate file types
     const validFiles = [];
     const invalidFiles = [];
     
-    for (const file of files) {
+    for (const file of files.slice(0, 1)) { // Only take first file
       const fileName = file.name.toLowerCase();
       const isAllowed = ALLOWED_FILE_TYPES.some(ext => fileName.endsWith(ext));
       
@@ -127,7 +134,7 @@ export default function StudentSubmissionAttemptsModal({
     
     // Show error for invalid files
     if (invalidFiles.length > 0) {
-      setSubmitError(`Invalid file type(s): ${invalidFiles.join(", ")}. Only .doc, .docx, and .pptx files are allowed.`);
+      setSubmitError(`Invalid file type: ${invalidFiles.join(", ")}. Only .doc, .docx, and .pptx files are allowed.`);
       setTimeout(() => setSubmitError(null), 5000);
     }
 
@@ -586,24 +593,25 @@ export default function StudentSubmissionAttemptsModal({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    multiple
                     accept=".doc,.docx,.pptx"
                     className="hidden"
                     onChange={handleFileSelect}
                   />
                   <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 transition"
-                      title="Upload .doc, .docx, or .pptx files only"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                      </svg>
-                      Attach Files
-                    </button>
-                    <p className="text-xs text-gray-400">Allowed: .doc, .docx, .pptx</p>
+                    {pendingFiles.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 transition"
+                        title="Upload one .doc, .docx, or .pptx file"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        Attach File
+                      </button>
+                    )}
+                    <p className="text-xs text-gray-400">One .doc, .docx, or .pptx file per attempt</p>
                   </div>
                 </div>
 

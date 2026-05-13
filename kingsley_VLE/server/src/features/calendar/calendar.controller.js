@@ -166,7 +166,10 @@ export const getCalendarReminders = async (req, res) => {
   }
 
   const fromDate = new Date(from);
+  // Include the full last day (23:59:59.999 UTC) so reminders stored at
+  // any time on the to-date are captured.
   const toDate = new Date(to);
+  toDate.setUTCHours(23, 59, 59, 999);
 
   if (isNaN(fromDate) || isNaN(toDate)) {
     return res
@@ -209,8 +212,15 @@ export const getCalendarReminders = async (req, res) => {
       date: getReminderDateKey(reminder) || formatDateKey(reminder.date),
     }));
 
+    // Post-filter: after normalization the date key may differ from the
+    // stored DB date (e.g. due to old timezone-shifted records). Only keep
+    // reminders whose normalised date actually falls within [from, to].
+    const inRangeReminders = normalizedReminders.filter(
+      (r) => r.date >= from && r.date <= to,
+    );
+
     // Group by date string for easy calendar rendering
-    const grouped = normalizedReminders.reduce((acc, r) => {
+    const grouped = inRangeReminders.reduce((acc, r) => {
       const key = r.date;
 
       if (!acc[key]) acc[key] = [];
@@ -218,7 +228,7 @@ export const getCalendarReminders = async (req, res) => {
       return acc;
     }, {});
 
-    return res.json({ reminders: normalizedReminders, grouped });
+    return res.json({ reminders: inRangeReminders, grouped });
   } catch (err) {
     console.error("getCalendarReminders error:", err);
     return res.status(500).json({ error: "Server error" });
